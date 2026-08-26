@@ -1,0 +1,20 @@
+# Secret & Environment Variables
+.env
+.env.local
+*.pem
+
+# Dependencies (Node / Python)
+node_modules/
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Build outputs
+dist/
+build/
+.next/
+
+# System / OS files
+.DS_Store
+Thumbs.db

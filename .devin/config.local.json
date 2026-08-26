@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(ls frontend)",
+      "Exec(python)",
+      "Exec(npm run)",
+      "Exec(curl)",
+      "Exec({)"
+    ]
+  }
+}

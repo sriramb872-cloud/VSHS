@@ -1,0 +1,28 @@
+# backend-python/app/models/grade.py
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import relationship
+from app.core.database import Base
+
+
+class Grade(Base):
+    __tablename__ = "grades"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)  # e.g. "Grade 10"
+    display_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    school = relationship("School", back_populates="grades")
+    sections = relationship("Section", back_populates="grade", cascade="all, delete-orphan")
+    grade_subjects = relationship("GradeSubject", back_populates="grade", cascade="all, delete-orphan")
+    enrollments = relationship("StudentEnrollment", back_populates="grade", cascade="all, delete-orphan")
+    homeworks = relationship("Homework", back_populates="grade", cascade="all, delete-orphan")
+    timetables = relationship("Timetable", back_populates="grade", cascade="all, delete-orphan")
+    attendance_records = relationship("Attendance", back_populates="grade", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("school_id", "name", name="uq_school_grade_name"),
+    )

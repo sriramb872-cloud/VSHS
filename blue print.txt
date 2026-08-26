@@ -1,0 +1,42 @@
+vshs-backend/
+│
+├── app/
+│   ├── __init__.py
+│   ├── config.py             # Environment variables & DB URL
+│   ├── database.py           # SQLAlchemy Engine & SessionLocal
+│   ├── models.py             # SQLAlchemy ORM Models
+│   ├── schemas.py            # Pydantic Schemas (Requests/Responses)
+│   ├── security.py           # Password hashing & JWT logic
+│   │
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── auth.py           # Login & Token routes
+│   │   ├── principal.py      # Principal management (Add teacher, etc.)
+│   │   └── teacher.py        # Teacher self-assignment, profile, add student
+│   │
+│   └── dependencies.py       # Auth & Role verification dependencies
+│
+├── .env                      # Database credentials & JWT secret
+├── requirements.txt          # Python dependencies
+└── main.py                   # FastAPI entry point
+
+
+
+{
+  "mobile_number": "9876543210",
+  "password": "Password@123"
+}
+
+{
+  "full_name": "Ramesh Kumar",
+  "mobile_number": "9876543211",
+  "initial_password": "Teacher@123"
+}
+
+
+bro lets continue our project so lets implement a feature today 
+1)so we are implementing the exams result module so you know principal has a feature to see all the list of classes so the same should be in teachers portal 
+2)so in teacher portel teacher goes like 
+more options -> classes -> (chooses a class she teaches ) -> exams -> select the exam (FA1 A2 SA1)-> selects her subject in list of subjects allocated to the class and click enter marks -> and she do gets to see the list of students in that class and  box beside them and she fills the marks in the box 
+3)as the above after a teacher fills marks class teacher will get the notification like the particular teacher filled the marks of all students and after all teachers all subjects marks are filled the class teacher reverify that all the marks are done and if any of not of marks are not marked the defalt 0
+so after all of this the class teacher taps publish marks and done every student get his marks of all subect 

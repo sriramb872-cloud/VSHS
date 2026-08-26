@@ -1,0 +1,5 @@
+/**
+ * SCHOLARIS ERP
+ *
+ * Placeholder Page
+ */

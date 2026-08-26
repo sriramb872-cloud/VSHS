@@ -1,0 +1,86 @@
+/* frontend/src/styles/responsive.css */
+@import './variables.css';
+
+/* Mobile-First Baseline Configuration */
+body {
+  padding: var(--space-2);
+}
+
+/* Containers and Layout Flow for Small Screens */
+.er-page-header {
+  align-items: flex-start;
+}
+
+.er-dashboard-grid {
+  grid-template-columns: 1fr;
+}
+
+/* Responsive Table Wrapper Adjustments for Mobile */
+.er-table-container {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Form stacking for smaller viewports */
+.er-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Media Query: Larger Mobile Screens (min-width: 480px) */
+@media screen and (min-width: 480px) {
+  body {
+    padding: var(--space-3);
+  }
+  
+  .er-dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Media Query: Tablets (min-width: 768px) */
+@media screen and (min-width: 768px) {
+  body {
+    padding: var(--space-4);
+  }
+
+  .er-page-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .er-dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+  }
+
+  .er-form-row {
+    flex-direction: row;
+  }
+  
+  .er-form-row > * {
+    flex: 1;
+  }
+}
+
+/* Media Query: Laptops & Desktops (min-width: 1024px) */
+@media screen and (min-width: 1024px) {
+  body {
+    padding: var(--space-6);
+  }
+
+  .er-dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Media Query: Large Desktops (min-width: 1280px) */
+@media screen and (min-width: 1280px) {
+  .er-dashboard-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

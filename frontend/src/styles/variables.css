@@ -1,0 +1,143 @@
+/* frontend/src/styles/variables.css */
+:root {
+  /* Default / Primary Brand Colors */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #eff6ff;
+  --color-primary-dark: #1e40af;
+
+  /* Role Theme: SUPER_ADMIN */
+  --role-admin-primary: #4f46e5;
+  --role-admin-secondary: #7c3aed;
+  --role-admin-accent: #8b5cf6;
+  --role-admin-bg: #f5f7ff;
+  --role-admin-surface: #ffffff;
+  --role-admin-subtle: #eef2ff;
+
+  /* Role Theme: PRINCIPAL */
+  --role-principal-primary: #059669;
+  --role-principal-secondary: #0d9488;
+  --role-principal-accent: #10b981;
+  --role-principal-bg: #f3fbf8;
+  --role-principal-surface: #ffffff;
+  --role-principal-subtle: #ecfdf5;
+
+  /* Role Theme: TEACHER */
+  --role-teacher-primary: #2563eb;
+  --role-teacher-secondary: #0284c7;
+  --role-teacher-accent: #06b6d4;
+  --role-teacher-bg: #f3f8ff;
+  --role-teacher-surface: #ffffff;
+  --role-teacher-subtle: #eff6ff;
+
+  /* Role Theme: STUDENT */
+  --role-student-primary: #ea580c;
+  --role-student-secondary: #d97706;
+  --role-student-accent: #f59e0b;
+  --role-student-bg: #fff9f0;
+  --role-student-surface: #ffffff;
+  --role-student-subtle: #fff7ed;
+
+  /* Background & Surface Colors */
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f5f9;
+  --color-surface-card: #ffffff;
+
+  /* Text Colors */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --color-text-inverse: #ffffff;
+
+  /* Border Colors */
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-border-focus: #2563eb;
+
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-success-bg: #ecfdf5;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #ef4444;
+  --color-danger-bg: #fef2f2;
+  --color-info: #06b6d4;
+  --color-info-bg: #ecfeff;
+
+  /* Border Radius */
+  --radius-xs: 0.375rem; /* 6px */
+  --radius-sm: 0.5rem;   /* 8px */
+  --radius-md: 0.75rem;  /* 12px */
+  --radius-lg: 1rem;     /* 16px */
+  --radius-xl: 1.25rem;  /* 20px */
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 4px 0 rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 6px 12px -2px rgba(15, 23, 42, 0.06), 0 3px 6px -3px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 6px 12px -4px rgba(15, 23, 42, 0.04);
+  --shadow-floating: 0 16px 32px -6px rgba(15, 23, 42, 0.12);
+
+  /* Mobile Touch Targets & Heights */
+  --touch-target-min: 44px;
+  --touch-target-preferred: 48px;
+  --header-height-mobile: 56px;
+  --bottom-nav-height: 64px;
+
+  /* Typography */
+  --font-size-xs: 0.75rem;   /* 12px */
+  --font-size-sm: 0.8125rem; /* 13px */
+  --font-size-base: 0.875rem;/* 14px */
+  --font-size-md: 0.9375rem; /* 15px */
+  --font-size-lg: 1rem;     /* 16px */
+  --font-size-xl: 1.125rem;  /* 18px */
+  --font-size-2xl: 1.25rem;  /* 20px */
+  --font-size-3xl: 1.5rem;   /* 24px */
+
+  /* Z-Index Levels */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-bottom-nav: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-toast: 1060;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Role Data-Attribute Scope */
+[data-role="SUPER_ADMIN"] {
+  --color-primary: var(--role-admin-primary);
+  --color-primary-hover: #4338ca;
+  --color-primary-light: var(--role-admin-subtle);
+  --color-background: var(--role-admin-bg);
+  --color-accent: var(--role-admin-accent);
+}
+
+[data-role="PRINCIPAL"] {
+  --color-primary: var(--role-principal-primary);
+  --color-primary-hover: #047857;
+  --color-primary-light: var(--role-principal-subtle);
+  --color-background: var(--role-principal-bg);
+  --color-accent: var(--role-principal-accent);
+}
+
+[data-role="TEACHER"] {
+  --color-primary: var(--role-teacher-primary);
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: var(--role-teacher-subtle);
+  --color-background: var(--role-teacher-bg);
+  --color-accent: var(--role-teacher-accent);
+}
+
+[data-role="STUDENT"] {
+  --color-primary: var(--role-student-primary);
+  --color-primary-hover: #c2410c;
+  --color-primary-light: var(--role-student-subtle);
+  --color-background: var(--role-student-bg);
+  --color-accent: var(--role-student-accent);
+}
