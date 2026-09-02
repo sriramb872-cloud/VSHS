@@ -159,13 +159,13 @@ def create_teacher_profile(
 
     new_user = User(
         school_id=school_id,
-        full_name=full_name,
-        mobile_number=mobile,
+        display_name=full_name,
+        mobile=mobile,
         email=payload.get("email"),
         profile_photo=payload.get("profile_photo"),
         password_hash=hashed_pwd,
         role="TEACHER",
-        account_status="ACTIVE",
+        is_active="ACTIVE",
     )
     db.add(new_user)
     db.flush()
@@ -265,6 +265,67 @@ def get_my_teaching_classes(
                 "subject_name": sub_name,
             }
     return list(assignments_map.values())
+
+
+@router.post("/me/assign-class-teacher", response_model=dict)
+def assign_me_as_class_teacher(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if str(current_user.role).upper() != "TEACHER":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
+    if not teacher:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher profile not found")
+
+    section_id = payload.get("section_id")
+    if not section_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="section_id is required")
+
+    try:
+        section_id = int(section_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid section_id")
+
+    # Check if teacher is already assigned to a class in her school
+    existing_assigned_sec = db.query(Section).filter(
+        Section.class_teacher_id == teacher.id,
+        Section.school_id == teacher.school_id
+    ).first()
+    if existing_assigned_sec:
+        if existing_assigned_sec.id == section_id:
+            return serialize_teacher(teacher, db=db)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already assigned as Class Teacher to another class."
+        )
+
+    # Check target section exists and belongs to teacher's school
+    target_section = db.query(Section).filter(
+        Section.id == section_id,
+        Section.school_id == teacher.school_id
+    ).first()
+    if not target_section:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Class/Section not found or does not belong to your school"
+        )
+
+    # Check if class already has a Class Teacher
+    if target_section.class_teacher_id and target_section.class_teacher_id != teacher.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This class already has a Class Teacher."
+        )
+
+    target_section.class_teacher_id = teacher.id
+    db.commit()
+    db.refresh(target_section)
+    db.refresh(teacher)
+
+    return serialize_teacher(teacher, db=db)
 
 
 @router.patch("/me", response_model=dict)

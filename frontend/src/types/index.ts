@@ -206,6 +206,14 @@ export interface Teacher {
   is_active?: boolean;
   assigned_subjects?: string[];
   assigned_sections?: string[];
+  class_teacher_section?: {
+    id: number;
+    section_id: number;
+    grade_id: number;
+    grade_name: string;
+    name: string;
+    section_name: string;
+  } | null;
   teaching_assignments?: TeachingAssignment[];
   created_at?: string | null;
   updated_at?: string | null;
@@ -267,6 +275,9 @@ export interface Section {
   school_id: number;
   grade_id: number;
   name: string;
+  grade_name?: string;
+  class_teacher_id?: number | null;
+  class_teacher_name?: string | null;
 }
 
 export interface SectionCreatePayload {

@@ -23,7 +23,13 @@ def get_students_by_school(db: Session, school_id: int, skip: int = 0, limit: in
 
 
 def create_student(db: Session, school_id: int, user_id: int, data: dict) -> Student:
-    db_item = Student(school_id=school_id, user_id=user_id, **data)
+    student_fields = {
+        "admission_number", "roll_number", "admission_date", "date_of_birth",
+        "gender", "blood_group", "father_name", "father_mobile",
+        "mother_name", "mother_mobile", "guardian_mobile", "address", "student_status"
+    }
+    clean_data = {k: v for k, v in data.items() if k in student_fields}
+    db_item = Student(school_id=school_id, user_id=user_id, **clean_data)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)

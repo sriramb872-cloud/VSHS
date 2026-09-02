@@ -1,39 +1,52 @@
 // src/pages/student/Exams.tsx
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { examService } from '../../services/exam';
 import { Exam } from '../../types/exam';
 import { ExamCard } from '../../components/exam';
+import { Award } from 'lucide-react';
+import { LoadingSkeleton, EmptyState } from '../../components/shared';
 
 export const StudentExamsPage: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
     examService
-      .listExams()
-      .then(data => setExams(data.items))
+      .listExams({ status: 'PUBLISHED' })
+      .then(data => {
+        // Double check filtering for published exams
+        setExams(data.items.filter(e => (e.status || '').toUpperCase() === 'PUBLISHED'));
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Exam Schedule</h1>
-        <p className="text-sm text-gray-500 mt-1">View upcoming physical examination timetables and schedules.</p>
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Published Examinations</h1>
+        <p className="text-xs text-slate-500">View published exams and grades</p>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading exam schedule...</div>
+        <LoadingSkeleton type="card" count={3} />
       ) : exams.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <p className="text-gray-500">No exam schedules published yet.</p>
-        </div>
+        <EmptyState
+          title="No Published Exams"
+          description="Exam results and schedules will appear here once officially published by your school."
+          icon={<Award className="w-10 h-10 text-slate-300" />}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {exams.map(exam => (
-            <ExamCard key={exam.id} exam={exam} />
+            <ExamCard
+              key={exam.id}
+              exam={exam}
+              onClick={() => navigate('/student/marks')}
+            />
           ))}
         </div>
       )}
@@ -41,8 +54,4 @@ export const StudentExamsPage: React.FC = () => {
   );
 };
 
-export default StudentExamsPage;/**
- * SCHOLARIS ERP
- *
- * Placeholder Page
- */
+export default StudentExamsPage;

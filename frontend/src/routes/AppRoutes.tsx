@@ -68,8 +68,6 @@ import TeacherStudents from "../pages/teacher/Students";
 import TeacherStudentProfile from "../pages/teacher/StudentProfile";
 import TeacherTimetable from "../pages/teacher/Timetable";
 import TeacherExams from "../pages/teacher/Exams";
-import TeacherCreateExam from "../pages/teacher/CreateExam";
-import TeacherEditExam from "../pages/teacher/EditExam";
 import TeacherExamDetails from "../pages/teacher/ExamDetails";
 import TeacherMarksEntry from "../pages/teacher/MarksEntry";
 import TeacherHomework from "../pages/teacher/Homework";
@@ -176,10 +174,9 @@ const AppRoutes: React.FC = () => {
             <Route path="/teacher/students/:id" element={<TeacherStudentProfile />} />
             <Route path="/teacher/timetable" element={<TeacherTimetable />} />
             <Route path="/teacher/exams" element={<TeacherExams />} />
-            <Route path="/teacher/exams/create" element={<TeacherCreateExam />} />
-            <Route path="/teacher/exams/:id/edit" element={<TeacherEditExam />} />
-            <Route path="/teacher/exams/edit/:id" element={<TeacherEditExam />} />
             <Route path="/teacher/exams/:id" element={<TeacherExamDetails />} />
+            <Route path="/teacher/exams/:examId/marks/:examSubjectId" element={<TeacherMarksEntry />} />
+            <Route path="/teacher/exams/:examId/subjects/:examSubjectId/marks" element={<TeacherMarksEntry />} />
             <Route path="/teacher/marks" element={<TeacherMarksEntry />} />
             <Route path="/teacher/homework" element={<TeacherHomework />} />
             <Route path="/teacher/homework/create" element={<TeacherCreateHomework />} />

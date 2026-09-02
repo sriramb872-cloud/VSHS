@@ -80,7 +80,9 @@ def get_enrollments(
 
 
 def create_student_enrollment(db: Session, data: dict) -> StudentEnrollment:
-    db_item = StudentEnrollment(**data)
+    allowed_fields = {"student_id", "academic_year_id", "section_id", "roll_number"}
+    clean_data = {k: v for k, v in data.items() if k in allowed_fields}
+    db_item = StudentEnrollment(**clean_data)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -88,8 +90,10 @@ def create_student_enrollment(db: Session, data: dict) -> StudentEnrollment:
 
 
 def update_student_enrollment(db: Session, db_item: StudentEnrollment, data: dict) -> StudentEnrollment:
+    allowed_fields = {"student_id", "academic_year_id", "section_id", "roll_number"}
     for key, value in data.items():
-        setattr(db_item, key, value)
+        if key in allowed_fields and hasattr(db_item, key):
+            setattr(db_item, key, value)
     db.commit()
     db.refresh(db_item)
     return db_item

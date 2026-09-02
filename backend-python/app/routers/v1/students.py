@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_roles, get_current_active_user
-from app.crud import student as student_crud
+from app.crud import student as student_crud, teacher as teacher_crud
 from app.models.student import Student
 from app.models.student_enrollment import StudentEnrollment
 from app.models.section import Section
@@ -119,11 +119,33 @@ def serialize_student(s: Student) -> dict:
 def create_student_profile(
     payload: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"]))
+    current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"]))
 ):
-    school_id = payload.get("school_id") or current_user.school_id
-    if not school_id and str(current_user.role).upper() != "SUPER_ADMIN":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
+    user_role = str(current_user.role).upper()
+    section_id = None
+
+    if user_role == "TEACHER":
+        teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
+        if not teacher:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher profile not found")
+
+        assigned_sec = db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id
+        ).first()
+        if not assigned_sec:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not assigned as a Class Teacher. Please assign yourself to a class first."
+            )
+
+        school_id = teacher.school_id
+        section_id = assigned_sec.id
+    else:
+        school_id = payload.get("school_id") or current_user.school_id
+        if not school_id and user_role != "SUPER_ADMIN":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
+        section_id = payload.get("section_id")
 
     # Generate or sanitize Student ID (admission number)
     admission_number = payload.get("admission_number") or payload.get("student_id_formatted")
@@ -154,13 +176,13 @@ def create_student_profile(
 
     new_user = User(
         school_id=school_id,
-        full_name=full_name,
-        mobile_number=mobile,
+        display_name=full_name,
+        mobile=mobile,
         email=payload.get("email"),
         profile_photo=payload.get("profile_photo"),
         password_hash=hashed_pwd,
         role="STUDENT",
-        account_status="ACTIVE",
+        is_active="ACTIVE",
     )
     db.add(new_user)
     db.flush()
@@ -200,12 +222,11 @@ def create_student_profile(
     db.add(new_student)
     db.flush()
 
-    # Optional auto-enrollment if section_id is given
-    section_id = payload.get("section_id")
+    # Auto-enrollment for the resolved section
     academic_year_id = payload.get("academic_year_id")
     if section_id:
         if not academic_year_id:
-            curr_ay = db.query(AcademicYear).filter(AcademicYear.school_id == school_id, AcademicYear.is_current == True).first()
+            curr_ay = db.query(AcademicYear).filter(AcademicYear.school_id == school_id, AcademicYear.is_active == True).first()
             if curr_ay:
                 academic_year_id = curr_ay.id
             else:
@@ -238,11 +259,34 @@ def list_students(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    user_role = str(current_user.role).upper()
+
+    if user_role == "TEACHER":
+        teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
+        if not teacher:
+            return []
+
+        assigned_sec = db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id
+        ).first()
+        if not assigned_sec:
+            return []
+
+        query = (
+            db.query(Student)
+            .filter(Student.school_id == teacher.school_id)
+            .join(Student.enrollments)
+            .filter(StudentEnrollment.section_id == assigned_sec.id)
+        )
+        students = query.offset(skip).limit(limit).all()
+        return [serialize_student(s) for s in students]
+
     target_school_id = current_user.school_id
-    if str(current_user.role).upper() == "SUPER_ADMIN" and school_id:
+    if user_role == "SUPER_ADMIN" and school_id:
         target_school_id = school_id
 
-    if not target_school_id and str(current_user.role).upper() != "SUPER_ADMIN":
+    if not target_school_id and user_role != "SUPER_ADMIN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
 
     query = db.query(Student)
@@ -316,6 +360,20 @@ def get_student(
     if role != "SUPER_ADMIN" and student.school_id != current_user.school_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    if role == "TEACHER":
+        teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
+        if not teacher:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        assigned_sec = db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id
+        ).first()
+        if not assigned_sec:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: Not assigned as Class Teacher")
+        is_enrolled = any(e.section_id == assigned_sec.id for e in (student.enrollments or []))
+        if not is_enrolled:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: Student does not belong to your class")
+
     return serialize_student(student)
 
 
@@ -333,14 +391,34 @@ def update_student(
     role = str(current_user.role).upper()
     is_self = (current_user.id == student.user_id)
     is_admin = (role in ["SUPER_ADMIN", "PRINCIPAL"])
+    is_teacher = (role == "TEACHER")
 
-    if not is_self and not is_admin:
+    if not is_self and not is_admin and not is_teacher:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    if is_admin and role != "SUPER_ADMIN" and student.school_id != current_user.school_id:
+    if role != "SUPER_ADMIN" and student.school_id != current_user.school_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    if is_self and not is_admin:
+    if is_teacher:
+        teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
+        if not teacher:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        assigned_sec = db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id
+        ).first()
+        if not assigned_sec:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: Not assigned as Class Teacher")
+        is_enrolled = any(e.section_id == assigned_sec.id for e in (student.enrollments or []))
+        if not is_enrolled:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: Student does not belong to your class")
+        allowed_fields = {
+            "roll_number", "admission_date", "date_of_birth",
+            "gender", "blood_group", "father_name", "father_mobile",
+            "mother_name", "mother_mobile", "guardian_mobile", "address",
+            "student_status", "display_name", "full_name", "email", "mobile", "profile_photo"
+        }
+    elif is_self and not is_admin:
         # Strict restriction for self update by student
         allowed_fields = {
             "date_of_birth", "gender", "blood_group",
@@ -358,4 +436,4 @@ def update_student(
 
     sanitized_payload = {k: v for k, v in payload.items() if k in allowed_fields}
     updated = student_crud.update_student(db, student, sanitized_payload)
-    return serialize_student(updated)
+    return serialize_student(updated)

@@ -31,6 +31,11 @@ export const teachersService = {
     const response = await api.patch<Teacher>(`/teachers/${id}`, payload);
     return response.data;
   },
+
+  async assignMeAsClassTeacher(sectionId: number): Promise<Teacher> {
+    const response = await api.post<Teacher>('/teachers/me/assign-class-teacher', { section_id: sectionId });
+    return response.data;
+  },
 };
 
 export default teachersService;

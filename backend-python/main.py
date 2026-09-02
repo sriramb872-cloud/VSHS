@@ -2,6 +2,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.database import Base, engine
+import app.models  # Ensure all models are registered in Base.metadata
+
 from app.routers.v1 import (
     auth,
     dashboard,
@@ -32,6 +35,8 @@ from app.routers.v1 import (
     search,
     slip_tests,
 )
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="SCHOLARIS School ERP API",

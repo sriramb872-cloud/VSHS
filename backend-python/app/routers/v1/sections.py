@@ -35,7 +35,14 @@ def list_sections(
             "id": s.id,
             "school_id": s.school_id,
             "grade_id": s.grade_id,
-            "name": getattr(s, "name", "")
+            "name": getattr(s, "name", ""),
+            "grade_name": getattr(s.grade, "name", "") if getattr(s, "grade", None) else f"Class {s.grade_id}",
+            "class_teacher_id": getattr(s, "class_teacher_id", None),
+            "class_teacher_name": (
+                s.class_teacher.user.display_name
+                if getattr(s, "class_teacher", None) and getattr(s.class_teacher, "user", None)
+                else None
+            ),
         }
         for s in sections
     ]

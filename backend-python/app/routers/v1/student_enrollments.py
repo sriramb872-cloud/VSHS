@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_roles, get_current_active_user
-from app.crud import student_enrollment as se_crud
+from app.crud import student_enrollment as se_crud, teacher as teacher_crud, student as student_crud
 from app.models.student_enrollment import StudentEnrollment
+from app.models.section import Section
+from app.models.student import Student
 from app.models.user import User
 
 router = APIRouter(prefix="/student-enrollments", tags=["Student Enrollments"])
@@ -58,11 +60,35 @@ def list_enrollments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    user_role = str(current_user.role).upper()
+
+    if user_role == "TEACHER":
+        teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
+        if not teacher:
+            return []
+        assigned_sec = db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id
+        ).first()
+        if not assigned_sec:
+            return []
+
+        items, attendance_map = se_crud.get_enrollments(
+            db,
+            school_id=teacher.school_id,
+            academic_year_id=academic_year_id,
+            grade_id=None,
+            section_id=assigned_sec.id,
+            skip=skip,
+            limit=limit
+        )
+        return [serialize_enrollment(i, attendance_map.get(i.student_id)) for i in items]
+
     target_school_id = current_user.school_id
-    if str(current_user.role).upper() == "SUPER_ADMIN" and school_id:
+    if user_role == "SUPER_ADMIN" and school_id:
         target_school_id = school_id
 
-    if not target_school_id and str(current_user.role).upper() != "SUPER_ADMIN":
+    if not target_school_id and user_role != "SUPER_ADMIN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
 
     items, attendance_map = se_crud.get_enrollments(
@@ -82,16 +108,40 @@ def list_enrollments(
 def enroll_student(
     payload: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"]))
+    current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"]))
 ):
-    student_id = payload.get("student_id")
-    academic_year_id = payload.get("academic_year_id")
+    user_role = str(current_user.role).upper()
+    data = dict(payload)
+
+    if user_role == "TEACHER":
+        teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
+        if not teacher:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teacher profile not found")
+        assigned_sec = db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id
+        ).first()
+        if not assigned_sec:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not assigned as a Class Teacher.")
+
+        student_id = data.get("student_id")
+        if not student_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="student_id is required")
+        student = student_crud.get_student(db, int(student_id))
+        if not student or student.school_id != teacher.school_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found in your school")
+
+        data["section_id"] = assigned_sec.id
+    else:
+        student_id = data.get("student_id")
+
+    academic_year_id = data.get("academic_year_id")
     if student_id and academic_year_id:
-        existing = se_crud.get_student_enrollment_by_academic_year(db, student_id, academic_year_id)
+        existing = se_crud.get_student_enrollment_by_academic_year(db, int(student_id), int(academic_year_id))
         if existing:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student already enrolled for this academic year")
 
-    item = se_crud.create_student_enrollment(db, payload)
+    item = se_crud.create_student_enrollment(db, data)
     return serialize_enrollment(item)
 
 

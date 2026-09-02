@@ -6,6 +6,9 @@ import {
   ExamQueryParams,
   ExamCreatePayload,
   ExamUpdatePayload,
+  ExamSubject,
+  MarksStatusResponse,
+  ExamPublishResponse,
 } from '../types/exam';
 
 export const examService = {
@@ -31,5 +34,20 @@ export const examService = {
 
   async deleteExam(id: number): Promise<void> {
     await api.delete(`/exams/${id}`);
+  },
+
+  async getExamSubjects(examId: number): Promise<ExamSubject[]> {
+    const response = await api.get<ExamSubject[]>(`/exams/${examId}/subjects`);
+    return response.data;
+  },
+
+  async getMarksStatus(examId: number): Promise<MarksStatusResponse> {
+    const response = await api.get<MarksStatusResponse>(`/exams/${examId}/marks-status`);
+    return response.data;
+  },
+
+  async publishExam(examId: number): Promise<ExamPublishResponse> {
+    const response = await api.post<ExamPublishResponse>(`/exams/${examId}/publish`);
+    return response.data;
   },
 };

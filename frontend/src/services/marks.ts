@@ -1,27 +1,37 @@
 // src/services/marks.ts
 import api from './api';
-import { Mark, MarksEntryCreatePayload, MarksListResponse } from '../types';
-
-export interface MarksParams {
-  exam_id?: number;
-  student_id?: number;
-  grade_id?: number;
-  section_id?: number;
-  subject_id?: number;
-  academic_year_id?: number;
-  teacher_id?: number;
-  skip?: number;
-  limit?: number;
-}
+import {
+  Mark,
+  MarksSubmitPayload,
+  FormativeMarksSubmitPayload,
+  MarksListResponse,
+  MarksQueryParams,
+  StudentMarksViewResponse,
+} from '../types/marks';
 
 export const marksService = {
-  async listMarks(params?: MarksParams): Promise<MarksListResponse> {
+  async listMarks(params?: MarksQueryParams): Promise<MarksListResponse> {
     const response = await api.get<MarksListResponse>('/marks/', { params });
     return response.data;
   },
 
-  async saveMarks(payload: MarksEntryCreatePayload): Promise<Mark[]> {
-    const response = await api.post<Mark[]>('/marks/', payload);
+  async submitMarks(payload: MarksSubmitPayload): Promise<Mark[]> {
+    const response = await api.post<Mark[]>('/marks/submit', payload);
+    return response.data;
+  },
+
+  async submitFormativeMarks(payload: FormativeMarksSubmitPayload): Promise<any> {
+    const response = await api.post('/marks/submit-formative', payload);
+    return response.data;
+  },
+
+  async saveMarks(payload: MarksSubmitPayload): Promise<Mark[]> {
+    const response = await api.post<Mark[]>('/marks/submit', payload);
+    return response.data;
+  },
+
+  async getMyMarks(): Promise<StudentMarksViewResponse> {
+    const response = await api.get<StudentMarksViewResponse>('/marks/my-marks');
     return response.data;
   },
 };

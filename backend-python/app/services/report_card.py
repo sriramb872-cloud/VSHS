@@ -46,13 +46,16 @@ class ReportCardService:
         from app.models.subject import Subject
 
         student = db.query(Student).filter(Student.id == report.student_id).first()
-        student_name = student.user.name if (student and student.user and student.user.name) else f"Student {report.student_id}"
+        student_name = (
+            getattr(student.user, "display_name", None) or
+            getattr(student.user, "full_name", None)
+        ) if (student and student.user) else f"Student {report.student_id}"
 
         enrollment = db.query(StudentEnrollment).filter(
             StudentEnrollment.student_id == report.student_id,
             StudentEnrollment.academic_year_id == report.academic_year_id
         ).first()
-        grade_id = enrollment.grade_id if enrollment else 1
+        grade_id = enrollment.section.grade_id if (enrollment and enrollment.section) else 1
         section_id = enrollment.section_id if enrollment else 1
 
         results = db.query(ExamResult).join(Exam, ExamResult.exam_id == Exam.id).filter(
@@ -116,6 +119,59 @@ class ReportCardService:
             )
             subject_map[sub_id]["subject_total_obtained"] += total_obtained
             subject_map[sub_id]["subject_total_maximum"] += total_max
+
+        # Query Summative marks joined with exam_subjects and exams
+        from app.models.marks import Marks
+        from app.models.exam_subject import ExamSubject
+
+        summative_marks = (
+            db.query(Marks)
+            .join(ExamSubject, Marks.exam_subject_id == ExamSubject.id)
+            .join(Exam, ExamSubject.exam_id == Exam.id)
+            .filter(
+                Marks.student_id == report.student_id,
+                Exam.academic_year_id == report.academic_year_id,
+            )
+            .all()
+        )
+
+        for sm in summative_marks:
+            es = sm.exam_subject
+            ex = es.exam if es else None
+            sub = es.subject if es else None
+            sub_id = es.subject_id if es else 1
+            sub_name = sub.name if (sub and hasattr(sub, "name")) else (sub.subject_name if (sub and hasattr(sub, "subject_name")) else f"Subject {sub_id}")
+
+            if sub_id not in subject_map:
+                subject_map[sub_id] = {
+                    "subject_id": sub_id,
+                    "subject_name": sub_name,
+                    "assessments": [],
+                    "subject_total_obtained": 0.0,
+                    "subject_total_maximum": 0.0,
+                }
+
+            exam_name = ex.name if ex else "Summative Exam"
+            max_m = es.maximum_marks if es else 100.0
+            components = [
+                AssessmentComponentScore(
+                    component_name="Total",
+                    raw_marks_obtained=sm.marks_obtained,
+                    raw_maximum_marks=max_m,
+                    report_maximum_marks=max_m,
+                    converted_marks=sm.marks_obtained,
+                )
+            ]
+            subject_map[sub_id]["assessments"].append(
+                SubjectAssessmentResult(
+                    assessment_name=exam_name,
+                    components=components,
+                    total_obtained=sm.marks_obtained,
+                    total_maximum=max_m,
+                )
+            )
+            subject_map[sub_id]["subject_total_obtained"] += sm.marks_obtained
+            subject_map[sub_id]["subject_total_maximum"] += max_m
 
         subjects: List[SubjectReportCardDetail] = []
         grand_total_obtained = 0.0
