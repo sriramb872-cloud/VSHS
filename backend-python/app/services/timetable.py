@@ -125,6 +125,24 @@ class TimetableService:
                 detail="End time must be later than start time"
             )
 
+        # Prevent double-booking: same teacher, same day, overlapping time window,
+        # regardless of section — a teacher physically cannot teach two classes at once.
+        day = data.get("day_of_week")
+        conflict = db.query(Timetable).filter(
+            Timetable.teacher_id == data["teacher_id"],
+            Timetable.day_of_week == day,
+            Timetable.start_time < end_t,
+            Timetable.end_time > start_t,
+        ).first()
+        if conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"This teacher is already scheduled on {day} from "
+                    f"{conflict.start_time} to {conflict.end_time} (section {conflict.section_id})."
+                ),
+            )
+
         # Resolve academic_year_id if missing
         if not data.get("academic_year_id"):
             ay = db.query(AcademicYear).filter(

@@ -75,7 +75,7 @@ def mark_all_notifications_as_read(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
-    count = NotificationService.mark_all_read(db, user_id=current_user.id)
+    count = NotificationService.mark_all_read(db, current_user=current_user)
     return {"message": "All notifications marked as read", "updated_count": count}
 
 

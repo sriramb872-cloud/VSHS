@@ -13,7 +13,7 @@ class Timetable(Base):
     grade_id = Column(Integer, ForeignKey("grades.grade_id", ondelete="CASCADE"), nullable=False, index=True)
     section_id = Column(Integer, ForeignKey("sections.section_id", ondelete="CASCADE"), nullable=False, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.subject_id", ondelete="CASCADE"), nullable=False, index=True)
-    teacher_id = Column(BigInteger, ForeignKey("teachers.teacher_id", ondelete="CASCADE"), nullable=False, index=True)
+    teacher_id = Column(Integer, ForeignKey("teachers.teacher_id", ondelete="CASCADE"), nullable=False, index=True)
     day_of_week = Column(String(20), nullable=False)  # MONDAY, TUESDAY, etc.
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)

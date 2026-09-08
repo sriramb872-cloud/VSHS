@@ -11,6 +11,7 @@ from app.models.section import Section
 from app.models.timetable import Timetable
 from app.core.security import get_password_hash
 from app.services.id_generator import generate_employee_id
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/teachers", tags=["Teachers"])
 
@@ -192,7 +193,25 @@ def create_teacher_profile(
     db.commit()
     db.refresh(new_teacher)
 
-    return serialize_teacher(new_teacher, db=db)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school_id,
+        action="CREATE", resource_type="Teacher", resource_id=new_teacher.id,
+        details={"full_name": full_name, "mobile": mobile, "employee_id": employee_id},
+    )
+    try:
+        return serialize_teacher(new_teacher, db=db)
+    except Exception as e:
+        # The teacher record itself is already committed and valid at this
+        # point — don't roll it back. But don't let a display/serialization
+        # bug masquerade as "creation failed" either.
+        raise HTTPException(
+            status_code=status.HTTP_201_CREATED,
+            detail=(
+                f"Teacher '{new_teacher.employee_id}' was created successfully, "
+                f"but the confirmation screen failed to load ({e}). "
+                f"Refresh the teacher list to see them."
+            ),
+        )
 
 
 @router.get("", response_model=List[dict])

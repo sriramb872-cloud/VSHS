@@ -11,7 +11,7 @@ class GradeSubject(Base):
     id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
     grade_id = Column(Integer, ForeignKey("grades.grade_id", ondelete="CASCADE"), nullable=False, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.subject_id", ondelete="CASCADE"), nullable=False, index=True)
-    teacher_id = Column(BigInteger, ForeignKey("teachers.teacher_id", ondelete="SET NULL"), nullable=True, index=True)
+    teacher_id = Column(Integer, ForeignKey("teachers.teacher_id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

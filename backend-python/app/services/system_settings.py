@@ -71,7 +71,7 @@ class SettingsService:
         if not settings:
             return {
                 "id": user_id,
-                "profile_information": {"name": getattr(current_user, "name", "User"), "email": getattr(current_user, "email", "user@scholaris.com")},
+                "profile_information": {"name": getattr(current_user, "display_name", None) or "User", "email": getattr(current_user, "email", "user@scholaris.com")},
                 "notification_preferences": {"email": True, "sms": False, "push": True}
             }
         return settings

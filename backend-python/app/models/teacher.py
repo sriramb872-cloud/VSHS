@@ -8,8 +8,8 @@ from app.core.database import Base
 class Teacher(Base):
     __tablename__ = "teachers"
 
-    id = Column("teacher_id", BigInteger, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    id = Column("teacher_id", Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     school_id = Column(Integer, ForeignKey("schools.school_id", ondelete="CASCADE"), nullable=False, index=True)
     employee_id = Column(String(100), nullable=True)
     department = Column(String(100), nullable=True)

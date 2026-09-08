@@ -12,8 +12,7 @@ class AttendanceCreate(BaseModel):
     student_id: int
     section_id: Optional[int] = None
     date: date
-    status: str
-    remarks: Optional[str] = None
+    status: AttendanceStatus
     recorded_by: Optional[int] = None
 
 

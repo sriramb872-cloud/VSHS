@@ -21,10 +21,12 @@ from app.models.marks import Marks
 from app.models.report_card import ReportCard
 from app.models.announcement import Announcement
 from app.models.notification import Notification
+from app.models.notification_read import NotificationRead
 from app.models.calendar_event import CalendarEvent
 from app.models.timetable import Timetable
 from app.models.audit_log import AuditLog
 from app.models.role import Role
+from app.models.app_settings import SystemSettings, SchoolSettings, UserAppSettings
 
 __all__ = [
     "School",
@@ -49,8 +51,12 @@ __all__ = [
     "ReportCard",
     "Announcement",
     "Notification",
+    "NotificationRead",
     "CalendarEvent",
     "Timetable",
     "AuditLog",
     "Role",
+    "SystemSettings",
+    "SchoolSettings",
+    "UserAppSettings",
 ]

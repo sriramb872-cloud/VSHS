@@ -16,6 +16,7 @@ from app.schemas.exam import (
 from app.services.exam import ExamService
 from app.models.user import UserModel
 from app.models.teacher import Teacher
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/exams", tags=["Exams"])
 
@@ -121,7 +122,13 @@ def publish_exam_marks(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
-    return ExamService.publish_exam(db, exam_id=exam_id, current_user=current_user)
+    result = ExamService.publish_exam(db, exam_id=exam_id, current_user=current_user)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="PUBLISH", resource_type="Exam", resource_id=exam_id,
+        details={"result": str(result)[:500]},
+    )
+    return result
 
 
 @router.post("/", response_model=ExamResponse, status_code=status.HTTP_201_CREATED)

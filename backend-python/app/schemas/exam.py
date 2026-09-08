@@ -1,7 +1,7 @@
 # app/schemas/exam.py
 from datetime import date, datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ExamSubjectResponse(BaseModel):
@@ -37,6 +37,12 @@ class ExamBase(BaseModel):
 class ExamCreate(ExamBase):
     maximum_marks: Optional[float] = Field(default=None, gt=0, description="Default max marks for subjects")
     passing_marks: Optional[float] = Field(default=None, ge=0, description="Default passing marks for subjects")
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValueError("start_date cannot be after end_date")
+        return self
 
 
 class ExamUpdate(BaseModel):

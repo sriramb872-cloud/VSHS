@@ -21,7 +21,7 @@ class AcademicYearBase(BaseModel):
 
 
 class AcademicYearCreate(AcademicYearBase):
-    school_id: int
+    school_id: Optional[int] = None
 
 
 class AcademicYearUpdate(BaseModel):

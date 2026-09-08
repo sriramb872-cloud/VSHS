@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, require_roles, get_current_active_user
 from app.crud import school as school_crud
 from app.models.user import User
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/schools", tags=["Schools"])
 
@@ -50,6 +51,11 @@ def create_school(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School code already exists")
     
     school = school_crud.create_school(db, payload)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school.id,
+        action="CREATE", resource_type="School", resource_id=school.id,
+        details={"name": getattr(school, "name", ""), "code": getattr(school, "code", "")},
+    )
     return {
         "id": school.id,
         "name": getattr(school, "name", ""),
@@ -94,6 +100,10 @@ def update_school(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="School not found")
 
     updated = school_crud.update_school(db, school, payload)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=updated.id,
+        action="UPDATE", resource_type="School", resource_id=updated.id, details=payload,
+    )
     return {
         "id": updated.id,
         "name": getattr(updated, "name", ""),

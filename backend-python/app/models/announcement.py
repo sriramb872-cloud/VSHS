@@ -22,6 +22,7 @@ class Announcement(Base):
     publish_date = Column(DateTime, default=datetime.utcnow, nullable=False)
     expiry_date = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    status_value = Column(String(20), default="Draft", nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -51,11 +52,12 @@ class Announcement(Base):
 
     @property
     def status(self) -> str:
-        return "Published" if self.is_active else "Draft"
+        return self.status_value or ("Published" if self.is_active else "Draft")
 
     @status.setter
     def status(self, val):
         val_str = str(val.value if hasattr(val, "value") else val)
+        self.status_value = val_str
         self.is_active = (val_str == "Published")
 
     school = relationship("School", back_populates="announcements")

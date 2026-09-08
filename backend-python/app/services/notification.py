@@ -153,9 +153,9 @@ class NotificationService:
                 # Principal cannot target individual students
                 target_student_id = None
 
-        # 3. TEACHER logic (Allowed: ONLY_FOR_CLASS, ONLY_FOR_STUDENT, PUBLIC)
+        # 3. TEACHER logic (Allowed: ONLY_FOR_CLASS, ONLY_FOR_STUDENT — NOT PUBLIC)
         elif user_role == "TEACHER":
-            allowed_teacher_types = ("ONLY_FOR_CLASS", "ONLY_FOR_STUDENT", "PUBLIC")
+            allowed_teacher_types = ("ONLY_FOR_CLASS", "ONLY_FOR_STUDENT")
             if notif_type not in allowed_teacher_types:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -209,11 +209,6 @@ class NotificationService:
                     if target_student:
                         target_user_id = target_student.user_id
 
-            elif notif_type == "PUBLIC":
-                category = "PUBLIC"
-                target_class_id = None
-                target_student_id = None
-
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -241,13 +236,13 @@ class NotificationService:
         db_obj = crud_notification.get(db, notification_id=notification_id)
         if not db_obj:
             return None
-        # User can mark as read if it's their direct notif, or broadcast
-        updated = crud_notification.update(db, db_obj=db_obj, obj_in=NotificationUpdate(is_read=True))
-        return crud_notification.serialize(updated)
+        # Per-user read receipt — does NOT affect any other recipient's state
+        crud_notification.mark_read(db, notification_id=notification_id, user_id=current_user.id)
+        return crud_notification.serialize(db_obj, is_read=True)
 
     @staticmethod
-    def mark_all_read(db: Session, user_id: int) -> int:
-        return crud_notification.mark_all_as_read(db, user_id=user_id)
+    def mark_all_read(db: Session, current_user: User) -> int:
+        return crud_notification.mark_all_as_read(db, current_user=current_user)
 
     @staticmethod
     def delete_notification(db: Session, notification_id: int, current_user: User) -> bool:

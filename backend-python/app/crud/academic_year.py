@@ -29,6 +29,7 @@ def get_academic_years_by_school(db: Session, school_id: int, skip: int = 0, lim
 
 
 def create_academic_year(db: Session, school_id: int, data: dict) -> AcademicYear:
+    data = {k: v for k, v in data.items() if k != "school_id"}
     db_item = AcademicYear(school_id=school_id, **data)
     db.add(db_item)
     db.commit()

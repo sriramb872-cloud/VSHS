@@ -29,13 +29,27 @@ def list_timetables(
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
-    if str(current_user.role).upper() == "TEACHER":
+    role = str(current_user.role).upper()
+    if role == "TEACHER":
         from app.models.teacher import Teacher
         teacher = getattr(current_user, "teacher_profile", None) or (
             db.query(Teacher).filter(Teacher.user_id == current_user.id).first()
         )
         if teacher:
             teacher_id = teacher.id
+    elif role == "STUDENT" and section_id is None:
+        from app.models.student import Student
+        from app.models.student_enrollment import StudentEnrollment
+        student = db.query(Student).filter(Student.user_id == current_user.id).first()
+        if student:
+            enrollment = (
+                db.query(StudentEnrollment)
+                .filter(StudentEnrollment.student_id == student.id)
+                .order_by(StudentEnrollment.id.desc())
+                .first()
+            )
+            if enrollment:
+                section_id = enrollment.section_id
 
     items, total = TimetableService.list_timetables(
         db,

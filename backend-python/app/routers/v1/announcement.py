@@ -13,6 +13,7 @@ from app.schemas.announcement import (
 )
 from app.services.announcement import AnnouncementService
 from app.models.user import UserModel
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/announcements", tags=["Announcements"])
 
@@ -79,7 +80,9 @@ def publish_announcement(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
-    return AnnouncementService.publish_announcement(db, announcement_id=announcement_id, current_user=current_user)
+    result = AnnouncementService.publish_announcement(db, announcement_id=announcement_id, current_user=current_user)
+    write_audit_log(db, user_id=current_user.id, school_id=current_user.school_id, action="PUBLISH", resource_type="Announcement", resource_id=announcement_id)
+    return result
 
 @router.post("/{announcement_id}/archive", response_model=AnnouncementResponse)
 def archive_announcement(
@@ -87,4 +90,6 @@ def archive_announcement(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
-    return AnnouncementService.archive_announcement(db, announcement_id=announcement_id, current_user=current_user)
+    result = AnnouncementService.archive_announcement(db, announcement_id=announcement_id, current_user=current_user)
+    write_audit_log(db, user_id=current_user.id, school_id=current_user.school_id, action="ARCHIVE", resource_type="Announcement", resource_id=announcement_id)
+    return result

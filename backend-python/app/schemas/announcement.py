@@ -24,7 +24,7 @@ class AnnouncementStatus(str, Enum):
     ARCHIVED = "Archived"
 
 class AnnouncementBase(BaseModel):
-    title: str = Field(..., min_h=1, max_length=255, description="Announcement Title")
+    title: str = Field(..., min_length=1, max_length=255, description="Announcement Title")
     description: str = Field(..., description="Announcement content description")
     audience: AnnouncementAudience = Field(..., description="Target audience")
     academic_year_id: Optional[int] = Field(None, description="Academic Year ID")

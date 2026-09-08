@@ -8,8 +8,73 @@ from app.api.deps import get_db, require_roles, get_current_active_user
 from app.models.user import User
 from app.models.principal import Principal
 from app.services.id_generator import generate_principal_id
+from app.core.security import get_password_hash
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/principals", tags=["Principals"])
+
+
+@router.post("", response_model=dict, status_code=status.HTTP_201_CREATED)
+def create_principal(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["SUPER_ADMIN"])),
+):
+    """
+    Create a Principal account for a school. Super Admin only — there is
+    otherwise no way to onboard a new school's Principal via the API.
+    """
+    school_id = payload.get("school_id")
+    if not school_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="school_id is required")
+
+    full_name = payload.get("full_name") or payload.get("display_name")
+    if not full_name or not str(full_name).strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="full_name is required")
+
+    mobile = payload.get("mobile")
+    if not mobile or not str(mobile).strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="mobile is required")
+
+    existing_user = db.query(User).filter(User.mobile == mobile).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"A user with mobile '{mobile}' already exists.",
+        )
+
+    existing_principal = db.query(User).filter(User.school_id == school_id, User.role == "PRINCIPAL").first()
+    if existing_principal:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This school already has a Principal. Update the existing account instead of creating a new one.",
+        )
+
+    initial_password = payload.get("password") or "Principal@123"
+    hashed_pwd = get_password_hash(initial_password)
+
+    new_user = User(
+        school_id=school_id,
+        display_name=str(full_name).strip(),
+        mobile=str(mobile).strip(),
+        email=payload.get("email"),
+        profile_photo=payload.get("profile_photo"),
+        password_hash=hashed_pwd,
+        role="PRINCIPAL",
+        is_active="ACTIVE",
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    _get_or_create_principal_profile(db, new_user)
+
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school_id,
+        action="CREATE", resource_type="Principal", resource_id=new_user.id,
+        details={"full_name": full_name, "mobile": mobile},
+    )
+    return serialize_principal(new_user, db=db)
 
 
 def _get_or_create_principal_profile(db: Session, user: User) -> Principal:

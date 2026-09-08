@@ -40,4 +40,21 @@ class UserResponse(BaseModel):
     is_active: str
 
     class Config:
-        from_attributes = True
+        from_attributes = True
+
+
+class ForgotPasswordRequest(BaseModel):
+    mobile: Optional[str] = Field(None, description="Mobile number of the account")
+    email: Optional[str] = Field(None, description="Email of the account")
+
+    @model_validator(mode="after")
+    def require_one_identifier(self):
+        if not self.mobile and not self.email:
+            raise ValueError("Provide either mobile or email")
+        return self
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str = Field(..., description="Token issued by /auth/forgot-password")
+    new_password: str = Field(..., min_length=6, description="New password")
+

@@ -4,6 +4,8 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.models import Attendance
 
+_VALID_ATTENDANCE_FIELDS = {"student_id", "section_id", "date", "status", "recorded_by"}
+
 
 def get_attendance(db: Session, attendance_id: int) -> Optional[Attendance]:
     return db.query(Attendance).filter(Attendance.id == attendance_id).first()
@@ -27,6 +29,7 @@ def get_attendance_by_section(db: Session, section_id: int, skip: int = 0, limit
 
 
 def create_attendance(db: Session, data: dict) -> Attendance:
+    data = {k: v for k, v in data.items() if k in _VALID_ATTENDANCE_FIELDS}
     student_id = data.get("student_id")
     att_date = data.get("date")
     if student_id and att_date:

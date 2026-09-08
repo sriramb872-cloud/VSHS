@@ -42,6 +42,8 @@ class User(Base):
     display_name = Column("full_name", String(100), nullable=False)
 
     profile_photo = Column(String(255), nullable=True)
+    reset_token = Column(String(128), nullable=True, index=True)
+    reset_token_expires_at = Column(DateTime, nullable=True)
 
     role = Column(
         Enum(

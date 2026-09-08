@@ -6,8 +6,17 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, require_roles, get_current_active_user
 from app.models.user import User
 from app.models import GradeSubject
+from app.models.grade import Grade
 
 router = APIRouter(prefix="/grade-subjects", tags=["Grade Subjects"])
+
+
+def _assert_grade_in_school(db: Session, current_user: User, grade_id: int) -> None:
+    if str(current_user.role).upper() == "SUPER_ADMIN":
+        return
+    grade = db.query(Grade).filter(Grade.id == grade_id).first()
+    if not grade or grade.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Grade does not belong to your school")
 
 
 @router.get("", response_model=List[dict])
@@ -16,15 +25,9 @@ def list_grade_subjects(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    _assert_grade_in_school(db, current_user, grade_id)
     items = db.query(GradeSubject).filter(GradeSubject.grade_id == grade_id).all()
-    return [
-        {
-            "id": i.id,
-            "grade_id": i.grade_id,
-            "subject_id": getattr(i, "subject_id", None)
-        }
-        for i in items
-    ]
+    return [{"id": i.id, "grade_id": i.grade_id, "subject_id": getattr(i, "subject_id", None)} for i in items]
 
 
 @router.post("", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -38,9 +41,10 @@ def assign_subject_to_grade(
     if not grade_id or not subject_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="grade_id and subject_id are required")
 
+    _assert_grade_in_school(db, current_user, grade_id)
+
     existing = db.query(GradeSubject).filter(
-        GradeSubject.grade_id == grade_id,
-        GradeSubject.subject_id == subject_id
+        GradeSubject.grade_id == grade_id, GradeSubject.subject_id == subject_id
     ).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment already exists")
@@ -49,11 +53,7 @@ def assign_subject_to_grade(
     db.add(item)
     db.commit()
     db.refresh(item)
-    return {
-        "id": item.id,
-        "grade_id": item.grade_id,
-        "subject_id": getattr(item, "subject_id", None)
-    }
+    return {"id": item.id, "grade_id": item.grade_id, "subject_id": getattr(item, "subject_id", None)}
 
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -65,6 +65,7 @@ def remove_grade_subject(
     item = db.query(GradeSubject).filter(GradeSubject.id == assignment_id).first()
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    _assert_grade_in_school(db, current_user, item.grade_id)
     db.delete(item)
     db.commit()
-    return None
+    return None

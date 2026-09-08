@@ -13,6 +13,8 @@ from app.schemas.homework import (
 from app.services.homework import HomeworkService
 from app.models.user import UserModel
 from app.models.teacher import Teacher
+from app.models.teacher_subject import TeacherSubject
+from app.models.homework import Homework
 
 router = APIRouter(prefix="/homework", tags=["Homework"])
 
@@ -72,6 +74,18 @@ def create_homework(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Teacher profile not found for user",
         )
+    if str(current_user.role).upper() == "TEACHER":
+        ts = db.query(TeacherSubject).filter(
+            TeacherSubject.teacher_id == teacher.id,
+            TeacherSubject.subject_id == obj_in.subject_id,
+            TeacherSubject.grade_id == obj_in.grade_id,
+            TeacherSubject.section_id == obj_in.section_id,
+        ).first()
+        if not ts:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Teacher is not assigned to this subject/grade/section",
+            )
     school_id = current_user.school_id or teacher.school_id
     if not school_id:
         raise HTTPException(
@@ -100,6 +114,31 @@ def update_homework(
                 detail="Teacher profile not found",
             )
         teacher_id = teacher.id
+        existing = db.query(Homework).filter(Homework.id == homework_id).first()
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Homework not found",
+            )
+        new_subject_id = obj_in.subject_id if obj_in.subject_id is not None else existing.subject_id
+        new_grade_id = obj_in.grade_id if obj_in.grade_id is not None else existing.grade_id
+        new_section_id = obj_in.section_id if obj_in.section_id is not None else existing.section_id
+        if (
+            (obj_in.subject_id is not None and obj_in.subject_id != existing.subject_id)
+            or (obj_in.grade_id is not None and obj_in.grade_id != existing.grade_id)
+            or (obj_in.section_id is not None and obj_in.section_id != existing.section_id)
+        ):
+            ts = db.query(TeacherSubject).filter(
+                TeacherSubject.teacher_id == teacher.id,
+                TeacherSubject.subject_id == new_subject_id,
+                TeacherSubject.grade_id == new_grade_id,
+                TeacherSubject.section_id == new_section_id,
+            ).first()
+            if not ts:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Teacher is not assigned to this subject/grade/section",
+                )
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
     homework = HomeworkService.update_homework(
         db, homework_id=homework_id, obj_in=obj_in, teacher_id=teacher_id, school_id=school_id

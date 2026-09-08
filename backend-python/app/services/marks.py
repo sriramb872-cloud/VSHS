@@ -102,6 +102,17 @@ class MarksService:
         if not exam:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
 
+        if (exam.assessment_mode or "FORMATIVE").upper() == "FORMATIVE":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "This exam is FORMATIVE. Use POST /marks/submit-formative "
+                    "(written_test/project/read_reflection/notebook) instead of "
+                    "the generic /marks/submit — marks entered here would be "
+                    "silently discarded when the exam is published."
+                ),
+            )
+
         MarksService._check_submission_permission(db, exam_subject, exam, current_user)
 
         # Validate marks values

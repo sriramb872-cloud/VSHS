@@ -29,6 +29,7 @@ from app.routers.v1 import (
     attendance,
     student_enrollments,
     grade_subjects,
+    teacher_subjects,
     teacher_assignments,
     audit_logs,
     files,
@@ -104,6 +105,7 @@ app.include_router(users.router, prefix=PREFIX)
 app.include_router(attendance.router, prefix=PREFIX)
 app.include_router(student_enrollments.router, prefix=PREFIX)
 app.include_router(grade_subjects.router, prefix=PREFIX)
+app.include_router(teacher_subjects.router, prefix=PREFIX)
 app.include_router(teacher_assignments.router, prefix=PREFIX)
 app.include_router(audit_logs.router, prefix=PREFIX)
 app.include_router(files.router, prefix=PREFIX)

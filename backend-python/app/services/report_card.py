@@ -221,6 +221,104 @@ class ReportCardService:
         )
 
     @staticmethod
+    def generate_report_cards(
+        db: Session,
+        academic_year_id: int,
+        section_id: int,
+        term_name: str = "Term 1",
+    ) -> List[ReportCardResponse]:
+        """
+        Compute and store a ReportCard row for every student enrolled in the
+        given section/academic year, based on PUBLISHED exams only. Safe to
+        re-run — an existing row for the same (student, year, term) is
+        updated in place rather than duplicated.
+        """
+        from app.models.student_enrollment import StudentEnrollment
+        from app.models.exam_result import ExamResult
+        from app.models.exam import Exam
+        from app.models.marks import Marks
+        from app.models.exam_subject import ExamSubject
+
+        enrollments = db.query(StudentEnrollment).filter(
+            StudentEnrollment.section_id == section_id,
+            StudentEnrollment.academic_year_id == academic_year_id,
+        ).all()
+
+        if not enrollments:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No students are enrolled in this section for this academic year",
+            )
+
+        results: List[ReportCardResponse] = []
+
+        for enr in enrollments:
+            student_id = enr.student_id
+
+            formative_rows = (
+                db.query(ExamResult)
+                .join(Exam, ExamResult.exam_id == Exam.id)
+                .filter(
+                    ExamResult.student_id == student_id,
+                    Exam.academic_year_id == academic_year_id,
+                    Exam.status == "PUBLISHED",
+                )
+                .all()
+            )
+            formative_obtained = sum(
+                (r.written_test or 0) + (r.project or 0) + (r.read_reflection or 0) + (r.notebook or 0)
+                for r in formative_rows
+            )
+            formative_max = len(formative_rows) * 35.0  # 20+5+5+5 component ceiling
+
+            summative_rows = (
+                db.query(Marks)
+                .join(ExamSubject, Marks.exam_subject_id == ExamSubject.id)
+                .join(Exam, ExamSubject.exam_id == Exam.id)
+                .filter(
+                    Marks.student_id == student_id,
+                    Exam.academic_year_id == academic_year_id,
+                    Exam.status == "PUBLISHED",
+                )
+                .all()
+            )
+            summative_obtained = sum((m.marks_obtained or 0) for m in summative_rows)
+            summative_max = sum((m.max_marks or 0) for m in summative_rows)
+
+            total_obtained = formative_obtained + summative_obtained
+            total_max = formative_max + summative_max
+            percentage = round((total_obtained / total_max) * 100, 2) if total_max > 0 else 0.0
+            grade_letter = ReportCardCalculationService.determine_grade(percentage)
+
+            existing = crud_report_card.get_by_student_and_year(
+                db, student_id=student_id, academic_year_id=academic_year_id
+            )
+            if existing and existing.term_name == term_name:
+                existing.total_marks = total_obtained
+                existing.percentage = percentage
+                existing.grade_letter = grade_letter
+                db.add(existing)
+                db.commit()
+                db.refresh(existing)
+                report_row = existing
+            else:
+                report_row = ReportCard(
+                    student_id=student_id,
+                    academic_year_id=academic_year_id,
+                    term_name=term_name,
+                    total_marks=total_obtained,
+                    percentage=percentage,
+                    grade_letter=grade_letter,
+                )
+                db.add(report_row)
+                db.commit()
+                db.refresh(report_row)
+
+            results.append(ReportCardService.build_response(db, report_row))
+
+        return results
+
+    @staticmethod
     def get_report_card(
         db: Session, student_id: int, academic_year_id: int, school_id: Optional[int] = None
     ) -> ReportCardResponse:
@@ -262,6 +360,20 @@ class ReportCardService:
                 query = query.filter(ReportCard.academic_year_id == academic_year_id)
             if student_id is not None:
                 query = query.filter(ReportCard.student_id == student_id)
+            if grade_id is not None or section_id is not None:
+                from app.models.student_enrollment import StudentEnrollment
+                from app.models.section import Section
+                enr_query = db.query(StudentEnrollment.student_id)
+                if academic_year_id is not None:
+                    enr_query = enr_query.filter(StudentEnrollment.academic_year_id == academic_year_id)
+                if section_id is not None:
+                    enr_query = enr_query.filter(StudentEnrollment.section_id == section_id)
+                if grade_id is not None:
+                    enr_query = enr_query.join(Section, StudentEnrollment.section_id == Section.id).filter(
+                        Section.grade_id == grade_id
+                    )
+                matching_student_ids = {s[0] for s in enr_query.all()}
+                query = query.filter(ReportCard.student_id.in_(matching_student_ids))
             total = query.count()
             items = query.offset(skip).limit(limit).all()
             return [ReportCardService.build_response(db, r) for r in items], total

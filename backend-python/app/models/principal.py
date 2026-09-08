@@ -9,7 +9,7 @@ class Principal(Base):
     __tablename__ = "principal_profiles"
 
     id = Column("principal_id", BigInteger, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     school_id = Column(Integer, ForeignKey("schools.school_id", ondelete="CASCADE"), nullable=False, index=True)
     employee_id = Column(String(30), nullable=True)
     joining_date = Column(Date, nullable=True)

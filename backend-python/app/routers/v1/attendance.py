@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_roles, get_current_active_user
-from app.crud import attendance as att_crud, student as student_crud
+from app.crud import attendance as att_crud, student as student_crud, teacher as teacher_crud
+from app.models.section import Section
+from app.models.teacher_subject import TeacherSubject
 from app.models.user import User
 from app.schemas.attendance import AttendanceCreate
 
@@ -98,6 +100,40 @@ def get_student_attendance_summary(
     }
 
 
+def _assert_teacher_owns_section(db: Session, current_user: User, section_id: Optional[int]):
+    if str(current_user.role).upper() != "TEACHER":
+        return
+    if not section_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Section ID is required"
+        )
+    teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teacher profile not found"
+        )
+    section = db.query(Section).filter(Section.id == section_id).first()
+    if not section or section.school_id != teacher.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Section not found or does not belong to your school"
+        )
+    is_class_teacher = (section.class_teacher_id == teacher.id)
+    is_subject_teacher = (
+        db.query(TeacherSubject).filter(
+            TeacherSubject.teacher_id == teacher.id,
+            TeacherSubject.section_id == section_id
+        ).first() is not None
+    )
+    if not (is_class_teacher or is_subject_teacher):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Teacher is neither class teacher nor assigned subject teacher for this section"
+        )
+
+
 @router.post("", response_model=dict, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=dict, status_code=status.HTTP_201_CREATED)
 def mark_attendance(
@@ -105,6 +141,7 @@ def mark_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"]))
 ):
+    _assert_teacher_owns_section(db, current_user, payload.section_id)
     data = payload.model_dump()
     if not data.get("recorded_by"):
         data["recorded_by"] = current_user.id
@@ -124,6 +161,13 @@ def mark_bulk_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"]))
 ):
+    distinct_section_ids = {
+        entry.get("section_id") if isinstance(entry, dict) else getattr(entry, "section_id", None)
+        for entry in payload
+    }
+    for sid in distinct_section_ids:
+        _assert_teacher_owns_section(db, current_user, sid)
+
     results = []
     for entry in payload:
         if "recorded_by" not in entry:

@@ -12,7 +12,7 @@ class Subject(Base):
     school_id = Column(Integer, ForeignKey("schools.school_id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column("subject_name", String(100), nullable=False)  # e.g. "Mathematics"
     code = Column("subject_code", String(30), nullable=True)
-    is_optional = Column(Boolean, default=False, nullable=True)
+    is_elective = Column(Boolean, default=False, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     school = relationship("School", back_populates="subjects")

@@ -12,6 +12,7 @@ from app.models.academic_year import AcademicYear
 from app.models.user import User
 from app.core.security import get_password_hash
 from app.services.id_generator import generate_student_id
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/students", tags=["Students"])
 
@@ -245,7 +246,23 @@ def create_student_profile(
 
     db.commit()
     db.refresh(new_student)
-    return serialize_student(new_student)
+
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school_id,
+        action="CREATE", resource_type="Student", resource_id=new_student.id,
+        details={"full_name": payload.get("full_name"), "admission_number": new_student.admission_number},
+    )
+    try:
+        return serialize_student(new_student)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_201_CREATED,
+            detail=(
+                f"Student '{new_student.admission_number}' was created successfully, "
+                f"but the confirmation screen failed to load ({e}). "
+                f"Refresh the student list to see them."
+            ),
+        )
 
 
 @router.get("", response_model=List[dict])
@@ -336,7 +353,6 @@ def update_my_student_profile(
 
     # Strict restriction: Students can only update permitted personal/contact fields
     allowed_student_fields = {
-        "date_of_birth", "gender", "blood_group",
         "father_name", "father_mobile", "mother_name", "mother_mobile",
         "guardian_mobile", "address", "display_name", "full_name", "email", "profile_photo"
     }

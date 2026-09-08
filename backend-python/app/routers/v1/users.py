@@ -36,13 +36,29 @@ def serialize_user(u: User) -> dict:
 def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    role: Optional[str] = Query(None, description="Filter by role: SUPER_ADMIN, PRINCIPAL, TEACHER, STUDENT"),
+    search: Optional[str] = Query(None, description="Search by name, mobile, or email"),
+    is_active: Optional[str] = Query(None, description="Filter by active status"),
+    school_id: Optional[int] = Query(None, description="Filter by school (SUPER_ADMIN only)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"]))
 ):
     query = db.query(User)
     if str(current_user.role).upper() != "SUPER_ADMIN":
         query = query.filter(User.school_id == current_user.school_id)
-    
+    elif school_id is not None:
+        query = query.filter(User.school_id == school_id)
+
+    if role:
+        query = query.filter(User.role == role.upper())
+    if is_active:
+        query = query.filter(User.is_active == is_active)
+    if search:
+        like = f"%{search.strip()}%"
+        query = query.filter(
+            (User.display_name.ilike(like)) | (User.mobile.ilike(like)) | (User.email.ilike(like))
+        )
+
     users = query.offset(skip).limit(limit).all()
     return [serialize_user(u) for u in users]
 

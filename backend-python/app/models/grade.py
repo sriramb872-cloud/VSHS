@@ -11,6 +11,8 @@ class Grade(Base):
     id = Column("grade_id", Integer, primary_key=True, index=True, autoincrement=True)
     school_id = Column(Integer, ForeignKey("schools.school_id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column("grade_name", String(30), nullable=False)  # e.g. "Grade 10"
+    code = Column("grade_code", String(20), nullable=True)
+    description = Column(String(255), nullable=True)
     display_order = Column("grade_order", Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

@@ -31,7 +31,8 @@ class CRUDAnnouncement:
         if audience is not None:
             query = query.filter(Announcement.target_role == str(audience))
         if status is not None:
-            query = query.filter(Announcement.is_active == (status == AnnouncementStatus.PUBLISHED))
+            status_str = status.value if hasattr(status, "value") else str(status)
+            query = query.filter(Announcement.status_value == status_str)
         if author_id is not None:
             query = query.filter(Announcement.created_by == author_id)
 
@@ -50,7 +51,8 @@ class CRUDAnnouncement:
             content=getattr(obj_in, "description", getattr(obj_in, "content", "")),
             target_role=audience_val,
             priority=priority_val,
-            is_active=(status_val == "Published" or obj_in.status == AnnouncementStatus.PUBLISHED),
+            is_active=(status_val == "Published"),
+            status_value=status_val,
             publish_date=getattr(obj_in, "publish_date", None),
             expiry_date=getattr(obj_in, "expiry_date", None),
             created_by=author_id,
@@ -78,6 +80,7 @@ class CRUDAnnouncement:
                 db_obj.priority = value.value if hasattr(value, "value") else str(value)
             elif field == "status" and value is not None:
                 status_str = value.value if hasattr(value, "value") else str(value)
+                db_obj.status_value = status_str
                 db_obj.is_active = (status_str == "Published")
             elif field == "author_id" and value is not None:
                 db_obj.created_by = value
