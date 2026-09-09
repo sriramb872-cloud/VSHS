@@ -8,6 +8,11 @@ export const principalsService = {
     return response.data;
   },
 
+  async createPrincipal(payload: { school_id: number; full_name: string; mobile: string; email?: string }): Promise<Principal> {
+    const response = await api.post<Principal>('/principals', payload);
+    return response.data;
+  },
+
   async getMyPrincipalProfile(): Promise<Principal> {
     const response = await api.get<Principal>('/principals/me');
     return response.data;

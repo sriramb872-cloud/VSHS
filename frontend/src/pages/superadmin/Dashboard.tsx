@@ -79,6 +79,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
           value={data.total_teachers}
           icon={<Users className="w-5 h-5 text-blue-600" />}
           iconBgClass="bg-blue-50 text-blue-600"
+          onClick={() => navigate('/superadmin/users?role=TEACHER')}
         />
       </div>
 

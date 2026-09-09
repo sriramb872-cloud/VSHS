@@ -1,15 +1,27 @@
-// src/pages/student/Attendance.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { attendanceService } from '../../services/attendance';
+import { studentsService } from '../../services/students';
 
 export const StudentAttendance: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Fetch student attendance using existing service
-    setLoading(false);
+  const fetchAttendance = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const profile = await studentsService.getMyStudentProfile();
+      const summary = await attendanceService.getStudentAttendanceSummary(profile.id);
+      setAttendanceData(summary);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Failed to load attendance records.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchAttendance(); }, [fetchAttendance]);
 
   return (
     <div className="er-section">
@@ -17,7 +29,12 @@ export const StudentAttendance: React.FC = () => {
         <h1 className="er-page-title">My Attendance Record</h1>
       </div>
 
-      {error && <div className="er-alert er-alert-danger">{error}</div>}
+      {error && (
+        <div className="er-alert er-alert-danger flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button onClick={fetchAttendance} className="text-xs font-bold underline flex-shrink-0">Retry</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="er-loading-spinner"></div>
@@ -51,8 +68,8 @@ export const StudentAttendance: React.FC = () => {
             {(!attendanceData.records || attendanceData.records.length === 0) ? (
               <div className="er-empty-state">No detailed records available.</div>
             ) : (
-              <div className="er-table-container">
-                <table className="er-table">
+              <div className="er-table-container overflow-x-auto">
+                <table className="er-table w-full">
                   <thead>
                     <tr>
                       <th>Date</th>

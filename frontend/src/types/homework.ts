@@ -11,6 +11,9 @@ export interface Homework {
   teacher_id: number;
   created_at: string;
   updated_at?: string;
+  subject_name?: string;
+  grade_name?: string;
+  section_name?: string;
 }
 
 export interface HomeworkListResponse {

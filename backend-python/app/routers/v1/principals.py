@@ -233,6 +233,16 @@ def update_principal(
                 p.display_name = str(v).strip()
             elif k == "status":
                 p.is_active = str(v).strip()
+            elif k == "school_id":
+                existing = db.query(User).filter(
+                    User.school_id == v, User.role == "PRINCIPAL", User.id != p.id
+                ).first()
+                if existing:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="That school already has a principal assigned.",
+                    )
+                p.school_id = v
             else:
                 setattr(p, k, v)
 

@@ -15,6 +15,30 @@ from app.models.user import UserModel
 from app.models.teacher import Teacher
 from app.models.teacher_subject import TeacherSubject
 from app.models.homework import Homework
+from app.models.subject import Subject
+from app.models.grade import Grade
+from app.models.section import Section
+
+def _enrich_with_names(db: Session, items):
+    single = not isinstance(items, list)
+    homework_list = [items] if single else items
+    if not homework_list:
+        return items
+
+    subject_ids = {h.subject_id for h in homework_list if h.subject_id}
+    grade_ids = {h.grade_id for h in homework_list if h.grade_id}
+    section_ids = {h.section_id for h in homework_list if h.section_id}
+
+    subjects = {s.id: s.name for s in db.query(Subject).filter(Subject.id.in_(subject_ids)).all()} if subject_ids else {}
+    grades = {g.id: g.name for g in db.query(Grade).filter(Grade.id.in_(grade_ids)).all()} if grade_ids else {}
+    sections = {s.id: s.name for s in db.query(Section).filter(Section.id.in_(section_ids)).all()} if section_ids else {}
+
+    for h in homework_list:
+        h.subject_name = subjects.get(h.subject_id)
+        h.grade_name = grades.get(h.grade_id)
+        h.section_name = sections.get(h.section_id)
+
+    return homework_list[0] if single else homework_list
 
 router = APIRouter(prefix="/homework", tags=["Homework"])
 
@@ -44,6 +68,7 @@ def list_homework(
         due_date=due_date,
         current_user=current_user,
     )
+    items = _enrich_with_names(db, items)
     return {"total": total, "items": items}
 
 @router.get("/{homework_id}", response_model=HomeworkResponse)
@@ -58,7 +83,7 @@ def get_homework_by_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Homework not found",
         )
-    return homework
+    return _enrich_with_names(db, homework)
 
 @router.post("/", response_model=HomeworkResponse, status_code=status.HTTP_201_CREATED)
 def create_homework(

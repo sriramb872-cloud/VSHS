@@ -1,5 +1,6 @@
 // src/pages/superadmin/Users.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Users as UsersIcon, Search } from 'lucide-react';
 import { MobileListItem, EmptyState, LoadingSkeleton, StatusBadge, ErrorState } from '../../components/shared';
 import { usersService } from '../../services/users';
@@ -14,35 +15,35 @@ const ROLES: { value: string; label: string }[] = [
 ];
 
 export const SuperAdminUsers: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      const data = await usersService.listUsers();
+      const data = await usersService.listUsers({
+        role: roleFilter || undefined,
+        search: debouncedSearch || undefined,
+      });
       setUsers(data);
     } catch {
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [roleFilter, debouncedSearch]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
-
-  const filtered = users.filter((u) => {
-    const matchSearch =
-      u.display_name?.toLowerCase().includes(search.toLowerCase()) ||
-      u.mobile?.includes(search) ||
-      u.email?.toLowerCase().includes(search.toLowerCase());
-    const matchRole = roleFilter ? u.role === roleFilter : true;
-    return matchSearch && matchRole;
-  });
 
   const roleColor: Record<string, string> = {
     SUPER_ADMIN: 'bg-indigo-50 text-indigo-600',
@@ -82,7 +83,7 @@ export const SuperAdminUsers: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="list" count={5} />
-      ) : filtered.length === 0 ? (
+      ) : users.length === 0 ? (
         <EmptyState
           title="No Users Found"
           description="No users match your current filters."
@@ -90,14 +91,14 @@ export const SuperAdminUsers: React.FC = () => {
         />
       ) : (
         <div className="space-y-2">
-          {filtered.map((u) => (
+          {users.map((u) => (
             <MobileListItem
               key={u.id}
               title={u.display_name || u.mobile}
               subtitle={u.email || u.mobile}
               icon={<UsersIcon className="w-4 h-4" />}
               avatarBg={roleColor[u.role] || 'bg-slate-50 text-slate-600'}
-              badge={<StatusBadge status={u.is_active ? 'ACTIVE' : 'INACTIVE'} />}
+              badge={<StatusBadge status={u.is_active || 'INACTIVE'} />}
               metaText={u.role}
             />
           ))}

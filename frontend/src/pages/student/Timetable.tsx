@@ -10,12 +10,19 @@ export const StudentTimetablePage: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    // Assuming student belongs to Grade 10, Section 1 (Timetable ID 1 for mock)
-    timetableService
-      .listTimetables({ grade_id: 10, section_id: 1 })
+    timetableService.listTimetables()
       .then(data => {
         if (data.items.length > 0) {
-          setTimetable(data.items[0]);
+          const first: any = data.items[0];
+          setTimetable({
+            id: first.id,
+            academic_year_id: first.academic_year_id,
+            grade_id: first.grade_id,
+            section_id: first.section_id,
+            entries: data.items as any,
+          });
+        } else {
+          setTimetable(null);
         }
       })
       .catch(console.error)

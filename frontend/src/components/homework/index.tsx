@@ -28,10 +28,10 @@ export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onClick, a
       <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-4 text-xs text-gray-500">
           <span className="flex items-center gap-1">
-            <BookOpen className="w-3.5 h-3.5" /> Subject ID: {homework.subject_id}
+            <BookOpen className="w-3.5 h-3.5" /> {homework.subject_name || `Subject #${homework.subject_id}`}
           </span>
           <span className="flex items-center gap-1">
-            <Layers className="w-3.5 h-3.5" /> Grade/Sec: {homework.grade_id}-{homework.section_id}
+            <Layers className="w-3.5 h-3.5" /> {homework.grade_name || `Grade #${homework.grade_id}`} - {homework.section_name || `Section #${homework.section_id}`}
           </span>
         </div>
         {actions && <div onClick={e => e.stopPropagation()} className="flex items-center gap-2">{actions}</div>}

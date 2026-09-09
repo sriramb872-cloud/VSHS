@@ -77,7 +77,7 @@ export const TeacherDashboardPage: React.FC = () => {
       value: data.announcements.length,
       bg: 'bg-blue-50',
       color: 'text-blue-600',
-      onClick: undefined,
+      onClick: () => navigate('/teacher/announcements'),   // was: undefined
     },
   ];
 

@@ -1,20 +1,29 @@
-// src/pages/student/ReportCard.tsx
 import React, { useEffect, useState } from 'react';
 import { reportCardService } from '../../services/reportcard';
+import { studentsService } from '../../services/students';
+import { academicYearsService } from '../../services/academicYears';
 import { ReportCardResponse } from '../../types/reportcard';
 import { ReportCardView } from '../../components/reportcard';
 
 export const StudentReportCardPage: React.FC = () => {
   const [reportCard, setReportCard] = useState<ReportCardResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [notGenerated, setNotGenerated] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    // Assuming student ID 101 for current session context
-    reportCardService
-      .getReportCard(101, 1)
+    setNotGenerated(false);
+    Promise.all([studentsService.getMyStudentProfile(), academicYearsService.listAcademicYears()])
+      .then(([profile, years]) => {
+        const currentYear = years.find((y: any) => y.is_active) || years[0];
+        if (!currentYear) throw new Error('No academic year configured');
+        return reportCardService.getReportCard(profile.id, currentYear.id);
+      })
       .then(setReportCard)
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        if (err?.response?.status === 404) setNotGenerated(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -29,6 +38,10 @@ export const StudentReportCardPage: React.FC = () => {
         <div className="text-center py-12 text-gray-500">Loading report card...</div>
       ) : reportCard ? (
         <ReportCardView reportCard={reportCard} />
+      ) : notGenerated ? (
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200 text-gray-500">
+          Your report card hasn't been published yet.
+        </div>
       ) : (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200 text-gray-500">
           Report card not found.

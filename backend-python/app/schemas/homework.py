@@ -29,6 +29,9 @@ class HomeworkResponse(HomeworkBase):
     teacher_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    subject_name: Optional[str] = None
+    grade_name: Optional[str] = None
+    section_name: Optional[str] = None
 
     class Config:
         from_attributes = True

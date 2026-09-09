@@ -121,7 +121,7 @@ export const Teachers: React.FC = () => {
       {/* Teachers List */}
       {loading ? (
         <LoadingSkeleton type="card" count={4} />
-      ) : teachers.length === 0 ? (
+      ) : error ? null : teachers.length === 0 ? (
         <EmptyState
           title="No faculty members found."
           description="No teachers have been registered for this school yet."

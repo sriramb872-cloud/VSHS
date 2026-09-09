@@ -18,7 +18,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({ timetable, selecte
       {filteredDays.map(day => {
         const dayEntries = timetable.entries
           .filter(e => e.day_of_week.toLowerCase() === day.toLowerCase())
-          .sort((a, b) => a.period_number - b.period_number);
+          .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
 
         if (dayEntries.length === 0 && selectedDay) {
           return (
@@ -39,25 +39,27 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({ timetable, selecte
               {dayEntries.map(entry => (
                 <div key={entry.id} className="bg-gray-50 rounded-md border border-gray-100 p-4 space-y-2">
                   <div className="flex justify-between items-start">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700">
-                      Period {entry.period_number}
-                    </span>
+                    {entry.period_number != null && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700">
+                        Period {entry.period_number}
+                      </span>
+                    )}
                     <span className="text-xs text-gray-500 flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" /> {entry.start_time} - {entry.end_time}
                     </span>
                   </div>
 
                   <div className="text-sm font-semibold text-gray-800 flex items-center gap-1.5 pt-1">
-                    <BookOpen className="w-4 h-4 text-gray-400" /> Subject #{entry.subject_id}
+                    <BookOpen className="w-4 h-4 text-gray-400" /> {entry.subject_name || `Subject #${entry.subject_id}`}
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-gray-600 pt-1 border-t border-gray-200/60">
                     <span className="flex items-center gap-1">
-                      <User className="w-3.5 h-3.5" /> Teacher #{entry.teacher_id}
+                      <User className="w-3.5 h-3.5" /> {entry.teacher_name || `Teacher #${entry.teacher_id}`}
                     </span>
-                    {entry.classroom && (
+                    {(entry.classroom || entry.room_number) && (
                       <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5" /> {entry.classroom}
+                        <MapPin className="w-3.5 h-3.5" /> {entry.classroom || entry.room_number}
                       </span>
                     )}
                   </div>

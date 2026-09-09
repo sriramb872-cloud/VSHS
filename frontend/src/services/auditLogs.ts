@@ -5,10 +5,11 @@ export interface AuditLog {
   id?: number;
   action?: string;
   user_id?: number;
-  resource?: string;
-  resource_id?: number;
-  details?: string;
-  created_at?: string;
+  school_id?: number;
+  resource_type?: string;
+  resource_id?: string;
+  details?: Record<string, any>;
+  timestamp?: string;
 }
 
 export const auditLogsService = {

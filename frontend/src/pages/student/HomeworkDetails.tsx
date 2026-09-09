@@ -56,16 +56,16 @@ export const StudentHomeworkDetailsPage: React.FC = () => {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-[11px] text-slate-500 block">Subject ID</span>
-              <span className="text-sm font-semibold text-slate-900">{homework.subject_id}</span>
+              <span className="text-[11px] text-slate-500 block">Subject</span>
+              <span className="text-sm font-semibold text-slate-900">{homework.subject_name || `Subject #${homework.subject_id}`}</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-[11px] text-slate-500 block">Grade ID</span>
-              <span className="text-sm font-semibold text-slate-900">{homework.grade_id}</span>
+              <span className="text-[11px] text-slate-500 block">Grade</span>
+              <span className="text-sm font-semibold text-slate-900">{homework.grade_name || `Grade #${homework.grade_id}`}</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 col-span-2 sm:col-span-1">
-              <span className="text-[11px] text-slate-500 block">Section ID</span>
-              <span className="text-sm font-semibold text-slate-900">{homework.section_id}</span>
+              <span className="text-[11px] text-slate-500 block">Section</span>
+              <span className="text-sm font-semibold text-slate-900">{homework.section_name || `Section #${homework.section_id}`}</span>
             </div>
           </div>
 

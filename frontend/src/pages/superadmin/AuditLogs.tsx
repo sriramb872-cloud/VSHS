@@ -48,11 +48,15 @@ export const SuperAdminAuditLogs: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{log.action || 'Action'}</p>
-                  <p className="text-xs text-slate-500">{log.resource}{log.resource_id ? ` #${log.resource_id}` : ''}</p>
-                  {log.details && <p className="text-xs text-slate-400 mt-1">{log.details}</p>}
+                  <p className="text-xs text-slate-500">{log.resource_type}{log.resource_id ? ` #${log.resource_id}` : ''}</p>
+                  {log.details && Object.keys(log.details).length > 0 && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      {Object.entries(log.details).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                    </p>
+                  )}
                 </div>
-                {log.created_at && (
-                  <p className="text-xs text-slate-400">{new Date(log.created_at).toLocaleDateString()}</p>
+                {log.timestamp && (
+                  <p className="text-xs text-slate-400">{new Date(log.timestamp).toLocaleString()}</p>
                 )}
               </div>
             </div>

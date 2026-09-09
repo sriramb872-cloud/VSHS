@@ -1,5 +1,5 @@
 // src/layouts/AppShell.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   GraduationCap,
@@ -25,6 +25,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import BottomNav, { PrimaryNavItem } from '../components/shared/BottomNav';
 import { SecondaryNavItem } from '../components/shared/MoreSheet';
+import { ErrorBoundary } from '../components/shared/ErrorBoundary';
+import { notificationService } from '../services/notification';
 
 export interface NavItem {
   label: string;
@@ -53,9 +55,23 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { logout, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!notificationsPath) return;
+    let cancelled = false;
+    const fetchUnread = () => {
+      notificationService.listNotifications({ unread_only: true, limit: 1 })
+        .then((res) => { if (!cancelled) setUnreadCount(res.unread_count ?? 0); })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [notificationsPath, location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -171,6 +187,11 @@ export const AppShell: React.FC<AppShellProps> = ({
                 aria-label="View notifications"
               >
                 <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
             )}
 
@@ -213,7 +234,9 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* Page Main Content Area */}
         <main className="flex-1 p-3.5 sm:p-5 md:p-6 max-w-7xl w-full mx-auto">
-          <Outlet />
+          <ErrorBoundary resetKey={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

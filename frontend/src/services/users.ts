@@ -3,7 +3,7 @@ import api from './api';
 import { AppUser, UserUpdatePayload } from '../types';
 
 export const usersService = {
-  async listUsers(params?: { skip?: number; limit?: number }): Promise<AppUser[]> {
+  async listUsers(params?: { skip?: number; limit?: number; role?: string; search?: string; is_active?: string; school_id?: number }): Promise<AppUser[]> {
     const response = await api.get<AppUser[]>('/users', { params });
     return response.data;
   },
