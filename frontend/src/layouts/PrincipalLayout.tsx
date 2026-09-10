@@ -1,5 +1,6 @@
 // src/layouts/PrincipalLayout.tsx
 import React from 'react';
+import { UserCheck } from 'lucide-react';
 import AppShell, { NavItem, LayoutDashboard, Users, BookOpen, BarChart3, CalendarDays, Settings, Bell, FileText, ClipboardList, User, Award, School } from './AppShell';
 
 const navItems: NavItem[] = [
@@ -10,6 +11,7 @@ const navItems: NavItem[] = [
   { label: 'Grades', path: '/principal/grades', icon: <Award className="w-4 h-4" /> },
   { label: 'Sections', path: '/principal/sections', icon: <School className="w-4 h-4" /> },
   { label: 'Subjects', path: '/principal/subjects', icon: <BookOpen className="w-4 h-4" /> },
+  { label: 'Assignments', path: '/principal/teaching-assignments', icon: <UserCheck className="w-4 h-4" /> },
   { label: 'Timetable', path: '/principal/timetable', icon: <CalendarDays className="w-4 h-4" /> },
   { label: 'Exams', path: '/principal/exams', icon: <FileText className="w-4 h-4" /> },
   { label: 'Attendance', path: '/principal/attendance', icon: <ClipboardList className="w-4 h-4" /> },

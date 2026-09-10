@@ -92,6 +92,10 @@ export const CreateHomeworkPage: React.FC = () => {
       setError('Please select an assigned class and subject.');
       return;
     }
+    if (!formData.title.trim() || !formData.description.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(formData.due_date)) {
+      setError('Enter a title, description, and valid due date.');
+      return;
+    }
     const [grade_id, section_id] = selectedClassKey.split('_').map(Number);
     try {
       setLoading(true);
@@ -217,6 +221,7 @@ export const CreateHomeworkPage: React.FC = () => {
               required
               value={formData.due_date}
               onChange={e => setFormData({ ...formData, due_date: e.target.value })}
+              onInput={e => setFormData({ ...formData, due_date: e.currentTarget.value })}
               className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>

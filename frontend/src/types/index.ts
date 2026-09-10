@@ -642,3 +642,32 @@ export interface StudentDashboard {
   announcements?: Announcement[];
   attendance_percentage?: number;
 }
+
+// ─── Grade & Teacher Subjects ──────────────────────────────────────────────────
+export interface GradeSubject {
+  id: number;
+  grade_id: number;
+  subject_id: number;
+}
+export interface GradeSubjectCreatePayload {
+  grade_id: number;
+  subject_id: number;
+}
+
+export interface TeacherSubject {
+  id: number;
+  teacher_id: number;
+  subject_id: number;
+  grade_id: number;
+  section_id: number;
+  school_id: number;
+  created_at: string;
+  updated_at: string;
+}
+export interface TeacherSubjectCreatePayload {
+  teacher_id: number;
+  subject_id: number;
+  grade_id: number;
+  section_id: number;
+  school_id: number;
+}

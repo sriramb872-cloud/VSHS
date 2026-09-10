@@ -61,6 +61,7 @@ const PrincipalSettings = React.lazy(() => import("../pages/principal/Settings")
 const PrincipalProfile = React.lazy(() => import("../pages/principal/Profile"));
 const PrincipalAnalytics = React.lazy(() => import("../pages/principal/Analytics"));
 const PrincipalEnrollments = React.lazy(() => import("../pages/principal/Enrollments"));
+const PrincipalTeachingAssignments = React.lazy(() => import("../pages/principal/TeachingAssignments"));
 
 // Teacher Pages
 const TeacherDashboard = React.lazy(() => import("../pages/teacher/Dashboard"));
@@ -165,6 +166,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/principal/profile" element={<PrincipalProfile />} />
             <Route path="/principal/analytics" element={<PrincipalAnalytics />} />
             <Route path="/principal/enrollments" element={<PrincipalEnrollments />} />
+            <Route path="/principal/teaching-assignments" element={<PrincipalTeachingAssignments />} />
           </Route>
         </Route>
       </Route>
