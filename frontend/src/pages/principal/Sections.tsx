@@ -3,19 +3,23 @@ import React, { useState, useEffect } from 'react';
 import { School, Plus } from 'lucide-react';
 import { MobileListItem, EmptyState, LoadingSkeleton } from '../../components/shared';
 import { sectionsService } from '../../services/sections';
-import { Section } from '../../types';
+import { gradesService } from '../../services/grades';
+import { Grade, Section } from '../../types';
 
 export const Sections: React.FC = () => {
   const [sections, setSections] = useState<Section[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [sectionName, setSectionName] = useState('');
   const [gradeId, setGradeId] = useState('');
 
   useEffect(() => {
-    sectionsService
-      .listSections()
-      .then(setSections)
+    Promise.all([sectionsService.listSections(), gradesService.listGrades()])
+      .then(([sectionData, gradeData]) => {
+        setSections(sectionData);
+        setGrades(gradeData);
+      })
       .catch(() => setError('Failed to load sections'))
       .finally(() => setLoading(false));
   }, []);
@@ -23,6 +27,10 @@ export const Sections: React.FC = () => {
   const handleCreateSection = (e: React.FormEvent) => {
     e.preventDefault();
     if (!sectionName.trim() || !gradeId) return;
+    if (sectionName.trim().length > 10) {
+      setError('Section name must be 10 characters or fewer.');
+      return;
+    }
     sectionsService
       .createSection({ name: sectionName.trim(), grade_id: Number(gradeId) })
       .then(newSection => {
@@ -45,20 +53,25 @@ export const Sections: React.FC = () => {
       <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Add Class Section</h3>
         <form onSubmit={handleCreateSection} className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="number"
-            className="w-24 h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+          <select
+            aria-label="Grade"
+            className="h-11 px-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             value={gradeId}
             onChange={(e) => setGradeId(e.target.value)}
-            placeholder="Grade ID"
             required
-          />
+          >
+            <option value="">Select grade...</option>
+            {grades.map((grade) => (
+              <option key={grade.id} value={grade.id}>{grade.name}</option>
+            ))}
+          </select>
           <input
             type="text"
             className="flex-1 h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             value={sectionName}
             onChange={(e) => setSectionName(e.target.value)}
             placeholder="e.g. Section A"
+            maxLength={10}
             required
           />
           <button

@@ -113,6 +113,14 @@ export const PrincipalDashboardPage: React.FC = () => {
           <span className="text-xs font-bold text-slate-900 block">Grades & Classes</span>
           <span className="text-[11px] text-slate-400">Class management</span>
         </button>
+        <button
+          onClick={() => navigate('/principal/announcements')}
+          className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs hover:border-emerald-300 text-left transition-all active:scale-98"
+        >
+          <Bell className="w-5 h-5 text-amber-600 mb-1.5" />
+          <span className="text-xs font-bold text-slate-900 block">Announcements</span>
+          <span className="text-[11px] text-slate-400">School updates</span>
+        </button>
       </div>
 
       {/* Recent Announcements Feed */}

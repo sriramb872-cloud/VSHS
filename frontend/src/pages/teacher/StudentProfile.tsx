@@ -1,6 +1,7 @@
 // src/pages/teacher/StudentProfile.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import studentsService from '../../services/students';
 
 export const TeacherStudentProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -10,8 +11,18 @@ export const TeacherStudentProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch student details using route parameter id
-    setLoading(false);
+    let cancelled = false;
+    const studentId = Number(id);
+    if (!Number.isFinite(studentId)) {
+      setError('Invalid student reference.');
+      setLoading(false);
+      return;
+    }
+    studentsService.getStudent(studentId)
+      .then((data) => { if (!cancelled) setStudent(data); })
+      .catch(() => { if (!cancelled) setError('Unable to load student profile.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [id]);
 
   return (
@@ -43,8 +54,24 @@ export const TeacherStudentProfile: React.FC = () => {
               <p className="text-gray-700">{student.mobile_number}</p>
             </div>
             <div>
+              <span className="er-label">Admission Number</span>
+              <p className="text-gray-700">{student.admission_number || '-'}</p>
+            </div>
+            <div>
+              <span className="er-label">Roll Number</span>
+              <p className="text-gray-700">{student.roll_number ?? '-'}</p>
+            </div>
+            <div>
               <span className="er-label">Grade / Section</span>
-              <p className="text-gray-700">{student.grade_section || '-'}</p>
+              <p className="text-gray-700">
+                {student.grade_section || (student.grade_id || student.section_id
+                  ? `Grade ${student.grade_id ?? '-'} / Section ${student.section_id ?? '-'}`
+                  : '-')}
+              </p>
+            </div>
+            <div>
+              <span className="er-label">Parent / Guardian</span>
+              <p className="text-gray-700">{student.father_name || student.mother_name || '-'}</p>
             </div>
           </div>
         </div>

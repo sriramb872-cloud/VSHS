@@ -10,6 +10,8 @@ export const AcademicYears: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [startDate, setStartDate] = useState('2026-09-09');
+  const [endDate, setEndDate] = useState('2027-09-08');
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export const AcademicYears: React.FC = () => {
     if (!name.trim()) return;
     setIsCreating(true);
     academicYearsService
-      .createAcademicYear({ name: name.trim() })
+      .createAcademicYear({ name: name.trim(), start_date: startDate, end_date: endDate, is_active: true })
       .then(newYear => {
         setAcademicYears(prev => [...prev, newYear]);
         setName('');
@@ -52,6 +54,22 @@ export const AcademicYears: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. 2026 - 2027"
+            required
+          />
+          <input
+            aria-label="Start date"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="h-11 px-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            required
+          />
+          <input
+            aria-label="End date"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="h-11 px-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             required
           />
           <button

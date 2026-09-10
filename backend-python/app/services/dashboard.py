@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.crud.dashboard import dashboard as crud_dashboard
 from app.models.user import User
+from app.models.student import Student
 from app.models.teacher import Teacher
 from app.models.timetable import Timetable
 from app.models.section import Section
@@ -142,9 +143,18 @@ class DashboardService:
 
     @staticmethod
     def get_student_dashboard(db: Session, current_user: User) -> StudentDashboardResponse:
+        student = getattr(current_user, "student_profile", None)
+        if not student:
+            student = db.query(Student).filter(Student.user_id == current_user.id).first()
+        attendance_percentage = 0.0
+        if student:
+            records = db.query(Attendance).filter(Attendance.student_id == student.id).all()
+            if records:
+                present = sum(1 for record in records if str(record.status).upper().endswith("PRESENT"))
+                attendance_percentage = round((present / len(records)) * 100, 1)
         return StudentDashboardResponse(
             todays_timetable=[],
-            attendance_percentage=96.5,
+            attendance_percentage=attendance_percentage,
             pending_homework=[],
             upcoming_exams=[],
             latest_marks=[],

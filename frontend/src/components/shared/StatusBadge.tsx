@@ -18,7 +18,7 @@ export type StatusVariant =
   | string;
 
 interface StatusBadgeProps {
-  status: StatusVariant;
+  status: StatusVariant | boolean | null | undefined;
   label?: string;
   size?: 'sm' | 'md';
 }
@@ -28,7 +28,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   label,
   size = 'sm',
 }) => {
-  const normalized = (status || '').toUpperCase();
+  // API resources use both string lifecycle statuses and boolean `is_active`
+  // flags. Normalize either form before deriving the visual treatment.
+  const normalized = typeof status === 'boolean'
+    ? (status ? 'ACTIVE' : 'INACTIVE')
+    : String(status || '').toUpperCase();
   const text = label || normalized;
 
   let colorStyle = 'bg-slate-100 text-slate-700';

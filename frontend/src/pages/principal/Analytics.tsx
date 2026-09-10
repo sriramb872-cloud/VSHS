@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, UserCheck, ClipboardCheck, BarChart2 } from 'lucide-react';
 import { LoadingSkeleton, StatCard } from '../../components/shared';
+import { dashboardService } from '../../services/dashboard';
 
 export const Analytics: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<any | null>(null);
@@ -9,8 +10,27 @@ export const Analytics: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch analytics data from service layer
-    setLoading(false);
+    let cancelled = false;
+    dashboardService.getPrincipalDashboard()
+      .then((dashboard) => {
+        if (cancelled) return;
+        const attendance = dashboard.todays_attendance || {};
+        const present = Number(attendance.present ?? 0);
+        const total = Number(attendance.total ?? attendance.expected ?? 0);
+        setAnalyticsData({
+          student_count: dashboard.total_students,
+          teacher_count: dashboard.total_teachers,
+          attendance_rate: total > 0 ? Math.round((present / total) * 1000) / 10 : 0,
+          average_score: '—',
+        });
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError('Unable to load school analytics right now.');
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   return (
