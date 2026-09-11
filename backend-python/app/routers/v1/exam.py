@@ -43,6 +43,20 @@ def list_exams(
     # If student, force published status only
     if user_role == "STUDENT":
         status_filter = "PUBLISHED"
+        from app.models.student import Student
+        from app.models.student_enrollment import StudentEnrollment
+        student = db.query(Student).filter(Student.user_id == current_user.id).first()
+        if student:
+            enrollment = (
+                db.query(StudentEnrollment)
+                .filter(StudentEnrollment.student_id == student.id)
+                .order_by(StudentEnrollment.id.desc())
+                .first()
+            )
+            if enrollment:
+                academic_year_id = enrollment.academic_year_id
+                section_id = enrollment.section_id
+                grade_id = enrollment.section.grade_id if enrollment.section else grade_id
 
     # If teacher and teacher_id not passed, can filter by teacher profile
     if user_role == "TEACHER" and teacher_id is None:

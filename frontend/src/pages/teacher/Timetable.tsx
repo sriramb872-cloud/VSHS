@@ -8,7 +8,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 export const TeacherTimetablePage: React.FC = () => {
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
-  const [dayFilter, setDayFilter] = useState<string>('');
+  const [dayFilter, setDayFilter] = useState<string>('Monday');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export const TeacherTimetablePage: React.FC = () => {
   // Find next upcoming class
   const nextClass = todaysSlots.length > 0 ? todaysSlots[0] : slots.length > 0 ? slots[0] : null;
 
-  const displayDays = dayFilter ? [dayFilter] : DAYS;
+  const displayDays = [dayFilter];
 
   return (
     <div className="space-y-6">
@@ -38,18 +38,9 @@ export const TeacherTimetablePage: React.FC = () => {
           <h1 className="text-xl font-bold text-slate-900">My Teaching Timetable</h1>
           <p className="text-xs text-slate-500">Your personal class schedule assigned by the Principal</p>
         </div>
-        <select
-          value={dayFilter}
-          onChange={e => setDayFilter(e.target.value)}
-          className="h-10 px-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        >
-          <option value="">All Days</option>
-          {DAYS.map(day => (
-            <option key={day} value={day}>
-              {day}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {DAYS.map(day => <button key={day} onClick={() => setDayFilter(day)} className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap ${dayFilter === day ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{day}</button>)}
+        </div>
       </div>
 
       {loading ? (

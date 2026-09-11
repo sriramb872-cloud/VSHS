@@ -20,6 +20,9 @@ from app.models.exam_result import ExamResult
 from app.models.marks import Marks
 from app.models.grade_subject import GradeSubject
 from app.models.teacher_subject import TeacherSubject
+from app.models.timetable import Timetable
+from app.models.subject import Subject
+from app.models.academic_year import AcademicYear
 from app.models.section import Section
 from app.models.teacher import Teacher
 from app.models.student_enrollment import StudentEnrollment
@@ -46,6 +49,7 @@ class ExamService:
                         id=es.id,
                         exam_id=es.exam_id,
                         subject_id=es.subject_id,
+                        exam_date=es.exam_date,
                         subject_name=sub_name,
                         subject_code=sub_code,
                         teacher_id=es.teacher_id,
@@ -128,6 +132,45 @@ class ExamService:
         school_id: int,
         created_by_id: Optional[int] = None,
     ) -> ExamResponse:
+        # Resolve the only valid subject source for this section: timetable entries.
+        grade = db.query(Section).filter(Section.id == obj_in.section_id, Section.grade_id == obj_in.grade_id, Section.school_id == school_id).first()
+        if not grade:
+            raise HTTPException(status_code=400, detail="Section does not belong to the selected class and school")
+        academic_year = db.query(AcademicYear).filter(AcademicYear.id == obj_in.academic_year_id, AcademicYear.school_id == school_id).first()
+        if not academic_year:
+            raise HTTPException(status_code=400, detail="Academic year does not belong to this school")
+
+        taught_subjects = {
+            row[0].subject_id: row
+            for row in db.query(Timetable, Subject).join(Subject, Subject.id == Timetable.subject_id)
+            .filter(
+                Timetable.school_id == school_id,
+                Timetable.academic_year_id == obj_in.academic_year_id,
+                Timetable.grade_id == obj_in.grade_id,
+                Timetable.section_id == obj_in.section_id,
+                Subject.school_id == school_id,
+            ).all()
+        }
+        if not taught_subjects:
+            raise HTTPException(status_code=400, detail="No subjects are configured for this class and section timetable")
+
+        schedules = list(obj_in.subject_schedules or [])
+        if not schedules:
+            schedules = [
+                {"subject_id": subject_id, "exam_date": obj_in.start_date}
+                for subject_id in taught_subjects
+            ]
+        schedule_ids = [int(s.subject_id if hasattr(s, "subject_id") else s["subject_id"]) for s in schedules]
+        if len(schedule_ids) != len(set(schedule_ids)):
+            raise HTTPException(status_code=400, detail="Each exam subject may be scheduled only once")
+        if any(subject_id not in taught_subjects for subject_id in schedule_ids):
+            raise HTTPException(status_code=400, detail="Exam subjects must be taught to the selected class and section")
+        schedule_dates = [s.exam_date if hasattr(s, "exam_date") else s["exam_date"] for s in schedules]
+        calculated_start = min(schedule_dates)
+        calculated_end = max(schedule_dates)
+        if obj_in.start_date != calculated_start or obj_in.end_date != calculated_end:
+            raise HTTPException(status_code=400, detail="Exam start and end dates must match the scheduled subject dates")
+
         # Create exam master record
         db_exam = crud_exam.create(
             db,
@@ -136,29 +179,32 @@ class ExamService:
             created_by_id=created_by_id,
         )
 
-        # Auto-create exam_subjects rows from grade_subjects for this grade
-        grade_subjects = db.query(GradeSubject).filter(GradeSubject.grade_id == obj_in.grade_id).all()
-
         is_formative = (obj_in.assessment_mode or "FORMATIVE").upper() == "FORMATIVE"
         default_max = obj_in.maximum_marks if obj_in.maximum_marks is not None else (20.0 if is_formative else 100.0)
         default_pass = obj_in.passing_marks if obj_in.passing_marks is not None else (7.0 if is_formative else 35.0)
 
-        for gs in grade_subjects:
+        for schedule in schedules:
+            subject_id = int(schedule.subject_id if hasattr(schedule, "subject_id") else schedule["subject_id"])
+            exam_date = schedule.exam_date if hasattr(schedule, "exam_date") else schedule["exam_date"]
             # Check teacher_subjects for section assignment
             ts = db.query(TeacherSubject).filter(
                 TeacherSubject.school_id == school_id,
                 TeacherSubject.section_id == obj_in.section_id,
-                TeacherSubject.subject_id == gs.subject_id,
+                TeacherSubject.subject_id == subject_id,
             ).first()
 
-            assigned_teacher_id = ts.teacher_id if ts else gs.teacher_id
+            assigned_teacher_id = ts.teacher_id if ts else taught_subjects[subject_id][0].teacher_id
+            max_marks = (schedule.maximum_marks if hasattr(schedule, "maximum_marks") else schedule.get("maximum_marks")) or default_max
+            pass_marks = (schedule.passing_marks if hasattr(schedule, "passing_marks") else schedule.get("passing_marks"))
+            pass_marks = pass_marks if pass_marks is not None else default_pass
 
             exam_subject = ExamSubject(
                 exam_id=db_exam.id,
-                subject_id=gs.subject_id,
+                subject_id=subject_id,
+                exam_date=exam_date,
                 teacher_id=assigned_teacher_id,
-                maximum_marks=default_max,
-                passing_marks=default_pass,
+                maximum_marks=max_marks,
+                passing_marks=pass_marks,
                 is_marks_submitted=False,
             )
             db.add(exam_subject)
@@ -223,6 +269,7 @@ class ExamService:
                     id=es.id,
                     exam_id=es.exam_id,
                     subject_id=es.subject_id,
+                    exam_date=es.exam_date,
                     subject_name=sub_name,
                     subject_code=sub_code,
                     teacher_id=es.teacher_id,
@@ -273,6 +320,7 @@ class ExamService:
                 MarksStatusItem(
                     exam_subject_id=es.id,
                     subject_id=es.subject_id,
+                    exam_date=es.exam_date,
                     subject_name=sub_name,
                     teacher_id=es.teacher_id,
                     teacher_name=teacher_name,

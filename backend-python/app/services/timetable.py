@@ -7,6 +7,9 @@ from app.crud.timetable import timetable as crud_timetable, parse_time
 from app.models.timetable import Timetable
 from app.models.academic_year import AcademicYear
 from app.models.section import Section
+from app.models.grade import Grade
+from app.models.subject import Subject
+from app.models.teacher import Teacher
 from app.schemas.timetable import TimetableCreate, TimetableUpdate, TimetableCopy
 
 
@@ -99,7 +102,9 @@ class TimetableService:
             section_id=section_id,
             teacher_id=teacher_id,
         )
-        return [serialize_timetable(item) for item in items], total
+        # Do not expose legacy/cross-school foreign-key records through any portal.
+        valid_items = [item for item in items if school_id is None or not getattr(item, "subject", None) or item.subject.school_id == school_id]
+        return [serialize_timetable(item) for item in valid_items], len(valid_items)
 
     @staticmethod
     def create_timetable(db: Session, obj_in: Union[TimetableCreate, dict], school_id: int) -> Dict[str, Any]:
@@ -108,6 +113,8 @@ class TimetableService:
         # Validate required fields
         if not data.get("grade_id"):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grade/Class is required")
+        if not data.get("section_id"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Section is required")
         if not data.get("subject_id"):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subject is required")
         if not data.get("teacher_id"):
@@ -124,6 +131,21 @@ class TimetableService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="End time must be later than start time"
             )
+
+        grade = db.query(Grade).filter(Grade.id == data["grade_id"], Grade.school_id == school_id).first()
+        if not grade:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grade does not belong to this school")
+        section = db.query(Section).filter(Section.id == data["section_id"]).first()
+        if not section or section.school_id != school_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Section does not belong to this school")
+        if section.grade_id != grade.id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Section does not belong to the selected class")
+        subject = db.query(Subject).filter(Subject.id == data["subject_id"], Subject.school_id == school_id).first()
+        if not subject:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subject does not belong to this school")
+        teacher = db.query(Teacher).filter(Teacher.id == data["teacher_id"], Teacher.school_id == school_id).first()
+        if not teacher:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Teacher does not belong to this school")
 
         # Prevent double-booking: same teacher, same day, overlapping time window,
         # regardless of section — a teacher physically cannot teach two classes at once.
@@ -143,7 +165,7 @@ class TimetableService:
                 ),
             )
 
-        # Resolve academic_year_id if missing
+        # Resolve academic_year_id if missing, but never invent a foreign key.
         if not data.get("academic_year_id"):
             ay = db.query(AcademicYear).filter(
                 AcademicYear.school_id == school_id,
@@ -151,23 +173,14 @@ class TimetableService:
             ).first() or db.query(AcademicYear).filter(
                 AcademicYear.school_id == school_id
             ).first()
-            if ay:
-                data["academic_year_id"] = ay.id
-            else:
-                data["academic_year_id"] = 1
-
-        # Resolve section_id if missing
-        if not data.get("section_id"):
-            sec = db.query(Section).filter(
-                Section.grade_id == data["grade_id"],
-                Section.school_id == school_id
-            ).first()
-            if sec:
-                data["section_id"] = sec.id
-            else:
-                # If no section exists, try to find any section for this grade
-                sec = db.query(Section).filter(Section.grade_id == data["grade_id"]).first()
-                data["section_id"] = sec.id if sec else 1
+            if not ay:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No academic year is configured for this school")
+            data["academic_year_id"] = ay.id
+        academic_year = db.query(AcademicYear).filter(
+            AcademicYear.id == data["academic_year_id"], AcademicYear.school_id == school_id
+        ).first()
+        if not academic_year:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Academic year does not belong to this school")
 
         created = crud_timetable.create(db, school_id=school_id, obj_in=data)
         return serialize_timetable(created)
@@ -194,6 +207,25 @@ class TimetableService:
         data = obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, "model_dump") else (
             obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else dict(obj_in)
         )
+
+        effective_grade_id = data.get("grade_id") or timetable.grade_id
+        effective_section_id = data.get("section_id") or timetable.section_id
+        grade = db.query(Grade).filter(Grade.id == effective_grade_id, Grade.school_id == (school_id or timetable.school_id)).first()
+        section = db.query(Section).filter(Section.id == effective_section_id).first()
+        if not grade or not section or section.school_id != (school_id or timetable.school_id) or section.grade_id != effective_grade_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Section must belong to the selected class and school")
+        if "subject_id" in data:
+            subject = db.query(Subject).filter(Subject.id == data["subject_id"], Subject.school_id == (school_id or timetable.school_id)).first()
+            if not subject:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subject does not belong to this school")
+        if "teacher_id" in data:
+            teacher = db.query(Teacher).filter(Teacher.id == data["teacher_id"], Teacher.school_id == (school_id or timetable.school_id)).first()
+            if not teacher:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Teacher does not belong to this school")
+        if "academic_year_id" in data:
+            ay = db.query(AcademicYear).filter(AcademicYear.id == data["academic_year_id"], AcademicYear.school_id == (school_id or timetable.school_id)).first()
+            if not ay:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Academic year does not belong to this school")
 
         start_val = data.get("start_time") or timetable.start_time
         end_val = data.get("end_time") or timetable.end_time

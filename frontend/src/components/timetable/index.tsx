@@ -10,6 +10,18 @@ interface TimetableGridProps {
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+const timeToMinutes = (value?: string): number => {
+  if (!value) return Number.MAX_SAFE_INTEGER;
+  const match = value.trim().match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const meridiem = (match[3] || '').toUpperCase();
+  if (meridiem === 'PM' && hours < 12) hours += 12;
+  if (meridiem === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+};
+
 export const TimetableGrid: React.FC<TimetableGridProps> = ({ timetable, selectedDay }) => {
   const filteredDays = selectedDay ? [selectedDay] : DAYS;
 
@@ -18,7 +30,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({ timetable, selecte
       {filteredDays.map(day => {
         const dayEntries = timetable.entries
           .filter(e => e.day_of_week.toLowerCase() === day.toLowerCase())
-          .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+          .sort((a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time));
 
         if (dayEntries.length === 0 && selectedDay) {
           return (

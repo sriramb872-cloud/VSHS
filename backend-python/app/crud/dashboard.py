@@ -2,6 +2,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from app.models.student import Student
 from app.models.teacher import Teacher
+from app.models.student_enrollment import StudentEnrollment
 
 
 class CRUDDashboard:
@@ -24,7 +25,7 @@ class CRUDDashboard:
             "active_schools": 1,
         }
 
-    def get_principal_stats(self, db: Session, school_id: Optional[int]) -> dict:
+    def get_principal_stats(self, db: Session, school_id: Optional[int], academic_year_id: Optional[int] = None) -> dict:
         try:
             if school_id:
                 total_teachers = db.query(Teacher).filter(Teacher.school_id == school_id).count()
@@ -35,9 +36,14 @@ class CRUDDashboard:
 
         try:
             if school_id:
-                total_students = db.query(Student).filter(Student.school_id == school_id).count()
+                enrollment_query = db.query(StudentEnrollment).join(
+                    Student, StudentEnrollment.student_id == Student.id
+                ).filter(Student.school_id == school_id)
+                if academic_year_id:
+                    enrollment_query = enrollment_query.filter(StudentEnrollment.academic_year_id == academic_year_id)
+                total_students = enrollment_query.count()
             else:
-                total_students = db.query(Student).count()
+                total_students = db.query(StudentEnrollment).count()
         except Exception:
             total_students = 0
 

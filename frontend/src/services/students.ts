@@ -1,5 +1,5 @@
 import api from './api';
-import { Student, StudentCreatePayload, StudentUpdatePayload } from '../types';
+import { Student, StudentCreatePayload, StudentUpdatePayload, StudentOnboardResponse } from '../types';
 
 export interface StudentFilterParams {
   skip?: number;
@@ -15,8 +15,8 @@ export const studentsService = {
     return response.data;
   },
 
-  async createStudent(payload: StudentCreatePayload): Promise<Student> {
-    const response = await api.post<Student>('/students', payload);
+  async createStudent(payload: StudentCreatePayload): Promise<StudentOnboardResponse> {
+    const response = await api.post<StudentOnboardResponse>('/students', payload);
     return response.data;
   },
 
@@ -46,4 +46,3 @@ export const studentsService = {
 };
 
 export default studentsService;
-

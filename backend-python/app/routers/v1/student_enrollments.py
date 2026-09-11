@@ -9,6 +9,7 @@ from app.models.student_enrollment import StudentEnrollment
 from app.models.section import Section
 from app.models.student import Student
 from app.models.user import User
+from app.models.academic_year import AcademicYear
 
 router = APIRouter(prefix="/student-enrollments", tags=["Student Enrollments"])
 
@@ -135,11 +136,35 @@ def enroll_student(
     else:
         student_id = data.get("student_id")
 
+    if not student_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="student_id is required")
+    student = student_crud.get_student(db, int(student_id))
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    if user_role != "SUPER_ADMIN" and student.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student does not belong to your school")
+
+    section_id = data.get("section_id")
+    if not section_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="section_id is required")
+    section = db.query(Section).filter(Section.id == int(section_id)).first()
+    if not section:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
+    if user_role != "SUPER_ADMIN" and section.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Section does not belong to your school")
+
     academic_year_id = data.get("academic_year_id")
-    if student_id and academic_year_id:
-        existing = se_crud.get_student_enrollment_by_academic_year(db, int(student_id), int(academic_year_id))
-        if existing:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student already enrolled for this academic year")
+    if not academic_year_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="academic_year_id is required")
+    academic_year = db.query(AcademicYear).filter(AcademicYear.id == int(academic_year_id)).first()
+    if not academic_year:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Academic year not found")
+    if user_role != "SUPER_ADMIN" and academic_year.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Academic year does not belong to your school")
+
+    existing = se_crud.get_student_enrollment_by_academic_year(db, int(student_id), int(academic_year_id))
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student already enrolled for this academic year")
 
     item = se_crud.create_student_enrollment(db, data)
     return serialize_enrollment(item)

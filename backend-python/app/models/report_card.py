@@ -11,6 +11,7 @@ class ReportCard(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey("students.student_id", ondelete="CASCADE"), nullable=False, index=True)
     academic_year_id = Column(Integer, ForeignKey("academic_years.academic_year_id", ondelete="CASCADE"), nullable=False, index=True)
+    exam_id = Column(Integer, ForeignKey("exams.id", ondelete="SET NULL"), nullable=True, index=True)
     term_name = Column(String(100), nullable=False)  # e.g. "Term 1", "Term 2", "Annual"
     total_marks = Column(Float, default=0.0, nullable=False)
     percentage = Column(Float, default=0.0, nullable=False)
@@ -21,11 +22,14 @@ class ReportCard(Base):
 
     student = relationship("Student", back_populates="report_cards")
     academic_year = relationship("AcademicYear", back_populates="report_cards")
+    exam = relationship("Exam")
 
     __table_args__ = (
-        UniqueConstraint("student_id", "academic_year_id", "term_name", name="uq_student_term_report_card"),
+        # A report card is unique per student, examination and term.  The
+        # examination is part of the identity because a student can have
+        # multiple published examinations in the same academic year.
+        UniqueConstraint("student_id", "academic_year_id", "exam_id", "term_name", name="uq_student_exam_term_report_card"),
     )
 
 
 ReportCardModel = ReportCard
-

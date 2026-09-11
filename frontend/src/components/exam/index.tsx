@@ -53,6 +53,16 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onClick, actions }) =>
             <span>Class: {exam.grade_name || `Grade ${exam.grade_id}`} - {exam.section_name || `Sec ${exam.section_id}`}</span>
           </div>
         </div>
+        {exam.exam_subjects && exam.exam_subjects.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">
+            {exam.exam_subjects.map(subject => (
+              <div key={subject.id} className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700">{subject.subject_name || `Subject #${subject.subject_id}`}</span>
+                {subject.exam_date && <span className="text-slate-500">{subject.exam_date}</span>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">

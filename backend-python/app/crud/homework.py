@@ -29,6 +29,8 @@ class CRUDHomework:
 
         if school_id is not None:
             query = query.filter(Homework.school_id == school_id)
+        if academic_year_id is not None:
+            query = query.filter(Homework.academic_year_id == academic_year_id)
         if grade_id is not None:
             query = query.filter(Homework.grade_id == grade_id)
         if section_id is not None:
@@ -49,6 +51,7 @@ class CRUDHomework:
     def create(self, db: Session, *, obj_in: HomeworkCreate, teacher_id: int, school_id: int) -> Homework:
         db_obj = Homework(
             school_id=school_id,
+            academic_year_id=obj_in.academic_year_id,
             teacher_id=teacher_id,
             grade_id=obj_in.grade_id,
             section_id=obj_in.section_id,

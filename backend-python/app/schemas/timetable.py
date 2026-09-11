@@ -46,13 +46,13 @@ class TimetableEntryCreate(TimetableEntryBase):
 
 class TimetableCreate(BaseModel):
     grade_id: int
+    section_id: int = Field(..., description="Section within the selected grade")
     subject_id: int
     teacher_id: int
     start_time: str
     end_time: str
     day_of_week: Optional[str] = "Monday"
     academic_year_id: Optional[int] = None
-    section_id: Optional[int] = None
     room_number: Optional[str] = None
     period_number: Optional[int] = None
     entries: Optional[List[TimetableEntryCreate]] = None

@@ -151,6 +151,10 @@ export interface StudentCreatePayload {
   password?: string;
 }
 
+export interface StudentOnboardResponse extends Student {
+  temporary_password?: string;
+}
+
 export interface StudentUpdatePayload {
   display_name?: string;
   full_name?: string;
@@ -217,6 +221,10 @@ export interface Teacher {
   teaching_assignments?: TeachingAssignment[];
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface TeacherOnboardResponse extends Teacher {
+  temporary_password?: string;
 }
 
 export interface TeacherCreatePayload {
@@ -522,7 +530,9 @@ export interface TimetableSlot {
   id: number;
   academic_year_id?: number;
   grade_id?: number;
+  grade_name?: string;
   section_id?: number;
+  section_name?: string;
   subject_id?: number;
   teacher_id?: number;
   day_of_week?: string | number;

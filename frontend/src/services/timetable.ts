@@ -26,6 +26,7 @@ export interface TimetableCreatePayload {
 
 export interface TimetableUpdatePayload {
   grade_id?: number;
+  section_id?: number;
   subject_id?: number;
   teacher_id?: number;
   day_of_week?: string;

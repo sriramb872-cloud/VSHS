@@ -5,19 +5,30 @@ import { BookOpen, ChevronRight, Calendar, User } from 'lucide-react';
 import { EmptyState, LoadingSkeleton } from '../../components/shared';
 import { homeworkService } from '../../services/homework';
 import { Homework as HomeworkType } from '../../types';
+import { timetableService } from '../../services/timetable';
+import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
 
 export const Homework: React.FC = () => {
   const [homeworkList, setHomeworkList] = useState<HomeworkType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState('Monday');
+  const [timetable, setTimetable] = useState<any[]>([]);
 
   useEffect(() => {
-    homeworkService
-      .listHomework()
-      .then(data => setHomeworkList(data.items))
+    Promise.all([homeworkService.listHomework(), timetableService.listTimetables()])
+      .then(([data, schedule]) => {
+        setHomeworkList(data.items);
+        setTimetable(schedule.items || []);
+      })
       .catch(() => setError('Failed to load homework'))
       .finally(() => setLoading(false));
   }, []);
+
+  const daySlots = timetable.filter(slot => String(slot.day_of_week).toLowerCase() === selectedDay.toLowerCase());
+  const dayHomework = homeworkList.filter(hw => daySlots.some(slot =>
+    slot.grade_id === hw.grade_id && slot.section_id === hw.section_id && slot.subject_id === hw.subject_id
+  ));
 
   return (
     <div className="space-y-4">
@@ -25,6 +36,9 @@ export const Homework: React.FC = () => {
         <h1 className="text-xl font-bold text-slate-900">Homework Overview</h1>
         <p className="text-xs text-slate-500">Published assignments across all classes</p>
       </div>
+
+      <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+      <p className="text-xs text-slate-500">{daySlots.length} scheduled period{daySlots.length === 1 ? '' : 's'} on {selectedDay}; homework follows the timetable structure.</p>
 
       {error && (
         <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">{error}</div>
@@ -40,7 +54,7 @@ export const Homework: React.FC = () => {
         />
       ) : (
         <div className="space-y-2.5">
-          {homeworkList.map((hw) => (
+          {dayHomework.map((hw) => (
             <Link
               key={hw.id}
               to={`/principal/homework/${hw.id}`}
@@ -63,6 +77,9 @@ export const Homework: React.FC = () => {
               <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
             </Link>
           ))}
+          {dayHomework.length === 0 && (
+            <EmptyState title={`No Homework on ${selectedDay}`} description="No homework matches a scheduled timetable period for this day." icon={<BookOpen className="w-10 h-10 text-slate-300" />} />
+          )}
         </div>
       )}
     </div>

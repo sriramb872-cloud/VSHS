@@ -55,7 +55,7 @@ export const Login: React.FC = () => {
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Portal Sign In</h2>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">Enter your Student ID, Employee ID, or Mobile Number</p>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">Students use their own mobile number and temporary password. Staff may use their employee ID or mobile.</p>
       </div>
 
       {/* Error Banner */}
@@ -73,7 +73,7 @@ export const Login: React.FC = () => {
         {/* Mobile / Student ID / Employee ID */}
         <div>
           <label htmlFor="mobile-number" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Student ID / Employee ID / Mobile Number
+            Student ID / Employee ID / Student Mobile Number
           </label>
           <div className="relative">
             <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -84,7 +84,7 @@ export const Login: React.FC = () => {
               required
               value={mobileNumber}
               onChange={(e) => setMobileNumber(e.target.value)}
-              placeholder="e.g. SCH2026001, EMP2026001, or Mobile"
+              placeholder="e.g. SCH2026001, EMP2026001, or student mobile"
               className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             />
           </div>

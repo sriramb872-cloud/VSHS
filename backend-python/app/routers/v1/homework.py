@@ -18,6 +18,65 @@ from app.models.homework import Homework
 from app.models.subject import Subject
 from app.models.grade import Grade
 from app.models.section import Section
+from app.models.timetable import Timetable
+
+
+def _teacher_has_assignment(
+    db: Session,
+    *,
+    teacher: Teacher,
+    school_id: int,
+    subject_id: int,
+    grade_id: int,
+    section_id: int,
+) -> bool:
+    """Validate an effective teaching assignment for a homework target.
+
+    The teacher portal builds its class/subject choices from timetable rows,
+    while older deployments also have explicit teacher_subjects rows.  Both
+    are legitimate assignment sources, but every referenced entity must be in
+    the teacher's school and the section must belong to the selected grade.
+    """
+    if not teacher.school_id or teacher.school_id != school_id:
+        return False
+
+    grade = db.query(Grade).filter(
+        Grade.id == grade_id,
+        Grade.school_id == school_id,
+    ).first()
+    section = db.query(Section).filter(
+        Section.id == section_id,
+        Section.school_id == school_id,
+        Section.grade_id == grade_id,
+    ).first()
+    subject = db.query(Subject).filter(
+        Subject.id == subject_id,
+        Subject.school_id == school_id,
+    ).first()
+    if not grade or not section or not subject:
+        return False
+
+    explicit = db.query(TeacherSubject).filter(
+        TeacherSubject.teacher_id == teacher.id,
+        TeacherSubject.school_id == school_id,
+        TeacherSubject.subject_id == subject_id,
+        TeacherSubject.grade_id == grade_id,
+        TeacherSubject.section_id == section_id,
+    ).first()
+    if explicit:
+        return True
+
+    # The current Principal timetable workflow is the source used by
+    # /teachers/me to populate this form, so a matching timetable assignment
+    # is an effective assignment for posting homework.
+    timetable_assignment = db.query(Timetable).filter(
+        Timetable.teacher_id == teacher.id,
+        Timetable.school_id == school_id,
+        Timetable.subject_id == subject_id,
+        Timetable.grade_id == grade_id,
+        Timetable.section_id == section_id,
+    ).first()
+    return timetable_assignment is not None
 
 def _enrich_with_names(db: Session, items):
     single = not isinstance(items, list)
@@ -99,24 +158,25 @@ def create_homework(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Teacher profile not found for user",
         )
-    if str(current_user.role).upper() == "TEACHER":
-        ts = db.query(TeacherSubject).filter(
-            TeacherSubject.teacher_id == teacher.id,
-            TeacherSubject.subject_id == obj_in.subject_id,
-            TeacherSubject.grade_id == obj_in.grade_id,
-            TeacherSubject.section_id == obj_in.section_id,
-        ).first()
-        if not ts:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Teacher is not assigned to this subject/grade/section",
-            )
     school_id = current_user.school_id or teacher.school_id
     if not school_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="School context not found",
         )
+    if str(current_user.role).upper() == "TEACHER":
+        if not _teacher_has_assignment(
+            db,
+            teacher=teacher,
+            school_id=school_id,
+            subject_id=obj_in.subject_id,
+            grade_id=obj_in.grade_id,
+            section_id=obj_in.section_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Teacher is not assigned to this subject/grade/section",
+            )
     return HomeworkService.create_homework(
         db, obj_in=obj_in, teacher_id=teacher.id, school_id=school_id
     )
@@ -153,13 +213,15 @@ def update_homework(
             or (obj_in.grade_id is not None and obj_in.grade_id != existing.grade_id)
             or (obj_in.section_id is not None and obj_in.section_id != existing.section_id)
         ):
-            ts = db.query(TeacherSubject).filter(
-                TeacherSubject.teacher_id == teacher.id,
-                TeacherSubject.subject_id == new_subject_id,
-                TeacherSubject.grade_id == new_grade_id,
-                TeacherSubject.section_id == new_section_id,
-            ).first()
-            if not ts:
+            school_id = current_user.school_id or teacher.school_id
+            if not _teacher_has_assignment(
+                db,
+                teacher=teacher,
+                school_id=school_id,
+                subject_id=new_subject_id,
+                grade_id=new_grade_id,
+                section_id=new_section_id,
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Teacher is not assigned to this subject/grade/section",

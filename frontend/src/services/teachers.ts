@@ -1,5 +1,5 @@
 import api from './api';
-import { Teacher, TeacherCreatePayload, TeacherUpdatePayload } from '../types';
+import { Teacher, TeacherOnboardResponse, TeacherCreatePayload, TeacherUpdatePayload } from '../types';
 
 export const teachersService = {
   async listTeachers(params?: { skip?: number; limit?: number }): Promise<Teacher[]> {
@@ -7,8 +7,8 @@ export const teachersService = {
     return response.data;
   },
 
-  async createTeacher(payload: TeacherCreatePayload): Promise<Teacher> {
-    const response = await api.post<Teacher>('/teachers', payload);
+  async createTeacher(payload: TeacherCreatePayload): Promise<TeacherOnboardResponse> {
+    const response = await api.post<TeacherOnboardResponse>('/teachers', payload);
     return response.data;
   },
 

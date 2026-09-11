@@ -30,6 +30,8 @@ class ReportCardResponse(BaseModel):
     grade_id: int
     section_id: int
     academic_year_id: int
+    exam_id: Optional[int] = None
+    exam_name: Optional[str] = None
     subjects: List[SubjectReportCardDetail]
     grand_total_obtained: float
     grand_total_maximum: float

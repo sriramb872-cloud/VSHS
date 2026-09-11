@@ -7,19 +7,26 @@ export interface ReportCardParams {
   grade_id?: number;
   section_id?: number;
   student_id?: number;
+  exam_id?: number;
   skip?: number;
   limit?: number;
 }
 
 export const reportCardService = {
+  async generateReportCards(academicYearId: number, sectionId: number, examId?: number, termName = 'Term 1'): Promise<ReportCardListResponse> {
+    const response = await api.post<ReportCardListResponse>('/report-cards/generate', null, {
+      params: { academic_year_id: academicYearId, section_id: sectionId, exam_id: examId, term_name: termName },
+    });
+    return response.data;
+  },
   async listReportCards(params?: ReportCardParams): Promise<ReportCardListResponse> {
     const response = await api.get<ReportCardListResponse>('/report-cards/', { params });
     return response.data;
   },
 
-  async getReportCard(studentId: number, academicYearId: number): Promise<ReportCard> {
+  async getReportCard(studentId: number, academicYearId: number, examId?: number): Promise<ReportCard> {
     const response = await api.get<ReportCard>(`/report-cards/${studentId}`, {
-      params: { academic_year_id: academicYearId },
+      params: { academic_year_id: academicYearId, exam_id: examId },
     });
     return response.data;
   },

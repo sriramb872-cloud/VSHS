@@ -8,6 +8,7 @@ class ExamSubjectResponse(BaseModel):
     id: int
     exam_id: int
     subject_id: int
+    exam_date: Optional[date] = None
     subject_name: Optional[str] = None
     subject_code: Optional[str] = None
     teacher_id: Optional[int] = None
@@ -34,9 +35,17 @@ class ExamBase(BaseModel):
     end_date: date = Field(..., description="End date of the examination window")
 
 
+class ExamSubjectScheduleCreate(BaseModel):
+    subject_id: int
+    exam_date: date
+    maximum_marks: Optional[float] = Field(default=None, gt=0)
+    passing_marks: Optional[float] = Field(default=None, ge=0)
+
+
 class ExamCreate(ExamBase):
     maximum_marks: Optional[float] = Field(default=None, gt=0, description="Default max marks for subjects")
     passing_marks: Optional[float] = Field(default=None, ge=0, description="Default passing marks for subjects")
+    subject_schedules: List[ExamSubjectScheduleCreate] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_dates(self):

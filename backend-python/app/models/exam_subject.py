@@ -1,6 +1,6 @@
 # backend-python/app/models/exam_subject.py
 from datetime import datetime
-from sqlalchemy import Column, Integer, Float, Boolean, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, Float, Boolean, Date, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -11,6 +11,7 @@ class ExamSubject(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     exam_id = Column(Integer, ForeignKey("exams.id", ondelete="CASCADE"), nullable=False, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.subject_id", ondelete="CASCADE"), nullable=False, index=True)
+    exam_date = Column(Date, nullable=True, index=True)
     teacher_id = Column(Integer, ForeignKey("teachers.teacher_id", ondelete="SET NULL"), nullable=True, index=True)
     maximum_marks = Column(Float, default=100.0, nullable=False)
     passing_marks = Column(Float, default=35.0, nullable=False)

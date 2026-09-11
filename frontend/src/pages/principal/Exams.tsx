@@ -5,7 +5,8 @@ import { examService } from '../../services/exam';
 import { gradesService } from '../../services/grades';
 import { sectionsService } from '../../services/sections';
 import { academicYearsService } from '../../services/academicYears';
-import { Exam, ExamCreatePayload } from '../../types/exam';
+import { timetableService } from '../../services/timetable';
+import { Exam, ExamCreatePayload, ExamSubjectSchedule } from '../../types/exam';
 import { Grade, Section, AcademicYear } from '../../types';
 import { LoadingSkeleton, EmptyState, ConfirmDialog } from '../../components/shared';
 
@@ -14,6 +15,8 @@ export const PrincipalExamsPage: React.FC = () => {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [timetableSubjects, setTimetableSubjects] = useState<Array<{ subject_id: number; subject_name: string }>>([]);
+  const [subjectDates, setSubjectDates] = useState<Record<number, string>>({});
 
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -26,11 +29,11 @@ export const PrincipalExamsPage: React.FC = () => {
     name: '',
     exam_type: 'Summative Assessment',
     assessment_mode: 'SUMMATIVE',
-    academic_year_id: 1,
-    grade_id: 1,
-    section_id: 1,
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    academic_year_id: 0,
+    grade_id: 0,
+    section_id: 0,
+    start_date: '',
+    end_date: '',
     maximum_marks: 100,
     passing_marks: 35,
   });
@@ -71,17 +74,49 @@ export const PrincipalExamsPage: React.FC = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!formData.academic_year_id || !formData.grade_id || !formData.section_id) return;
+    timetableService.listTimetables({
+      academic_year_id: formData.academic_year_id,
+      grade_id: formData.grade_id,
+      section_id: formData.section_id,
+    }).then(data => {
+      const seen = new Set<number>();
+      const subjects = (data.items || []).filter(item => {
+        if (!item.subject_id || seen.has(item.subject_id)) return false;
+        seen.add(item.subject_id);
+        return true;
+      }).map(item => ({ subject_id: item.subject_id!, subject_name: item.subject_name || `Subject #${item.subject_id}` }));
+      setTimetableSubjects(subjects);
+      setSubjectDates(prev => {
+        const next = { ...prev };
+        subjects.forEach((subject, index) => { if (!next[subject.subject_id]) next[subject.subject_id] = new Date(Date.now() + index * 86400000).toISOString().split('T')[0]; });
+        return next;
+      });
+    }).catch(() => setTimetableSubjects([]));
+  }, [formData.academic_year_id, formData.grade_id, formData.section_id]);
+
   const handleCreateExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       setFeedback({ type: 'error', text: 'Exam title is required' });
       return;
     }
+    if (timetableSubjects.length === 0) {
+      setFeedback({ type: 'error', text: 'No timetable subjects are configured for this class and section.' });
+      return;
+    }
+    const schedules: ExamSubjectSchedule[] = timetableSubjects.map(subject => ({ subject_id: subject.subject_id, exam_date: subjectDates[subject.subject_id] }));
+    if (schedules.some(schedule => !schedule.exam_date)) {
+      setFeedback({ type: 'error', text: 'Choose an exam date for every subject.' });
+      return;
+    }
+    const dates = schedules.map(schedule => schedule.exam_date).sort();
 
     try {
       setSubmitting(true);
       setFeedback(null);
-      await examService.createExam(formData);
+      await examService.createExam({ ...formData, start_date: dates[0], end_date: dates[dates.length - 1], subject_schedules: schedules });
       setFeedback({
         type: 'success',
         text: `Exam "${formData.name}" created successfully with auto-generated subject schedules!`,
@@ -112,6 +147,16 @@ export const PrincipalExamsPage: React.FC = () => {
       setFeedback({ type: 'error', text: err.response?.data?.detail || 'Failed to delete exam' });
     } finally {
       setDeleteId(null);
+    }
+  };
+
+  const handlePublish = async (examId: number) => {
+    try {
+      await examService.publishExam(examId);
+      setFeedback({ type: 'success', text: 'Examination published successfully.' });
+      await loadData();
+    } catch (err: any) {
+      setFeedback({ type: 'error', text: err.response?.data?.detail || 'Failed to publish examination' });
     }
   };
 
@@ -222,7 +267,7 @@ export const PrincipalExamsPage: React.FC = () => {
                   setFormData({
                     ...formData,
                     grade_id: gId,
-                    section_id: validSecs.length > 0 ? validSecs[0].id : 1,
+                    section_id: validSecs.length > 0 ? validSecs[0].id : 0,
                   });
                 }}
                 className="w-full h-10 px-3 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
@@ -260,26 +305,26 @@ export const PrincipalExamsPage: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label className="font-semibold text-slate-700 block mb-1">Start Date *</label>
-              <input
-                type="date"
-                value={formData.start_date}
-                onChange={e => setFormData({ ...formData, start_date: e.target.value })}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-slate-700 block mb-1">End Date *</label>
-              <input
-                type="date"
-                value={formData.end_date}
-                onChange={e => setFormData({ ...formData, end_date: e.target.value })}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
-                required
-              />
+            <div className="sm:col-span-2 rounded-xl border border-blue-100 bg-blue-50/50 p-4 space-y-3">
+              <div>
+                <label className="font-semibold text-slate-700 block">Subject schedule *</label>
+                <p className="text-xs text-slate-500 mt-1">Subjects are loaded from this section's timetable. Assign one exam date per subject; the overall period is calculated automatically.</p>
+              </div>
+              {timetableSubjects.length === 0 ? (
+                <p className="text-xs text-amber-700">No subjects are taught to the selected class and section.</p>
+              ) : timetableSubjects.map(subject => (
+                <div key={subject.subject_id} className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+                  <span className="font-semibold text-slate-800">{subject.subject_name}</span>
+                  <input
+                    aria-label={`Exam date for ${subject.subject_name}`}
+                    type="date"
+                    value={subjectDates[subject.subject_id] || ''}
+                    onChange={e => setSubjectDates(prev => ({ ...prev, [subject.subject_id]: e.target.value }))}
+                    className="w-full h-10 px-3 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
+                    required
+                  />
+                </div>
+              ))}
             </div>
 
             <div>
@@ -372,6 +417,14 @@ export const PrincipalExamsPage: React.FC = () => {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                      {!isPublished && (
+                        <button
+                          onClick={() => handlePublish(exam.id)}
+                          className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold"
+                        >
+                          Publish
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -400,7 +453,7 @@ export const PrincipalExamsPage: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {exam.exam_subjects.map(s => (
+                          {exam.exam_subjects.map(s => (
                           <span
                             key={s.id}
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs ${
@@ -414,7 +467,7 @@ export const PrincipalExamsPage: React.FC = () => {
                             ) : (
                               <Clock className="w-3 h-3 text-slate-400" />
                             )}
-                            {s.subject_name}
+                            {s.subject_name}{s.exam_date ? ` — ${s.exam_date}` : ''}
                           </span>
                         ))}
                       </div>

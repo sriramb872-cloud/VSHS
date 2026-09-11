@@ -10,6 +10,7 @@ class Homework(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     school_id = Column(Integer, ForeignKey("schools.school_id", ondelete="CASCADE"), nullable=False, index=True)
+    academic_year_id = Column(Integer, ForeignKey("academic_years.academic_year_id", ondelete="SET NULL"), nullable=True, index=True)
     teacher_id = Column(Integer, ForeignKey("teachers.teacher_id", ondelete="CASCADE"), nullable=False, index=True)
     grade_id = Column(Integer, ForeignKey("grades.grade_id", ondelete="CASCADE"), nullable=False, index=True)
     section_id = Column(Integer, ForeignKey("sections.section_id", ondelete="CASCADE"), nullable=False, index=True)
@@ -31,4 +32,3 @@ class Homework(Base):
 
 
 HomeworkModel = Homework
-

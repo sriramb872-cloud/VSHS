@@ -265,12 +265,19 @@ export const StudentProfile: React.FC = () => {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
               <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
                 <p className="text-[11px] text-slate-500 font-medium">Grade & Section</p>
                 <p className="text-sm font-bold text-slate-900 mt-0.5">
                   {profileData.grade_name ? `${profileData.grade_name}` : 'N/A'}{' '}
                   {profileData.section_name ? `(${profileData.section_name})` : ''}
+                </p>
+              </div>
+
+              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <p className="text-[11px] text-slate-500 font-medium">Academic Year</p>
+                <p className="text-sm font-bold text-slate-900 mt-0.5">
+                  {profileData.academic_year_name || 'N/A'}
                 </p>
               </div>
 
@@ -650,4 +657,4 @@ export const StudentProfile: React.FC = () => {
   );
 };
 
-export default StudentProfile;
+export default StudentProfile;

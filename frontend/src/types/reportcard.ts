@@ -30,6 +30,8 @@ export interface ReportCardResponse {
   grade_id: number;
   section_id: number;
   academic_year_id: number;
+  exam_id?: number | null;
+  exam_name?: string | null;
   subjects: SubjectReportCardDetail[];
   grand_total_obtained: number;
   grand_total_maximum: number;

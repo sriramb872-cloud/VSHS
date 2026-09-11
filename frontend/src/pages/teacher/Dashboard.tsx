@@ -63,14 +63,22 @@ export const TeacherDashboardPage: React.FC = () => {
       color: data.attendance_pending ? 'text-amber-600' : 'text-emerald-600',
       onClick: () => navigate('/teacher/attendance'),
     },
-    {
-      icon: <BookOpen className="w-5 h-5" />,
-      label: 'Homework',
-      value: data.homework_summary.length,
+      {
+        icon: <BookOpen className="w-5 h-5" />,
+        label: 'Homework',
+        value: data.homework_summary.length,
       bg: 'bg-sky-50',
       color: 'text-sky-600',
-      onClick: () => navigate('/teacher/homework'),
-    },
+        onClick: () => navigate('/teacher/homework'),
+      },
+      {
+        icon: <Calendar className="w-5 h-5" />,
+        label: 'Upcoming Exams',
+        value: data.upcoming_exams.length,
+        bg: 'bg-rose-50',
+        color: 'text-rose-600',
+        onClick: () => navigate('/teacher/exams'),
+      },
     {
       icon: <Bell className="w-5 h-5" />,
       label: 'Announcements',

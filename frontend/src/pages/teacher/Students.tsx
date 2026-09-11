@@ -16,6 +16,8 @@ import {
   Layers,
   School,
   Lock,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { teachersService } from '../../services/teachers';
 import { sectionsService } from '../../services/sections';
@@ -46,10 +48,28 @@ export const TeacherStudents: React.FC = () => {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ full_name: string; mobile: string; temporary_password: string } | null>(null);
+  const [copiedCredential, setCopiedCredential] = useState<'mobile' | 'password' | null>(null);
+
+  const generateTemporaryPassword = () => {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    const values = new Uint32Array(14);
+    if (typeof window !== 'undefined' && window.crypto?.getRandomValues) window.crypto.getRandomValues(values);
+    else values.fill(Math.floor(Math.random() * alphabet.length));
+    return Array.from(values, value => alphabet[value % alphabet.length]).join('');
+  };
+
+  const copyCredential = async (value: string, field: 'mobile' | 'password') => {
+    if (navigator?.clipboard?.writeText) await navigator.clipboard.writeText(value);
+    setCopiedCredential(field);
+    setTimeout(() => setCopiedCredential(null), 1800);
+  };
 
   // New Student Form Data
   const [formData, setFormData] = useState({
     full_name: '',
+    mobile: '',
+    password: '',
     admission_number: '',
     admission_date: new Date().toISOString().slice(0, 10),
     roll_number: '',
@@ -155,6 +175,18 @@ export const TeacherStudents: React.FC = () => {
       });
       return;
     }
+    if (!formData.mobile.trim()) {
+      setStudentModalFeedback({ type: 'error', message: 'Student mobile number is required for login.' });
+      return;
+    }
+    if (!formData.password) {
+      setStudentModalFeedback({ type: 'error', message: 'A temporary password is required. Generate one or enter it manually.' });
+      return;
+    }
+    if (formData.password.length < 8) {
+      setStudentModalFeedback({ type: 'error', message: 'Temporary password must be at least 8 characters long.' });
+      return;
+    }
 
     try {
       setSubmittingStudent(true);
@@ -163,6 +195,8 @@ export const TeacherStudents: React.FC = () => {
       const payload = {
         full_name: formData.full_name.trim(),
         display_name: formData.full_name.trim(),
+        mobile: formData.mobile.trim(),
+        password: formData.password,
         admission_number: formData.admission_number.trim() || undefined,
         admission_date: formData.admission_date || undefined,
         roll_number: formData.roll_number.trim() || undefined,
@@ -182,10 +216,12 @@ export const TeacherStudents: React.FC = () => {
         email: formData.email.trim() || undefined,
       };
 
-      await studentsService.createStudent(payload);
+      const createdStudent = await studentsService.createStudent(payload);
       setShowAddModal(false);
       setFormData({
         full_name: '',
+        mobile: '',
+        password: '',
         admission_number: '',
         admission_date: new Date().toISOString().slice(0, 10),
         roll_number: '',
@@ -199,6 +235,11 @@ export const TeacherStudents: React.FC = () => {
         guardian_mobile: '',
         address: '',
         email: '',
+      });
+      setCreatedCredentials({
+        full_name: payload.full_name,
+        mobile: createdStudent.mobile || payload.mobile,
+        temporary_password: createdStudent.temporary_password || payload.password,
       });
 
       // Refresh student roster
@@ -490,6 +531,24 @@ export const TeacherStudents: React.FC = () => {
                 </span>
               </div>
 
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3">
+                <div>
+                  <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Student Login Details</h3>
+                  <p className="text-[11px] text-emerald-700 mt-1">The student signs in with their own mobile number and this temporary password. Parent/guardian numbers are contact details only.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Student Mobile Number (Login) *</label>
+                  <input type="tel" required value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} placeholder="e.g. 9876543210" className="w-full h-10 px-3 rounded-xl border border-emerald-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Temporary Password *</label>
+                    <button type="button" onClick={() => setFormData({ ...formData, password: generateTemporaryPassword() })} className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800">Generate Password</button>
+                  </div>
+                  <input type="text" required minLength={8} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Generate or enter at least 8 characters" autoComplete="new-password" className="w-full h-10 px-3 rounded-xl border border-emerald-300 bg-white text-slate-900 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                </div>
+              </div>
+
               {/* Identity Details */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
@@ -708,6 +767,23 @@ export const TeacherStudents: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {createdCredentials && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Student Created Successfully</h2>
+              <p className="text-xs text-slate-500 mt-1">Share these credentials with the student. The password will not be shown again.</p>
+            </div>
+            <div className="space-y-3 bg-slate-50 rounded-2xl p-4 border border-slate-200">
+              <div><span className="block text-[11px] font-bold text-slate-500 uppercase">Student</span><span className="text-sm font-semibold">{createdCredentials.full_name}</span></div>
+              <div><span className="block text-[11px] font-bold text-slate-500 uppercase">Student Mobile (Login)</span><div className="flex items-center justify-between"><span className="font-mono text-sm">{createdCredentials.mobile}</span><button type="button" onClick={() => copyCredential(createdCredentials.mobile, 'mobile')} title="Copy mobile" className="p-1.5">{copiedCredential === 'mobile' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}</button></div></div>
+              <div><span className="block text-[11px] font-bold text-slate-500 uppercase">Temporary Password</span><div className="flex items-center justify-between"><span className="font-mono font-bold text-sm text-emerald-700">{createdCredentials.temporary_password}</span><button type="button" onClick={() => copyCredential(createdCredentials.temporary_password, 'password')} title="Copy password" className="p-1.5">{copiedCredential === 'password' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}</button></div></div>
+            </div>
+            <button type="button" onClick={() => setCreatedCredentials(null)} className="w-full h-11 rounded-xl bg-emerald-600 text-white text-xs font-bold">Done</button>
           </div>
         </div>
       )}

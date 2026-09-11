@@ -12,6 +12,7 @@ from app.models.timetable import Timetable
 from app.core.security import get_password_hash
 from app.services.id_generator import generate_employee_id
 from app.core.audit import write_audit_log
+from app.validators.user import validate_password_strength, validate_email_format
 
 router = APIRouter(prefix="/teachers", tags=["Teachers"])
 
@@ -150,19 +151,33 @@ def create_teacher_profile(
     if not mobile or str(mobile).strip() == "":
         mobile = f"FAC{employee_id}"
 
-    # Check for unique mobile in users
+    # A teacher account must have an explicit temporary password.  The
+    # Principal UI generates/displays it once; only its hash is persisted.
+    initial_password = payload.get("password")
+    if not isinstance(initial_password, str) or not initial_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Temporary password is required.")
+    validate_password_strength(initial_password)
+
+    # Check for unique mobile and email in users.  Silent mobile replacement
+    # made it impossible for a Principal to know the actual login identifier.
     existing_user = db.query(User).filter(User.mobile == mobile).first()
     if existing_user:
-        mobile = f"FAC{employee_id}"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A user with this mobile number already exists.")
 
-    initial_password = payload.get("password") or "Teacher@123"
+    email = payload.get("email")
+    if email:
+        validate_email_format(str(email))
+        existing_email = db.query(User).filter(User.email == str(email)).first()
+        if existing_email:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A user with this email address already exists.")
+
     hashed_pwd = get_password_hash(initial_password)
 
     new_user = User(
         school_id=school_id,
         display_name=full_name,
         mobile=mobile,
-        email=payload.get("email"),
+        email=email,
         profile_photo=payload.get("profile_photo"),
         password_hash=hashed_pwd,
         role="TEACHER",
@@ -199,7 +214,9 @@ def create_teacher_profile(
         details={"full_name": full_name, "mobile": mobile, "employee_id": employee_id},
     )
     try:
-        return serialize_teacher(new_teacher, db=db)
+        result = serialize_teacher(new_teacher, db=db)
+        result["temporary_password"] = initial_password
+        return result
     except Exception as e:
         # The teacher record itself is already committed and valid at this
         # point — don't roll it back. But don't let a display/serialization
@@ -413,4 +430,4 @@ def update_teacher(
     if "status" in sanitized_payload and teacher.user:
         teacher.user.is_active = sanitized_payload["status"]
     updated = teacher_crud.update_teacher(db, teacher, sanitized_payload)
-    return serialize_teacher(updated, db=db)
+    return serialize_teacher(updated, db=db)

@@ -5,12 +5,15 @@ from app.models.report_card import ReportCard
 
 class CRUDReportCard:
     def get_by_student_and_year(
-        self, db: Session, *, student_id: int, academic_year_id: int
+        self, db: Session, *, student_id: int, academic_year_id: int, exam_id: Optional[int] = None
     ) -> Optional[ReportCard]:
-        return db.query(ReportCard).filter(
+        query = db.query(ReportCard).filter(
             ReportCard.student_id == student_id,
             ReportCard.academic_year_id == academic_year_id
-        ).first()
+        )
+        if exam_id is not None:
+            query = query.filter(ReportCard.exam_id == exam_id)
+        return query.first()
 
     def get_multi(
         self,
@@ -22,6 +25,7 @@ class CRUDReportCard:
         grade_id: Optional[int] = None,
         section_id: Optional[int] = None,
         student_id: Optional[int] = None,
+        exam_id: Optional[int] = None,
     ) -> Tuple[List[ReportCard], int]:
         query = db.query(ReportCard)
 
@@ -29,6 +33,8 @@ class CRUDReportCard:
             query = query.filter(ReportCard.academic_year_id == academic_year_id)
         if student_id is not None:
             query = query.filter(ReportCard.student_id == student_id)
+        if exam_id is not None:
+            query = query.filter(ReportCard.exam_id == exam_id)
         if grade_id is not None or section_id is not None:
             from app.models.student_enrollment import StudentEnrollment
             query = query.join(

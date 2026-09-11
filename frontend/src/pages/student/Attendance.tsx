@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { attendanceService } from '../../services/attendance';
 import { studentsService } from '../../services/students';
+import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
 
 export const StudentAttendance: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState('Monday');
 
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
@@ -22,6 +24,11 @@ export const StudentAttendance: React.FC = () => {
   }, []);
 
   useEffect(() => { fetchAttendance(); }, [fetchAttendance]);
+
+  const dayRecords = (attendanceData?.records || []).filter((record: any) => {
+    const dateValue = new Date(`${record.date}T00:00:00`);
+    return dateValue.toLocaleDateString('en-US', { weekday: 'long' }) === selectedDay;
+  });
 
   return (
     <div className="er-section">
@@ -65,7 +72,8 @@ export const StudentAttendance: React.FC = () => {
 
           <div className="er-card">
             <h3 className="er-card-title mb-4">Attendance History</h3>
-            {(!attendanceData.records || attendanceData.records.length === 0) ? (
+            <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+            {dayRecords.length === 0 ? (
               <div className="er-empty-state">No detailed records available.</div>
             ) : (
               <div className="er-table-container overflow-x-auto">
@@ -77,7 +85,7 @@ export const StudentAttendance: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {attendanceData.records.map((rec: any, idx: number) => (
+                    {dayRecords.map((rec: any, idx: number) => (
                       <tr key={idx}>
                         <td>{rec.date}</td>
                         <td>

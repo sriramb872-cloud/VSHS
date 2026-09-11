@@ -43,6 +43,15 @@ class MarkResponse(BaseModel):
     remarks: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    # Human-readable context used by Principal marks monitoring.
+    exam_id: Optional[int] = None
+    exam_name: Optional[str] = None
+    subject_id: Optional[int] = None
+    subject_name: Optional[str] = None
+    grade_id: Optional[int] = None
+    section_id: Optional[int] = None
+    academic_year_id: Optional[int] = None
+    teacher_id: Optional[int] = None
 
     class Config:
         from_attributes = True

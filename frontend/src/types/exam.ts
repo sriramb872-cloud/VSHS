@@ -3,6 +3,7 @@ export interface ExamSubject {
   id: number;
   exam_id: number;
   subject_id: number;
+  exam_date?: string | null;
   subject_name?: string;
   subject_code?: string;
   teacher_id?: number | null;
@@ -63,6 +64,14 @@ export interface ExamCreatePayload {
   section_id: number;
   start_date: string;
   end_date: string;
+  subject_schedules?: ExamSubjectSchedule[];
+  maximum_marks?: number;
+  passing_marks?: number;
+}
+
+export interface ExamSubjectSchedule {
+  subject_id: number;
+  exam_date: string;
   maximum_marks?: number;
   passing_marks?: number;
 }

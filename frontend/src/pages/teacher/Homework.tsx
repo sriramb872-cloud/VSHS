@@ -7,20 +7,28 @@ import { Homework } from '../../types/homework';
 import { HomeworkCard } from '../../components/homework';
 import { BookOpen } from 'lucide-react';
 import { LoadingSkeleton, EmptyState, ConfirmDialog, ErrorState } from '../../components/shared';
+import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
+import { timetableService } from '../../services/timetable';
 
 export const TeacherHomeworkPage: React.FC = () => {
   const [homeworkList, setHomeworkList] = useState<Homework[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState('Monday');
+  const [timetable, setTimetable] = useState<any[]>([]);
   const navigate = useNavigate();
 
   const fetchHomework = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await homeworkService.listHomework();
+      const [data, schedule] = await Promise.all([
+        homeworkService.listHomework(),
+        timetableService.listTimetables(),
+      ]);
       setHomeworkList(data?.items || []);
+      setTimetable(schedule?.items || []);
     } catch (err) {
       console.error('Failed to load homework', err);
       setError('Unable to load homework. Please try again.');
@@ -28,6 +36,13 @@ export const TeacherHomeworkPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const daySlots = timetable
+    .filter(slot => String(slot.day_of_week).toLowerCase() === selectedDay.toLowerCase())
+    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
+  const dayHomework = homeworkList.filter(hw => daySlots.some(slot =>
+    slot.grade_id === hw.grade_id && slot.section_id === hw.section_id && slot.subject_id === hw.subject_id
+  ));
 
   useEffect(() => {
     fetchHomework();
@@ -62,6 +77,9 @@ export const TeacherHomeworkPage: React.FC = () => {
         </button>
       </div>
 
+      <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+      <p className="text-xs text-slate-500">{daySlots.length} scheduled period{daySlots.length === 1 ? '' : 's'} on {selectedDay}; homework is matched to the existing timetable.</p>
+
       {/* Homework Cards */}
       {loading ? (
         <LoadingSkeleton type="card" count={4} />
@@ -76,7 +94,7 @@ export const TeacherHomeworkPage: React.FC = () => {
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {homeworkList.map(hw => (
+          {dayHomework.map(hw => (
             <div key={hw.id} className="relative">
               <HomeworkCard
                 homework={hw}
@@ -102,6 +120,9 @@ export const TeacherHomeworkPage: React.FC = () => {
               />
             </div>
           ))}
+          {dayHomework.length === 0 && (
+            <EmptyState title={`No Homework on ${selectedDay}`} description="No homework matches a timetable period for this day." icon={<BookOpen className="w-10 h-10 text-slate-300" />} />
+          )}
         </div>
       )}
 

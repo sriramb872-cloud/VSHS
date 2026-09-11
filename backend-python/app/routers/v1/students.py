@@ -13,6 +13,7 @@ from app.models.user import User
 from app.core.security import get_password_hash
 from app.services.id_generator import generate_student_id
 from app.core.audit import write_audit_log
+from app.validators.user import validate_password_strength, validate_email_format
 
 router = APIRouter(prefix="/students", tags=["Students"])
 
@@ -124,6 +125,7 @@ def create_student_profile(
 ):
     user_role = str(current_user.role).upper()
     section_id = None
+    academic_year_id = payload.get("academic_year_id")
 
     if user_role == "TEACHER":
         teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
@@ -148,6 +150,38 @@ def create_student_profile(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
         section_id = payload.get("section_id")
 
+    # Resolve and validate the enrollment context before creating the account
+    # or profile.  A student created from a class must always have a real,
+    # same-school section and academic year; silently skipping enrollment
+    # leaves an orphaned student that appears in no class-based workflow.
+    section = None
+    if section_id:
+        section = db.query(Section).filter(Section.id == int(section_id)).first()
+        if not section:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Selected section was not found.")
+        if section.school_id != school_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Selected section does not belong to your school.")
+        if not academic_year_id:
+            active_year = db.query(AcademicYear).filter(
+                AcademicYear.school_id == school_id,
+                AcademicYear.is_active == True,
+            ).first()
+            academic_year = active_year or db.query(AcademicYear).filter(
+                AcademicYear.school_id == school_id
+            ).order_by(AcademicYear.id.desc()).first()
+        else:
+            academic_year = db.query(AcademicYear).filter(
+                AcademicYear.id == int(academic_year_id)
+            ).first()
+        if not academic_year:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No academic year is configured for this school. Create or activate an academic year before adding students to a class.",
+            )
+        if academic_year.school_id != school_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Academic year does not belong to your school.")
+        academic_year_id = academic_year.id
+
     # Generate or sanitize Student ID (admission number)
     admission_number = payload.get("admission_number") or payload.get("student_id_formatted")
     if not admission_number or str(admission_number).strip() == "":
@@ -162,17 +196,26 @@ def create_student_profile(
 
     # Prepare user account
     full_name = payload.get("full_name") or payload.get("display_name") or "New Student"
-    mobile = payload.get("mobile") or payload.get("guardian_mobile") or payload.get("father_mobile") or payload.get("mother_mobile")
+    # A student's own mobile is the login identifier. Parent/guardian numbers
+    # are contact fields only and must never be promoted to an account login.
+    mobile = payload.get("mobile")
     if not mobile or str(mobile).strip() == "":
-        mobile = f"STU{admission_number}"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student mobile number is required for login.")
+    mobile = str(mobile).strip()
 
     # Check if mobile exists in users table
     existing_user = db.query(User).filter(User.mobile == mobile).first()
     if existing_user:
-        # Generate unique mobile identifier based on admission number
-        mobile = f"STU{admission_number}"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student mobile number is already registered.")
 
-    initial_password = payload.get("password") or "Student@123"
+    initial_password = payload.get("password")
+    if not isinstance(initial_password, str) or not initial_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Temporary password is required.")
+    validate_password_strength(initial_password)
+    if payload.get("email"):
+        validate_email_format(str(payload["email"]))
+        if db.query(User).filter(User.email == str(payload["email"])).first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A user with this email address already exists.")
     hashed_pwd = get_password_hash(initial_password)
 
     new_user = User(
@@ -217,34 +260,32 @@ def create_student_profile(
         father_mobile=payload.get("father_mobile"),
         mother_name=payload.get("mother_name"),
         mother_mobile=payload.get("mother_mobile"),
-        guardian_mobile=payload.get("guardian_mobile") or mobile,
+        # Guardian contact is optional and must remain separate from the
+        # student's login identifier. Never copy the student's mobile into
+        # the guardian field as an implicit credential fallback.
+        guardian_mobile=payload.get("guardian_mobile"),
         address=payload.get("address"),
     )
     db.add(new_student)
     db.flush()
 
-    # Auto-enrollment for the resolved section
-    academic_year_id = payload.get("academic_year_id")
-    if section_id:
-        if not academic_year_id:
-            curr_ay = db.query(AcademicYear).filter(AcademicYear.school_id == school_id, AcademicYear.is_active == True).first()
-            if curr_ay:
-                academic_year_id = curr_ay.id
-            else:
-                first_ay = db.query(AcademicYear).filter(AcademicYear.school_id == school_id).first()
-                if first_ay:
-                    academic_year_id = first_ay.id
+    # Persist the class relationship in the same transaction as the account
+    # and profile.  The relationship is what powers roster, profile,
+    # attendance, and enrollment views.
+    if section_id and academic_year_id:
+        enrollment = StudentEnrollment(
+            student_id=new_student.id,
+            section_id=section_id,
+            academic_year_id=academic_year_id,
+            roll_number=payload.get("roll_number"),
+        )
+        db.add(enrollment)
 
-        if academic_year_id:
-            enrollment = StudentEnrollment(
-                student_id=new_student.id,
-                section_id=section_id,
-                academic_year_id=academic_year_id,
-                roll_number=payload.get("roll_number"),
-            )
-            db.add(enrollment)
-
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     db.refresh(new_student)
 
     write_audit_log(
@@ -253,7 +294,12 @@ def create_student_profile(
         details={"full_name": payload.get("full_name"), "admission_number": new_student.admission_number},
     )
     try:
-        return serialize_student(new_student)
+        result = serialize_student(new_student)
+        # Only the creation response exposes the one-time credential. It is
+        # never part of list/profile serializers and only the authorized
+        # creator receives this response.
+        result["temporary_password"] = initial_password
+        return result
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_201_CREATED,

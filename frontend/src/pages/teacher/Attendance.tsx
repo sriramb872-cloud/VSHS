@@ -5,6 +5,8 @@ import { teachersService } from '../../services/teachers';
 import { studentsService } from '../../services/students';
 import { attendanceService } from '../../services/attendance';
 import { Teacher } from '../../types';
+import { timetableService } from '../../services/timetable';
+import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
 
 export const TeacherAttendance: React.FC = () => {
   const [teacherProfile, setTeacherProfile] = useState<Teacher | null>(null);
@@ -16,6 +18,8 @@ export const TeacherAttendance: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState<boolean>(false);
   const [saved, setSaved] = useState<boolean>(false);
+  const [selectedDay, setSelectedDay] = useState('Monday');
+  const [timetable, setTimetable] = useState<any[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -31,11 +35,13 @@ export const TeacherAttendance: React.FC = () => {
           return Promise.all([
             studentsService.listStudents({ section_id: section.id }),
             attendanceService.getAttendance({ section_id: section.id, attendance_date: selectedDate }),
+            timetableService.listTimetables(),
           ]);
         }
-        return [null, null];
+        return [null, null, { items: [] }];
       })
-      .then(([stList, attRecords]: any) => {
+      .then(([stList, attRecords, schedule]: any) => {
+        setTimetable(schedule?.items || []);
         if (stList) {
           setStudents(stList);
           const map: Record<number, string> = {};
@@ -58,6 +64,10 @@ export const TeacherAttendance: React.FC = () => {
       })
       .finally(() => setLoading(false));
   }, [selectedDate]);
+
+  const daySlots = timetable
+    .filter(slot => String(slot.day_of_week).toLowerCase() === selectedDay.toLowerCase())
+    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
 
   const handleStatusChange = (studentId: number, status: string) => {
     setAttendanceMap(prev => ({
@@ -128,6 +138,18 @@ export const TeacherAttendance: React.FC = () => {
       {error && (
         <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">{error}</div>
       )}
+      <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 space-y-2">
+        <p className="text-xs font-semibold text-slate-700">{selectedDay} attendance sessions</p>
+        {daySlots.length === 0 ? (
+          <p className="text-xs text-slate-500">No timetable period is scheduled for this day.</p>
+        ) : daySlots.map(slot => (
+          <div key={slot.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs">
+            <span className="font-semibold text-slate-800">{slot.subject_name || `Subject #${slot.subject_id}`} · {slot.grade_name} - {slot.section_name}</span>
+            <span className="text-slate-500">{slot.start_time} – {slot.end_time}</span>
+          </div>
+        ))}
+      </div>
       {saved && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs font-medium">
           ✓ Attendance saved successfully for {selectedDate}!

@@ -50,6 +50,7 @@ def list_timetables(
             )
             if enrollment:
                 section_id = enrollment.section_id
+                academic_year_id = enrollment.academic_year_id
 
     items, total = TimetableService.list_timetables(
         db,
@@ -117,4 +118,4 @@ def copy_timetable(
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
-    return TimetableService.copy_timetable(db, timetable_id=timetable_id, copy_in=copy_in, school_id=school_id)
+    return TimetableService.copy_timetable(db, timetable_id=timetable_id, copy_in=copy_in, school_id=school_id)

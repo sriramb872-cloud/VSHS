@@ -4,20 +4,28 @@ import { ClipboardCheck } from 'lucide-react';
 import { EmptyState, LoadingSkeleton, StatusBadge } from '../../components/shared';
 import { attendanceService } from '../../services/attendance';
 import { AttendanceRecord } from '../../types';
+import { timetableService } from '../../services/timetable';
+import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
 
 export const Attendance: React.FC = () => {
   const [attendanceList, setAttendanceList] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState('Monday');
+  const [timetable, setTimetable] = useState<any[]>([]);
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    attendanceService
-      .getAttendance({ attendance_date: today })
-      .then(setAttendanceList)
+    Promise.all([attendanceService.getAttendance({ attendance_date: today }), timetableService.listTimetables()])
+      .then(([records, schedule]) => {
+        setAttendanceList(records);
+        setTimetable(schedule.items || []);
+      })
       .catch(() => setError('Failed to load attendance records'))
       .finally(() => setLoading(false));
   }, []);
+
+  const daySlots = timetable.filter(slot => String(slot.day_of_week).toLowerCase() === selectedDay.toLowerCase());
 
   return (
     <div className="space-y-4">
@@ -25,6 +33,9 @@ export const Attendance: React.FC = () => {
         <h1 className="text-xl font-bold text-slate-900">Attendance Overview</h1>
         <p className="text-xs text-slate-500">Today's student attendance across all sections</p>
       </div>
+
+      <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+      <p className="text-xs text-slate-500">{daySlots.length} scheduled session{daySlots.length === 1 ? '' : 's'} on {selectedDay}; attendance records remain date-based.</p>
 
       {error && (
         <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">{error}</div>

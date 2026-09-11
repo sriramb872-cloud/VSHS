@@ -58,10 +58,13 @@ class ReportCardService:
         grade_id = enrollment.section.grade_id if (enrollment and enrollment.section) else 1
         section_id = enrollment.section_id if enrollment else 1
 
-        results = db.query(ExamResult).join(Exam, ExamResult.exam_id == Exam.id).filter(
+        results_query = db.query(ExamResult).join(Exam, ExamResult.exam_id == Exam.id).filter(
             ExamResult.student_id == report.student_id,
             Exam.academic_year_id == report.academic_year_id
-        ).all()
+        )
+        if report.exam_id is not None:
+            results_query = results_query.filter(Exam.id == report.exam_id)
+        results = results_query.all()
 
         subject_map: Dict[int, Dict[str, Any]] = {}
         for res in results:
@@ -124,7 +127,7 @@ class ReportCardService:
         from app.models.marks import Marks
         from app.models.exam_subject import ExamSubject
 
-        summative_marks = (
+        summative_query = (
             db.query(Marks)
             .join(ExamSubject, Marks.exam_subject_id == ExamSubject.id)
             .join(Exam, ExamSubject.exam_id == Exam.id)
@@ -132,8 +135,10 @@ class ReportCardService:
                 Marks.student_id == report.student_id,
                 Exam.academic_year_id == report.academic_year_id,
             )
-            .all()
         )
+        if report.exam_id is not None:
+            summative_query = summative_query.filter(Exam.id == report.exam_id)
+        summative_marks = summative_query.all()
 
         for sm in summative_marks:
             es = sm.exam_subject
@@ -211,6 +216,8 @@ class ReportCardService:
             grade_id=grade_id,
             section_id=section_id,
             academic_year_id=report.academic_year_id,
+            exam_id=report.exam_id,
+            exam_name=(report.exam.name if report.exam else None),
             subjects=subjects,
             grand_total_obtained=grand_total_obtained,
             grand_total_maximum=grand_total_maximum,
@@ -226,6 +233,7 @@ class ReportCardService:
         academic_year_id: int,
         section_id: int,
         term_name: str = "Term 1",
+        exam_id: Optional[int] = None,
     ) -> List[ReportCardResponse]:
         """
         Compute and store a ReportCard row for every student enrolled in the
@@ -244,6 +252,17 @@ class ReportCardService:
             StudentEnrollment.academic_year_id == academic_year_id,
         ).all()
 
+        selected_exam = None
+        if exam_id is not None:
+            selected_exam = db.query(Exam).filter(
+                Exam.id == exam_id,
+                Exam.academic_year_id == academic_year_id,
+                Exam.section_id == section_id,
+                Exam.status == "PUBLISHED",
+            ).first()
+            if not selected_exam:
+                raise HTTPException(status_code=404, detail="Published examination not found for this class and academic year")
+
         if not enrollments:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -255,7 +274,7 @@ class ReportCardService:
         for enr in enrollments:
             student_id = enr.student_id
 
-            formative_rows = (
+            formative_query = (
                 db.query(ExamResult)
                 .join(Exam, ExamResult.exam_id == Exam.id)
                 .filter(
@@ -263,15 +282,17 @@ class ReportCardService:
                     Exam.academic_year_id == academic_year_id,
                     Exam.status == "PUBLISHED",
                 )
-                .all()
             )
+            if exam_id is not None:
+                formative_query = formative_query.filter(Exam.id == exam_id)
+            formative_rows = formative_query.all()
             formative_obtained = sum(
                 (r.written_test or 0) + (r.project or 0) + (r.read_reflection or 0) + (r.notebook or 0)
                 for r in formative_rows
             )
             formative_max = len(formative_rows) * 35.0  # 20+5+5+5 component ceiling
 
-            summative_rows = (
+            summative_query = (
                 db.query(Marks)
                 .join(ExamSubject, Marks.exam_subject_id == ExamSubject.id)
                 .join(Exam, ExamSubject.exam_id == Exam.id)
@@ -280,8 +301,10 @@ class ReportCardService:
                     Exam.academic_year_id == academic_year_id,
                     Exam.status == "PUBLISHED",
                 )
-                .all()
             )
+            if exam_id is not None:
+                summative_query = summative_query.filter(Exam.id == exam_id)
+            summative_rows = summative_query.all()
             summative_obtained = sum((m.marks_obtained or 0) for m in summative_rows)
             summative_max = sum((m.max_marks or 0) for m in summative_rows)
 
@@ -291,12 +314,13 @@ class ReportCardService:
             grade_letter = ReportCardCalculationService.determine_grade(percentage)
 
             existing = crud_report_card.get_by_student_and_year(
-                db, student_id=student_id, academic_year_id=academic_year_id
+                db, student_id=student_id, academic_year_id=academic_year_id, exam_id=exam_id
             )
             if existing and existing.term_name == term_name:
                 existing.total_marks = total_obtained
                 existing.percentage = percentage
                 existing.grade_letter = grade_letter
+                existing.exam_id = exam_id
                 db.add(existing)
                 db.commit()
                 db.refresh(existing)
@@ -305,6 +329,7 @@ class ReportCardService:
                 report_row = ReportCard(
                     student_id=student_id,
                     academic_year_id=academic_year_id,
+                    exam_id=exam_id,
                     term_name=term_name,
                     total_marks=total_obtained,
                     percentage=percentage,
@@ -320,11 +345,11 @@ class ReportCardService:
 
     @staticmethod
     def get_report_card(
-        db: Session, student_id: int, academic_year_id: int, school_id: Optional[int] = None
+        db: Session, student_id: int, academic_year_id: int, exam_id: Optional[int] = None, school_id: Optional[int] = None
     ) -> ReportCardResponse:
         from app.models.student import Student
         report = crud_report_card.get_by_student_and_year(
-            db, student_id=student_id, academic_year_id=academic_year_id
+            db, student_id=student_id, academic_year_id=academic_year_id, exam_id=exam_id
         )
         if not report:
             raise HTTPException(
@@ -350,6 +375,7 @@ class ReportCardService:
         section_id: Optional[int] = None,
         student_id: Optional[int] = None,
         school_id: Optional[int] = None,
+        exam_id: Optional[int] = None,
     ) -> Tuple[List[ReportCardResponse], int]:
         from app.models.student import Student
         if school_id is not None:
@@ -374,6 +400,8 @@ class ReportCardService:
                     )
                 matching_student_ids = {s[0] for s in enr_query.all()}
                 query = query.filter(ReportCard.student_id.in_(matching_student_ids))
+            if exam_id is not None:
+                query = query.filter(ReportCard.exam_id == exam_id)
             total = query.count()
             items = query.offset(skip).limit(limit).all()
             return [ReportCardService.build_response(db, r) for r in items], total
@@ -386,6 +414,7 @@ class ReportCardService:
             grade_id=grade_id,
             section_id=section_id,
             student_id=student_id,
+            exam_id=exam_id,
         )
         return [ReportCardService.build_response(db, r) for r in items], total
 

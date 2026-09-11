@@ -1,7 +1,7 @@
 // src/pages/teacher/MarksEntry.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, CheckCircle2, Lock } from 'lucide-react';
+import { ArrowLeft, Save, CheckCircle2, Lock, ClipboardList } from 'lucide-react';
 import { examService } from '../../services/exam';
 import { marksService } from '../../services/marks';
 import { enrollmentsService } from '../../services/enrollments';
@@ -57,6 +57,11 @@ export const TeacherMarksEntryPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [availableExams, setAvailableExams] = useState<Exam[]>([]);
+  const [selectedExam, setSelectedExam] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [pickerSubjects, setPickerSubjects] = useState<ExamSubject[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
   const alreadySubmitted = useRef(false);
 
   const examIdNum = Number(examId);
@@ -70,10 +75,16 @@ export const TeacherMarksEntryPage: React.FC = () => {
     // Number(undefined) === NaN, which gets baked straight into the API
     // URL as ".../exams/NaN" and the backend correctly 422s it.
     if (!hasValidParams) {
-      setFeedback({
-        type: 'error',
-        text: 'Invalid exam or subject reference. Please go back and try again.',
-      });
+      try {
+        setPickerLoading(true);
+        const data = await examService.listExams();
+        setAvailableExams(data.items);
+        setFeedback(null);
+      } catch (err: any) {
+        setFeedback({ type: 'error', text: getErrorMessage(err, 'Failed to load examinations.') });
+      } finally {
+        setPickerLoading(false);
+      }
       setLoading(false);
       return;
     }
@@ -96,12 +107,18 @@ export const TeacherMarksEntryPage: React.FC = () => {
       setExamSubject(es);
       alreadySubmitted.current = es.is_marks_submitted;
 
-      // Load enrolled students using section_id and academic_year_id from the exam
-      const enrollments = await enrollmentsService.listEnrollments({
-        section_id: examData.section_id,
-        academic_year_id: examData.academic_year_id,
-        limit: 500,
-      });
+      // Load enrolled students and any previously saved marks. Reloading the
+      // grid must reflect persisted values rather than resetting every input.
+      const [enrollmentData, savedMarks] = await Promise.all([
+        enrollmentsService.listEnrollments({
+          section_id: examData.section_id,
+          academic_year_id: examData.academic_year_id,
+          limit: 500,
+        }),
+        marksService.listMarks({ exam_subject_id: examSubjectIdNum, limit: 100 }),
+      ]);
+      const enrollments = enrollmentData;
+      const savedByStudent = new Map(savedMarks.items.map(mark => [mark.student_id, mark]));
 
       const isFormative = (examData.assessment_mode || '').toUpperCase() === 'FORMATIVE';
 
@@ -123,8 +140,8 @@ export const TeacherMarksEntryPage: React.FC = () => {
             student_id: en.student_id,
             student_name: en.student_name || en.full_name || `Student #${en.student_id}`,
             roll_number: en.roll_number || '-',
-            marks_obtained: '',
-            remarks: '',
+            marks_obtained: savedByStudent.get(en.student_id)?.marks_obtained ?? '',
+            remarks: savedByStudent.get(en.student_id)?.remarks || '',
           }))
         );
       }
@@ -138,6 +155,21 @@ export const TeacherMarksEntryPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleExamSelect = async (value: string) => {
+    setSelectedExam(value);
+    setSelectedSubject('');
+    setPickerSubjects([]);
+    if (!value) return;
+    try {
+      setPickerLoading(true);
+      setPickerSubjects(await examService.getExamSubjects(Number(value)));
+    } catch (err: any) {
+      setFeedback({ type: 'error', text: getErrorMessage(err, 'Failed to load examination subjects.') });
+    } finally {
+      setPickerLoading(false);
+    }
+  };
 
   const isFormative = (exam?.assessment_mode || '').toUpperCase() === 'FORMATIVE';
   const isPublished = (exam?.status || '').toUpperCase() === 'PUBLISHED';
@@ -224,6 +256,45 @@ export const TeacherMarksEntryPage: React.FC = () => {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
         <LoadingSkeleton type="card" count={3} />
+      </div>
+    );
+  }
+
+  if (!hasValidParams) {
+    const selectedExamData = availableExams.find(e => String(e.id) === selectedExam);
+    const goToMarks = () => {
+      if (selectedExam && selectedSubject) {
+        navigate(`/teacher/exams/${selectedExam}/subjects/${selectedSubject}/marks`);
+      }
+    };
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Marks Entry</h1>
+          <p className="text-xs text-slate-500 mt-1">Choose an examination and subject assigned to your classes.</p>
+        </div>
+        {feedback && <div className="p-4 rounded-xl text-sm font-medium bg-rose-50 text-rose-800 border border-rose-200">{feedback.text}</div>}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+          <label className="block text-sm font-semibold text-slate-700">
+            Examination
+            <select value={selectedExam} onChange={e => handleExamSelect(e.target.value)} disabled={pickerLoading || availableExams.length === 0} className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800">
+              <option value="">Select examination</option>
+              {availableExams.map(examOption => <option key={examOption.id} value={examOption.id}>{examOption.name} · {examOption.grade_name || `Grade ${examOption.grade_id}`} - {examOption.section_name || `Section ${examOption.section_id}`}</option>)}
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-slate-700">
+            Subject
+            <select value={selectedSubject} onChange={e => setSelectedSubject(e.target.value)} disabled={!selectedExam || pickerLoading || pickerSubjects.length === 0} className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800">
+              <option value="">Select subject</option>
+              {pickerSubjects.map(subject => <option key={subject.id} value={subject.id}>{subject.subject_name || `Subject ${subject.subject_id}`} · Max {subject.maximum_marks}</option>)}
+            </select>
+          </label>
+          {selectedExamData && <p className="text-xs text-slate-500">Class: {selectedExamData.grade_name || `Grade ${selectedExamData.grade_id}`} · {selectedExamData.section_name || `Section ${selectedExamData.section_id}`} · Status: {selectedExamData.status}</p>}
+          <button type="button" onClick={goToMarks} disabled={!selectedExam || !selectedSubject} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed">
+            <ClipboardList className="w-4 h-4" /> Open Marks Grid
+          </button>
+        </div>
+        {availableExams.length === 0 && !pickerLoading && <p className="text-sm text-slate-500">No examinations are currently available for your assigned classes.</p>}
       </div>
     );
   }

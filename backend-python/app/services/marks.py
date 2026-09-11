@@ -10,6 +10,7 @@ from app.models.marks import Marks
 from app.models.section import Section
 from app.models.teacher import Teacher
 from app.models.teacher_subject import TeacherSubject
+from app.models.timetable import Timetable
 from app.models.student import Student
 from app.models.student_enrollment import StudentEnrollment
 from app.models.user import User
@@ -52,16 +53,35 @@ class MarksService:
             if not teacher:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Teacher profile not found")
 
-            # Check if teacher matches exam_subject.teacher_id or is assigned via teacher_subjects
+            if teacher.school_id != exam.school_id or current_user.school_id != exam.school_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are not authorized to submit marks for this school's examination",
+                )
+
+            # Check if teacher matches the assigned exam subject, an explicit
+            # teacher_subjects assignment, or the school-scoped timetable
+            # assignment used by the Teacher portal.
             is_assigned = (exam_subject.teacher_id == teacher.id)
             if not is_assigned:
                 ts = db.query(TeacherSubject).filter(
                     TeacherSubject.teacher_id == teacher.id,
+                    TeacherSubject.school_id == exam.school_id,
                     TeacherSubject.section_id == exam.section_id,
                     TeacherSubject.subject_id == exam_subject.subject_id,
                 ).first()
                 if ts:
                     is_assigned = True
+            if not is_assigned:
+                timetable_assignment = db.query(Timetable).filter(
+                    Timetable.teacher_id == teacher.id,
+                    Timetable.school_id == exam.school_id,
+                    Timetable.academic_year_id == exam.academic_year_id,
+                    Timetable.grade_id == exam.grade_id,
+                    Timetable.section_id == exam.section_id,
+                    Timetable.subject_id == exam_subject.subject_id,
+                ).first()
+                is_assigned = timetable_assignment is not None
 
             if not is_assigned:
                 raise HTTPException(
@@ -294,6 +314,9 @@ class MarksService:
         for item in items:
             student = db.query(Student).filter(Student.id == item.student_id).first()
             st_name = student.user.display_name if (student and student.user and hasattr(student.user, "display_name")) else f"Student #{item.student_id}"
+            exam_subject = item.exam_subject
+            exam = exam_subject.exam if exam_subject else None
+            subject = exam_subject.subject if exam_subject else None
             responses.append(
                 MarkResponse(
                     id=item.id,
@@ -306,6 +329,14 @@ class MarksService:
                     remarks=item.remarks,
                     created_at=item.created_at,
                     updated_at=item.updated_at,
+                    exam_id=exam.id if exam else None,
+                    exam_name=exam.name if exam else None,
+                    subject_id=exam_subject.subject_id if exam_subject else None,
+                    subject_name=(getattr(subject, "name", None) or getattr(subject, "subject_name", None)) if subject else None,
+                    grade_id=exam.grade_id if exam else None,
+                    section_id=exam.section_id if exam else None,
+                    academic_year_id=exam.academic_year_id if exam else None,
+                    teacher_id=exam_subject.teacher_id if exam_subject else None,
                 )
             )
         return responses, total

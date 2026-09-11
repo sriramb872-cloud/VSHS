@@ -7,6 +7,7 @@ from app.schemas.homework import HomeworkCreate, HomeworkUpdate
 from app.models.homework import Homework
 from app.models.student import Student
 from app.models.user import User
+from app.models.academic_year import AcademicYear
 
 
 class HomeworkService:
@@ -93,6 +94,13 @@ class HomeworkService:
     def create_homework(
         db: Session, obj_in: HomeworkCreate, teacher_id: int, school_id: int
     ) -> Homework:
+        if obj_in.academic_year_id is None:
+            active_year = db.query(AcademicYear).filter(
+                AcademicYear.school_id == school_id,
+                AcademicYear.is_active == True,
+            ).first()
+            if active_year:
+                obj_in = obj_in.model_copy(update={"academic_year_id": active_year.id})
         return crud_homework.create(db, obj_in=obj_in, teacher_id=teacher_id, school_id=school_id)
 
     @staticmethod
@@ -127,4 +135,4 @@ class HomeworkService:
         if teacher_id is not None and db_obj.teacher_id != teacher_id:
             return False
         crud_homework.remove(db, id=homework_id)
-        return True
+        return True

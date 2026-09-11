@@ -18,10 +18,12 @@ import { timetableService } from '../../services/timetable';
 import { gradesService } from '../../services/grades';
 import { subjectsService } from '../../services/subjects';
 import { teachersService } from '../../services/teachers';
-import { TimetableSlot, Grade, Subject, Teacher } from '../../types';
+import { sectionsService } from '../../services/sections';
+import { TimetableSlot, Grade, Subject, Teacher, Section } from '../../types';
 
 interface TimetableFormData {
   id?: number;
+  section_id: number | '';
   subject_id: number | '';
   teacher_id: number | '';
   start_time: string;
@@ -48,6 +50,8 @@ const formatDisplayTime = (timeStr?: string): string => {
   return timeStr;
 };
 
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 // Convert "09:00 AM" or "09:00:00" to "HH:mm" for <input type="time" />
 const toInputTime = (timeStr?: string): string => {
   if (!timeStr) return '';
@@ -73,10 +77,13 @@ export const PrincipalTimetablePage: React.FC = () => {
   // State for classes/grades
   const [classes, setClasses] = useState<Grade[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState('Monday');
 
   // State for subjects & teachers catalog
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
 
   // State for timetable entries for selected class
   const [entries, setEntries] = useState<TimetableSlot[]>([]);
@@ -89,6 +96,7 @@ export const PrincipalTimetablePage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [formData, setFormData] = useState<TimetableFormData>({
+    section_id: '',
     subject_id: '',
     teacher_id: '',
     start_time: '09:00',
@@ -109,18 +117,22 @@ export const PrincipalTimetablePage: React.FC = () => {
         setLoadingClasses(true);
         setError(null);
 
-        const [fetchedGrades, fetchedSubjects, fetchedTeachers] = await Promise.all([
+        const [fetchedGrades, fetchedSubjects, fetchedTeachers, fetchedSections] = await Promise.all([
           gradesService.listGrades(),
           subjectsService.listSubjects().catch(() => []),
           teachersService.listTeachers().catch(() => []),
+          sectionsService.listSections().catch(() => []),
         ]);
 
         setClasses(fetchedGrades || []);
         setSubjects(fetchedSubjects || []);
         setTeachers(fetchedTeachers || []);
+        setSections(fetchedSections || []);
 
         if (fetchedGrades && fetchedGrades.length > 0) {
           setSelectedClassId(fetchedGrades[0].id);
+          const firstSection = (fetchedSections || []).find(section => section.grade_id === fetchedGrades[0].id);
+          setSelectedSectionId(firstSection?.id || null);
         }
       } catch (err: any) {
         console.error('Failed to load initial timetable data:', err);
@@ -144,7 +156,7 @@ export const PrincipalTimetablePage: React.FC = () => {
       try {
         setLoadingEntries(true);
         setError(null);
-        const res = await timetableService.listTimetables({ grade_id: selectedClassId });
+        const res = await timetableService.listTimetables({ grade_id: selectedClassId, section_id: selectedSectionId || undefined });
         setEntries(res.items || []);
       } catch (err: any) {
         console.error('Failed to load timetable entries:', err);
@@ -155,10 +167,12 @@ export const PrincipalTimetablePage: React.FC = () => {
     };
 
     fetchClassEntries();
-  }, [selectedClassId]);
+  }, [selectedClassId, selectedSectionId]);
 
   // Selected Class details
   const selectedClass = classes.find(c => c.id === selectedClassId);
+  const selectedSections = sections.filter(s => s.grade_id === selectedClassId);
+  const visibleEntries = entries.filter(entry => (entry.day_of_week || 'Monday').toString().toLowerCase() === selectedDay.toLowerCase());
 
   // Clear toast notifications after 3 seconds
   useEffect(() => {
@@ -172,6 +186,7 @@ export const PrincipalTimetablePage: React.FC = () => {
   const handleOpenCreateModal = () => {
     setModalMode('create');
     setFormData({
+      section_id: selectedSections.length > 0 ? selectedSections[0].id : '',
       subject_id: subjects.length > 0 ? subjects[0].id : '',
       teacher_id: teachers.length > 0 ? teachers[0].id : '',
       start_time: '09:00',
@@ -187,6 +202,7 @@ export const PrincipalTimetablePage: React.FC = () => {
     setModalMode('edit');
     setFormData({
       id: entry.id,
+      section_id: entry.section_id ?? '',
       subject_id: entry.subject_id ?? '',
       teacher_id: entry.teacher_id ?? '',
       start_time: toInputTime(entry.start_time) || '09:00',
@@ -204,6 +220,11 @@ export const PrincipalTimetablePage: React.FC = () => {
 
     if (!selectedClassId) {
       setFormError('Please select a class first.');
+      return;
+    }
+
+    if (!formData.section_id) {
+      setFormError('Section is required.');
       return;
     }
 
@@ -247,6 +268,7 @@ export const PrincipalTimetablePage: React.FC = () => {
       if (modalMode === 'create') {
         const payload = {
           grade_id: selectedClassId,
+          section_id: Number(formData.section_id),
           subject_id: Number(formData.subject_id),
           teacher_id: Number(formData.teacher_id),
           start_time: formattedStart,
@@ -260,6 +282,7 @@ export const PrincipalTimetablePage: React.FC = () => {
       } else if (modalMode === 'edit' && formData.id) {
         const payload = {
           grade_id: selectedClassId,
+          section_id: Number(formData.section_id),
           subject_id: Number(formData.subject_id),
           teacher_id: Number(formData.teacher_id),
           start_time: formattedStart,
@@ -377,7 +400,10 @@ export const PrincipalTimetablePage: React.FC = () => {
               return (
                 <button
                   key={c.id}
-                  onClick={() => setSelectedClassId(c.id)}
+                  onClick={() => {
+                    setSelectedClassId(c.id);
+                    setSelectedSectionId(sections.find(section => section.grade_id === c.id)?.id || null);
+                  }}
                   className={`h-10 px-5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer ${
                     isSelected
                       ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/20'
@@ -396,6 +422,14 @@ export const PrincipalTimetablePage: React.FC = () => {
       {/* ─── 2. CLASS TIMETABLE VIEW ────────────────────────────────────────────── */}
       {selectedClassId && (
         <div className="space-y-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {selectedSections.map(section => (
+              <button key={section.id} onClick={() => setSelectedSectionId(section.id)} className={`px-3 py-2 rounded-lg text-xs font-semibold ${selectedSectionId === section.id ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{section.name}</button>
+            ))}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {DAYS.map(day => <button key={day} onClick={() => setSelectedDay(day)} className={`px-3 py-2 rounded-lg text-xs font-semibold ${selectedDay === day ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{day}</button>)}
+          </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-slate-900">
@@ -434,7 +468,7 @@ export const PrincipalTimetablePage: React.FC = () => {
           ) : (
             /* ─── 4. ENTRIES LIST ───────────────────────────────────────────────── */
             <div className="space-y-3">
-              {entries.map(entry => {
+                {visibleEntries.map(entry => {
                 const subjectName = getSubjectName(entry.subject_id, entry.subject_name);
                 const teacherFullName = getTeacherFullName(entry.teacher_id, entry.teacher_name);
                 const startTimeFormatted = formatDisplayTime(entry.start_time);
@@ -460,6 +494,12 @@ export const PrincipalTimetablePage: React.FC = () => {
                             <span>
                               Teacher: <strong className="text-slate-800 font-semibold">{teacherFullName}</strong>
                             </span>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            Section: <strong className="text-slate-700">{entry.section_name || `Section ${entry.section_id ?? '-'}`}</strong>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            Day: <strong className="text-slate-700">{entry.day_of_week || 'Monday'}</strong>
                           </div>
                         </div>
                       </div>
@@ -535,6 +575,25 @@ export const PrincipalTimetablePage: React.FC = () => {
             )}
 
             <form onSubmit={handleSaveEntry} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Section <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.section_id}
+                  onChange={e => setFormData(prev => ({ ...prev, section_id: Number(e.target.value) }))}
+                  className="w-full h-11 px-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  required
+                >
+                  <option value="" disabled>Select Section</option>
+                  {selectedSections.map(section => (
+                    <option key={section.id} value={section.id}>{section.name}</option>
+                  ))}
+                </select>
+                {selectedSections.length === 0 && (
+                  <p className="text-xs text-rose-600">No sections are configured for this class.</p>
+                )}
+              </div>
               {/* Field 1: Subject */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -554,16 +613,7 @@ export const PrincipalTimetablePage: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                ) : (
-                  <input
-                    type="number"
-                    value={formData.subject_id}
-                    onChange={e => setFormData(prev => ({ ...prev, subject_id: Number(e.target.value) }))}
-                    placeholder="Subject ID (e.g. 1)"
-                    className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    required
-                  />
-                )}
+                ) : <p className="text-xs text-rose-600">No subjects are configured for this school.</p>}
               </div>
 
               {/* Field 2: Teacher */}
@@ -601,6 +651,18 @@ export const PrincipalTimetablePage: React.FC = () => {
               </div>
 
               {/* Field 3 & 4: Start Time & End Time */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Day <span className="text-rose-500">*</span></label>
+                <select
+                  value={formData.day_of_week || 'Monday'}
+                  onChange={e => setFormData(prev => ({ ...prev, day_of_week: e.target.value }))}
+                  className="w-full h-11 px-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  required
+                >
+                  {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(day => <option key={day} value={day}>{day}</option>)}
+                </select>
+              </div>
+              {/* Field 4 & 5: Start Time & End Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -673,4 +735,3 @@ export const PrincipalTimetablePage: React.FC = () => {
 export const Timetable = PrincipalTimetablePage;
 export const PrincipalTimetable = PrincipalTimetablePage;
 export default PrincipalTimetablePage;
-
