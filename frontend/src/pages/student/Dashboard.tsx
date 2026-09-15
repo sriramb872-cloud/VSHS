@@ -4,18 +4,20 @@ import { dashboardService } from '../../services/dashboard';
 import { StudentDashboard } from '../../types/dashboard';
 import { StatCard, LoadingSkeleton, ErrorState } from '../../components/shared';
 import { Calendar, BookOpen, Award, Bell } from 'lucide-react';
+import { usePet } from '../../pet/PetContext';
 
 export const StudentDashboardPage: React.FC = () => {
   const [data, setData] = useState<StudentDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const navigate = useNavigate();
+  const { setDashboardData } = usePet();
 
   const fetchDashboard = () => {
     setLoading(true);
     setError(false);
     dashboardService.getStudentDashboard()
-      .then(setData)
+      .then(next => { setData(next); setDashboardData('STUDENT', { attendancePercentage: next.attendance_percentage, overdueHomework: next.pending_homework.filter((item: any) => new Date(item.due_date) < new Date()).length, unreadAnnouncements: next.announcements.length }); })
       .catch((err) => { console.error(err); setError(true); })
       .finally(() => setLoading(false));
   };

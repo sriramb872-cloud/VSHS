@@ -44,6 +44,7 @@ class User(Base):
     profile_photo = Column(String(255), nullable=True)
     reset_token = Column(String(128), nullable=True, index=True)
     reset_token_expires_at = Column(DateTime, nullable=True)
+    must_change_password = Column(Boolean, default=False, nullable=False)
 
     role = Column(
         Enum(

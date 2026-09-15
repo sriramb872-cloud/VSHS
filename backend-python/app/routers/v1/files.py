@@ -1,7 +1,6 @@
 # backend-python/app/routers/v1/files.py
 import os
 import uuid
-import shutil
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 
@@ -19,19 +18,33 @@ async def upload_profile_photo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only image files (JPEG, PNG, WebP) are permitted for profile photos."
-        )
+    from PIL import Image
+    import io
+
+    ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+    MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
+
+    contents = await file.read()
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 5MB).")
+
+    try:
+        image = Image.open(io.BytesIO(contents))
+        image.verify()
+        detected_ext = f".{image.format.lower()}".replace(".jpeg", ".jpg")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
+
+    if detected_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Unsupported image type.")
 
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-    ext = os.path.splitext(file.filename or "")[1] or ".jpg"
+    ext = detected_ext
     unique_filename = f"photo_user_{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
     target_path = os.path.join(UPLOAD_DIR, unique_filename)
 
     with open(target_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(contents)
 
     photo_url = f"/media/profile_photos/{unique_filename}"
     current_user.profile_photo = photo_url

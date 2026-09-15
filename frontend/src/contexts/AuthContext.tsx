@@ -60,14 +60,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const userResponse = await api.get<User>('/auth/me');
     setUser(userResponse.data);
+    window.dispatchEvent(new Event('scholaris:pet-greeting'));
     return userResponse.data;
   };
 
   const logout = () => {
+    window.dispatchEvent(new Event('scholaris:pet-farewell'));
     authService.logout();
-    setToken(null);
-    setUser(null);
-    window.location.href = '/login';
+    window.setTimeout(() => {
+      setToken(null);
+      setUser(null);
+      window.location.href = '/login';
+    }, 1500);
   };
 
   return (

@@ -28,6 +28,7 @@ class PasswordChangeRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    must_change_password: bool = False
 
 
 class UserResponse(BaseModel):
@@ -57,4 +58,4 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     reset_token: str = Field(..., description="Token issued by /auth/forgot-password")
     new_password: str = Field(..., min_length=6, description="New password")
-
+

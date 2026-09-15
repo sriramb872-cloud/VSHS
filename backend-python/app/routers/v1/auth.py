@@ -1,7 +1,7 @@
 # backend-python/app/routers/v1/auth.py
 import secrets
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_active_user
@@ -9,6 +9,7 @@ from app.schemas.auth import LoginRequest, TokenResponse, UserResponse, Password
 from app.services.auth_service import authenticate_user, create_user_token
 from app.core.security import verify_password, get_password_hash
 from app.models.user import User
+from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -16,7 +17,8 @@ RESET_TOKEN_TTL_MINUTES = 30
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
     user = authenticate_user(db, mobile=payload.mobile, password=payload.password)
     if not user:
         raise HTTPException(
@@ -25,7 +27,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_user_token(user)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "must_change_password": bool(getattr(user, "must_change_password", False)),
+    }
 
 
 @router.get("/me", response_model=UserResponse)
@@ -45,12 +51,14 @@ def change_password(
             detail="Current password is incorrect",
         )
     current_user.password_hash = get_password_hash(payload.new_password)
+    current_user.must_change_password = False
     db.commit()
     return {"message": "Password changed successfully"}
 
 
 @router.post("/forgot-password")
-def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/hour")
+def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     query = db.query(User)
     user = None
     if payload.mobile:
@@ -67,8 +75,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     user.reset_token_expires_at = datetime.utcnow() + timedelta(minutes=RESET_TOKEN_TTL_MINUTES)
     db.commit()
 
-    # DEV-ONLY: replace with real email/SMS delivery before production.
-    generic_response["reset_token"] = token
+    # No SMS/email provider is configured; an administrator must reset passwords manually.
     generic_response["expires_in_minutes"] = RESET_TOKEN_TTL_MINUTES
     return generic_response
 
@@ -84,4 +91,4 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     user.reset_token_expires_at = None
     db.commit()
     return {"message": "Password reset successfully"}
-
+

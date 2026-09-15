@@ -5,17 +5,19 @@ import { dashboardService } from '../../services/dashboard';
 import { TeacherDashboard } from '../../types/dashboard';
 import { Calendar, BookOpen, CheckCircle, Bell, Clock, ChevronRight } from 'lucide-react';
 import { LoadingSkeleton } from '../../components/shared';
+import { usePet } from '../../pet/PetContext';
 
 export const TeacherDashboardPage: React.FC = () => {
   const [data, setData] = useState<TeacherDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const navigate = useNavigate();
+  const { setDashboardData } = usePet();
 
   useEffect(() => {
     dashboardService
       .getTeacherDashboard()
-      .then(setData)
+      .then(next => { setData(next); setDashboardData('TEACHER', { pendingMarks: next.upcoming_exams.some((exam: any) => String(exam.status).toUpperCase() === 'MARKS_IN_PROGRESS'), unreadAnnouncements: next.announcements.length }); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);

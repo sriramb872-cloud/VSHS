@@ -5,19 +5,21 @@ import { dashboardService } from '../../services/dashboard';
 import { PrincipalDashboard } from '../../types/dashboard';
 import { StatCard, LoadingSkeleton, ErrorState, MobileListItem } from '../../components/shared';
 import { Users, BookOpen, Bell, Calendar, Award, CheckCircle, ArrowRight, School } from 'lucide-react';
+import { usePet } from '../../pet/PetContext';
 
 export const PrincipalDashboardPage: React.FC = () => {
   const [data, setData] = useState<PrincipalDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const navigate = useNavigate();
+  const { setDashboardData } = usePet();
 
   const fetchDashboard = () => {
     setLoading(true);
     setError(false);
     dashboardService
       .getPrincipalDashboard()
-      .then(setData)
+      .then(next => { setData(next); setDashboardData('PRINCIPAL', { unreadAnnouncements: next.announcements.length }); })
       .catch((err) => {
         console.error(err);
         setError(true);
