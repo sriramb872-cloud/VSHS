@@ -61,8 +61,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://vshs.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://scholaris.in",
+        "https://www.scholaris.in",
     ],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://(www\.)?scholaris\.in",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
