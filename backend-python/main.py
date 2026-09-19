@@ -71,6 +71,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/debug/cors")
+def debug_cors():
+    return {
+        "message": "THIS IS THE DEPLOYED BACKEND",
+        "cors_origins": [
+            "https://vshs.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "https://scholaris.in",
+            "https://www.scholaris.in",
+        ]
+    }
+
 # Static and Media Files
 import os
 from fastapi.staticfiles import StaticFiles
