@@ -16,8 +16,6 @@ export const SuperAdminPrincipals: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modalFeedback, setModalFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [createdCredentials, setCreatedCredentials] = useState<{ mobile: string; password: string } | null>(null);
-  const [credentialsFeedback, setCredentialsFeedback] = useState<string | null>(null);
 
   // Assign School Modal State (for fixing principals with missing school_id)
   const [assignModalPrincipal, setAssignModalPrincipal] = useState<Principal | null>(null);
@@ -31,7 +29,16 @@ export const SuperAdminPrincipals: React.FC = () => {
     full_name: '',
     mobile: '',
     email: '',
+    password: '',
   });
+
+  const generateTemporaryPassword = () => {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    const values = new Uint32Array(14);
+    if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(values);
+    else values.fill(Math.floor(Math.random() * alphabet.length));
+    return Array.from(values, value => alphabet[value % alphabet.length]).join('');
+  };
 
   const navigate = useNavigate();
 
@@ -88,16 +95,25 @@ export const SuperAdminPrincipals: React.FC = () => {
       setModalFeedback({ type: 'error', message: 'Mobile number is required for login credentials.' });
       return;
     }
+    if (!formData.password) {
+      setModalFeedback({ type: 'error', message: 'A temporary password is required. Generate one or enter it manually.' });
+      return;
+    }
+    if (formData.password.length < 8) {
+      setModalFeedback({ type: 'error', message: 'Temporary password must be at least 8 characters long.' });
+      return;
+    }
 
     try {
       setSubmitting(true);
       setModalFeedback(null);
 
-      const result = await principalsService.createPrincipal({
+      await principalsService.createPrincipal({
         school_id: Number(formData.school_id),
         full_name: formData.full_name.trim(),
         mobile: formData.mobile.trim(),
         email: formData.email.trim() || undefined,
+        password: formData.password,
       });
 
       setShowAddModal(false);
@@ -106,14 +122,8 @@ export const SuperAdminPrincipals: React.FC = () => {
         full_name: '',
         mobile: '',
         email: '',
+        password: '',
       });
-      if (result.temporary_password) {
-        setCreatedCredentials({
-          mobile: formData.mobile.trim(),
-          password: result.temporary_password,
-        });
-        setCredentialsFeedback(null);
-      }
       fetchData();
     } catch (err: any) {
       console.error('Failed to onboard principal', err);
@@ -123,22 +133,6 @@ export const SuperAdminPrincipals: React.FC = () => {
       });
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleCopyCredentials = async () => {
-    if (!createdCredentials) return;
-
-    try {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error('Clipboard API unavailable');
-      }
-      await navigator.clipboard.writeText(
-        `Mobile: ${createdCredentials.mobile}\nPassword: ${createdCredentials.password}`
-      );
-      setCredentialsFeedback('Credentials copied to clipboard.');
-    } catch {
-      setCredentialsFeedback('Copy is unavailable in this browser. Please copy the credentials manually.');
     }
   };
 
@@ -180,6 +174,7 @@ export const SuperAdminPrincipals: React.FC = () => {
           onClick={() => {
             setShowAddModal(true);
             setModalFeedback(null);
+            setFormData(current => ({ ...current, password: generateTemporaryPassword() }));
           }}
           className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all self-start sm:self-auto"
         >
@@ -352,6 +347,32 @@ export const SuperAdminPrincipals: React.FC = () => {
                   </div>
                 </div>
 
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Temporary Password *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, password: generateTemporaryPassword() })}
+                      className="text-[11px] font-bold text-indigo-700 hover:text-indigo-800"
+                    >
+                      Generate Password
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    minLength={8}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Generate or enter at least 8 characters"
+                    autoComplete="new-password"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                  <p className="mt-1 text-[11px] text-slate-500">Share this password with the principal directly.</p>
+                </div>
+
                 <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                   <button
                     type="button"
@@ -451,44 +472,6 @@ export const SuperAdminPrincipals: React.FC = () => {
         </div>
       )}
 
-      {createdCredentials && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-slate-100">
-            <h2 className="text-base font-bold text-slate-900">Principal Onboarded</h2>
-            <p className="text-xs text-slate-500">
-              Share these credentials with the principal. This password will not be shown again.
-            </p>
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-sm">
-              <div>
-                <span className="text-slate-500">Mobile:</span>{' '}
-                <span className="font-mono font-semibold">{createdCredentials.mobile}</span>
-              </div>
-              <div>
-                <span className="text-slate-500">Temp Password:</span>{' '}
-                <span className="font-mono font-semibold">{createdCredentials.password}</span>
-              </div>
-            </div>
-            {credentialsFeedback && <p className="text-xs text-slate-500">{credentialsFeedback}</p>}
-            <button
-              type="button"
-              onClick={handleCopyCredentials}
-              className="w-full h-10 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50"
-            >
-              Copy to Clipboard
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setCreatedCredentials(null);
-                setCredentialsFeedback(null);
-              }}
-              className="w-full h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

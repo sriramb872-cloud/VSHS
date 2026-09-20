@@ -75,7 +75,14 @@ export interface Principal {
 
 export interface PrincipalOnboardResponse extends Principal {
   must_change_password: boolean;
-  temporary_password?: string;
+}
+
+export interface PrincipalCreatePayload {
+  school_id: number;
+  full_name: string;
+  mobile: string;
+  email?: string;
+  password: string;
 }
 
 export interface PrincipalUpdatePayload {

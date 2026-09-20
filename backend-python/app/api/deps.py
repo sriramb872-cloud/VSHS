@@ -1,6 +1,6 @@
 from typing import Generator, Optional, Callable, List
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -96,7 +96,6 @@ def get_current_user(
 
 
 def get_current_active_user(
-    request: Request,
     current_user: User = Depends(get_current_user),
 ) -> User:
     """
@@ -115,12 +114,6 @@ def get_current_active_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user account",
-        )
-
-    if getattr(current_user, "must_change_password", False) and not request.url.path.endswith("/auth/change-password"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Password change required before accessing this resource",
         )
 
     return current_user

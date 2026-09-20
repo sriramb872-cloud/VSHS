@@ -1,7 +1,5 @@
 # backend-python/app/routers/v1/principals.py
 from datetime import date
-import secrets
-import string
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -12,15 +10,9 @@ from app.models.principal import Principal
 from app.services.id_generator import generate_principal_id
 from app.core.security import get_password_hash
 from app.core.audit import write_audit_log
+from app.validators.user import validate_password_strength
 
 router = APIRouter(prefix="/principals", tags=["Principals"])
-
-
-def _generate_temp_password(length: int = 12) -> str:
-    alphabet = string.ascii_letters + string.digits + "!@#$%"
-    return "".join(secrets.choice(alphabet) for _ in range(length))
-
-
 @router.post("", response_model=dict, status_code=status.HTTP_201_CREATED)
 def create_principal(
     payload: dict,
@@ -66,8 +58,13 @@ def create_principal(
             detail="This school already has a Principal. Update the existing account instead of creating a new one.",
         )
 
-    password_was_generated = not payload.get("password")
-    initial_password = payload.get("password") or _generate_temp_password()
+    initial_password = payload.get("password")
+    if not isinstance(initial_password, str) or not initial_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A temporary password is required. Generate one or enter it manually.",
+        )
+    validate_password_strength(initial_password)
     hashed_pwd = get_password_hash(initial_password)
 
     new_user = User(
@@ -79,7 +76,7 @@ def create_principal(
         password_hash=hashed_pwd,
         role="PRINCIPAL",
         is_active="ACTIVE",
-        must_change_password=True,
+        must_change_password=False,
     )
     db.add(new_user)
     db.commit()
@@ -92,11 +89,7 @@ def create_principal(
         action="CREATE", resource_type="Principal", resource_id=new_user.id,
         details={"full_name": full_name, "mobile": mobile},
     )
-    response = serialize_principal(new_user, db=db)
-    response["must_change_password"] = True
-    if password_was_generated:
-        response["temporary_password"] = initial_password
-    return response
+    return serialize_principal(new_user, db=db)
 
 
 def _get_or_create_principal_profile(db: Session, user: User) -> Principal:

@@ -1,6 +1,6 @@
 // src/services/principals.ts
 import api from './api';
-import { Principal, PrincipalOnboardResponse, PrincipalUpdatePayload } from '../types';
+import { Principal, PrincipalCreatePayload, PrincipalOnboardResponse, PrincipalUpdatePayload } from '../types';
 
 export const principalsService = {
   async listPrincipals(params?: { skip?: number; limit?: number }): Promise<Principal[]> {
@@ -8,7 +8,7 @@ export const principalsService = {
     return response.data;
   },
 
-  async createPrincipal(payload: { school_id: number; full_name: string; mobile: string; email?: string }): Promise<PrincipalOnboardResponse> {
+  async createPrincipal(payload: PrincipalCreatePayload): Promise<PrincipalOnboardResponse> {
     const response = await api.post<PrincipalOnboardResponse>('/principals', payload);
     return response.data;
   },
