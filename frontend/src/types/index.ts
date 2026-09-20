@@ -73,6 +73,11 @@ export interface Principal {
   is_active: boolean;
 }
 
+export interface PrincipalOnboardResponse extends Principal {
+  must_change_password: boolean;
+  temporary_password?: string;
+}
+
 export interface PrincipalUpdatePayload {
   display_name?: string;
   full_name?: string;

@@ -16,6 +16,8 @@ export const SuperAdminPrincipals: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modalFeedback, setModalFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ mobile: string; password: string } | null>(null);
+  const [credentialsFeedback, setCredentialsFeedback] = useState<string | null>(null);
 
   // Assign School Modal State (for fixing principals with missing school_id)
   const [assignModalPrincipal, setAssignModalPrincipal] = useState<Principal | null>(null);
@@ -91,7 +93,7 @@ export const SuperAdminPrincipals: React.FC = () => {
       setSubmitting(true);
       setModalFeedback(null);
 
-      await principalsService.createPrincipal({
+      const result = await principalsService.createPrincipal({
         school_id: Number(formData.school_id),
         full_name: formData.full_name.trim(),
         mobile: formData.mobile.trim(),
@@ -105,6 +107,13 @@ export const SuperAdminPrincipals: React.FC = () => {
         mobile: '',
         email: '',
       });
+      if (result.temporary_password) {
+        setCreatedCredentials({
+          mobile: formData.mobile.trim(),
+          password: result.temporary_password,
+        });
+        setCredentialsFeedback(null);
+      }
       fetchData();
     } catch (err: any) {
       console.error('Failed to onboard principal', err);
@@ -114,6 +123,22 @@ export const SuperAdminPrincipals: React.FC = () => {
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCopyCredentials = async () => {
+    if (!createdCredentials) return;
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable');
+      }
+      await navigator.clipboard.writeText(
+        `Mobile: ${createdCredentials.mobile}\nPassword: ${createdCredentials.password}`
+      );
+      setCredentialsFeedback('Credentials copied to clipboard.');
+    } catch {
+      setCredentialsFeedback('Copy is unavailable in this browser. Please copy the credentials manually.');
     }
   };
 
@@ -422,6 +447,45 @@ export const SuperAdminPrincipals: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {createdCredentials && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-slate-100">
+            <h2 className="text-base font-bold text-slate-900">Principal Onboarded</h2>
+            <p className="text-xs text-slate-500">
+              Share these credentials with the principal. This password will not be shown again.
+            </p>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-sm">
+              <div>
+                <span className="text-slate-500">Mobile:</span>{' '}
+                <span className="font-mono font-semibold">{createdCredentials.mobile}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Temp Password:</span>{' '}
+                <span className="font-mono font-semibold">{createdCredentials.password}</span>
+              </div>
+            </div>
+            {credentialsFeedback && <p className="text-xs text-slate-500">{credentialsFeedback}</p>}
+            <button
+              type="button"
+              onClick={handleCopyCredentials}
+              className="w-full h-10 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50"
+            >
+              Copy to Clipboard
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCreatedCredentials(null);
+                setCredentialsFeedback(null);
+              }}
+              className="w-full h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+            >
+              Done
+            </button>
           </div>
         </div>
       )}

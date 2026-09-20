@@ -50,6 +50,15 @@ def create_principal(
             detail=f"A user with mobile '{mobile}' already exists.",
         )
 
+    email = payload.get("email")
+    if email:
+        existing_email = db.query(User).filter(User.email == email).first()
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"A user with email '{email}' already exists.",
+            )
+
     existing_principal = db.query(User).filter(User.school_id == school_id, User.role == "PRINCIPAL").first()
     if existing_principal:
         raise HTTPException(
@@ -65,7 +74,7 @@ def create_principal(
         school_id=school_id,
         display_name=str(full_name).strip(),
         mobile=str(mobile).strip(),
-        email=payload.get("email"),
+        email=email,
         profile_photo=payload.get("profile_photo"),
         password_hash=hashed_pwd,
         role="PRINCIPAL",

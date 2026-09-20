@@ -90,18 +90,26 @@ export const SuperAdminSchools: React.FC = () => {
               avatarBg="bg-indigo-50 text-indigo-600"
               badge={<StatusBadge status={sch.is_active ? 'ACTIVE' : 'INACTIVE'} />}
               onClick={() => navigate(`/superadmin/schools/${sch.id}`)}
-              actions={[
-                {
-                  label: 'View',
-                  icon: <Eye className="w-4 h-4" />,
-                  onClick: () => navigate(`/superadmin/schools/${sch.id}`),
-                },
-                {
-                  label: 'Edit',
-                  icon: <Edit className="w-4 h-4" />,
-                  onClick: () => navigate(`/superadmin/schools/${sch.id}/edit`),
-                },
-              ]}
+              actions={
+                <div className="flex items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/superadmin/schools/${sch.id}`)}
+                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+                    title="View"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/superadmin/schools/${sch.id}/edit`)}
+                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+                    title="Edit"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                </div>
+              }
             />
           ))}
         </div>
