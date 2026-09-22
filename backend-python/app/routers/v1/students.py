@@ -295,10 +295,6 @@ def create_student_profile(
     )
     try:
         result = serialize_student(new_student)
-        # Only the creation response exposes the one-time credential. It is
-        # never part of list/profile serializers and only the authorized
-        # creator receives this response.
-        result["temporary_password"] = initial_password
         return result
     except Exception as e:
         raise HTTPException(

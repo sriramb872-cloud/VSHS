@@ -161,7 +161,9 @@ export const Students: React.FC = () => {
       setCreatedCredentials({
         full_name: payload.full_name,
         mobile: createdStudent.mobile || payload.mobile,
-        temporary_password: createdStudent.temporary_password || payload.password,
+        // The password is generated/entered in this form and deliberately is
+        // not returned by the API.
+        temporary_password: payload.password,
       });
       fetchStudents();
     } catch (err: any) {

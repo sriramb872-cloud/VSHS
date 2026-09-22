@@ -215,7 +215,6 @@ def create_teacher_profile(
     )
     try:
         result = serialize_teacher(new_teacher, db=db)
-        result["temporary_password"] = initial_password
         return result
     except Exception as e:
         # The teacher record itself is already committed and valid at this

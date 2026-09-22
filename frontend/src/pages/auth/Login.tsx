@@ -73,10 +73,13 @@ export const Login: React.FC = () => {
         {/* Mobile / Student ID / Employee ID */}
         <div>
           <label htmlFor="mobile-number" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Student ID / Employee ID / Student Mobile Number
+            Login ID
           </label>
           <div className="relative">
             <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <p className="mb-1.5 text-xs text-slate-500">
+              Use your mobile number, email address, student ID, or employee ID.
+            </p>
             <input
               id="mobile-number"
               name="mobile_number"
@@ -84,7 +87,7 @@ export const Login: React.FC = () => {
               required
               value={mobileNumber}
               onChange={(e) => setMobileNumber(e.target.value)}
-              placeholder="e.g. SCH2026001, EMP2026001, or student mobile"
+              placeholder="e.g. mobile number, email, SCH2026001, or EMP2026001"
               className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             />
           </div>

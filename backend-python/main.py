@@ -1,6 +1,7 @@
 # backend-python/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from app.core.database import Base, engine
 import app.models  # Ensure all models are registered in Base.metadata
@@ -38,6 +39,30 @@ from app.routers.v1 import (
 )
 
 Base.metadata.create_all(bind=engine)
+
+
+def apply_startup_schema_migrations() -> None:
+    """Apply small, idempotent upgrades required by the current ORM models.
+
+    ``create_all`` creates missing tables but does not add columns to tables
+    that already exist.  Without this migration, existing installations made
+    before ``must_change_password`` was introduced fail whenever SQLAlchemy
+    loads a User row.
+    """
+    with engine.begin() as connection:
+        user_columns = {
+            column["name"] for column in inspect(connection).get_columns("users")
+        }
+        if "must_change_password" not in user_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE users "
+                    "ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT FALSE"
+                )
+            )
+
+
+apply_startup_schema_migrations()
 
 app = FastAPI(
     title="SCHOLARIS School ERP API",

@@ -127,7 +127,9 @@ export const Teachers: React.FC = () => {
         mobile: createdTeacher?.mobile || payload.mobile,
         email: createdTeacher?.email || payload.email,
         employee_id: createdTeacher?.employee_id || payload.employee_id,
-        temporary_password: createdTeacher?.temporary_password,
+        // The password is generated/entered in this form and deliberately is
+        // not returned by the API.
+        temporary_password: payload.password,
       });
       fetchTeachers();
     } catch (err: any) {
