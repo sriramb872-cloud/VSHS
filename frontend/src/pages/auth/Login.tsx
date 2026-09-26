@@ -11,8 +11,65 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const { login } = useAuth();
+  const [forceChange, setForceChange] = useState<boolean>(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changing, setChanging] = useState<boolean>(false);
+  const [pendingRole, setPendingRole] = useState<string | undefined>(undefined);
+
+  const { login, user, mustChangePassword, changePassword } = useAuth();
   const navigate = useNavigate();
+
+  const forceChangeActive = forceChange || mustChangePassword;
+
+  const goToDashboard = (role?: string) => {
+    switch (role) {
+      case 'SUPER_ADMIN':
+        navigate('/superadmin/dashboard');
+        break;
+      case 'PRINCIPAL':
+        navigate('/principal/dashboard');
+        break;
+      case 'TEACHER':
+        navigate('/teacher/dashboard');
+        break;
+      case 'STUDENT':
+        navigate('/student/dashboard');
+        break;
+      default:
+        navigate('/');
+        break;
+    }
+  };
+
+  const handleForceChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirmation do not match.');
+      return;
+    }
+
+    setChanging(true);
+    try {
+      await changePassword(currentPassword || password, newPassword);
+      setForceChange(false);
+      setPassword('');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      goToDashboard(pendingRole || user?.role);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.detail ||
+          'Failed to change password. Please check your current password and try again.'
+      );
+    } finally {
+      setChanging(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,23 +79,15 @@ export const Login: React.FC = () => {
     try {
       const user = await login(mobileNumber, password);
 
-      switch (user.role) {
-        case 'SUPER_ADMIN':
-          navigate('/superadmin/dashboard');
-          break;
-        case 'PRINCIPAL':
-          navigate('/principal/dashboard');
-          break;
-        case 'TEACHER':
-          navigate('/teacher/dashboard');
-          break;
-        case 'STUDENT':
-          navigate('/student/dashboard');
-          break;
-        default:
-          navigate('/');
-          break;
+      if (user.must_change_password) {
+        setForceChange(true);
+        setPendingRole(user.role);
+        setCurrentPassword(password);
+        return;
       }
+
+      goToDashboard(user.role);
+      return;
     } catch (err: any) {
       if (err.response && err.response.data && err.response.data.detail) {
         setError(err.response.data.detail);
@@ -49,6 +98,101 @@ export const Login: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (forceChangeActive) {
+    return (
+      <div className="w-full">
+        <div className="text-center mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Change Your Password</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Your password was reset by an administrator. Set a new password to continue.
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-5 flex items-start gap-2.5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs sm:text-sm">
+            <span className="font-medium leading-snug">{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleForceChange} className="space-y-4">
+          <div>
+            <label htmlFor="current-password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Current Password
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                id="current-password"
+                name="current_password"
+                type="password"
+                required
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="new-password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              New Password
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                id="new-password"
+                name="new_password"
+                type="password"
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 6 characters)"
+                className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="confirm-password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Confirm New Password
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                id="confirm-password"
+                name="confirm_password"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
+
+          <button
+            id="change-password-submit-btn"
+            type="submit"
+            disabled={changing}
+            className="w-full h-12 mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+          >
+            {changing ? (
+              <>
+                <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                <span>Updating…</span>
+              </>
+            ) : (
+              <span>Set New Password</span>
+            )}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

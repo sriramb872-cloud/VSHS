@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, require_roles, get_current_active_user
 from app.crud import grade as grade_crud
 from app.models.user import User
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/grades", tags=["Grades"])
 
@@ -90,8 +91,44 @@ def update_grade(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     updated = grade_crud.update_grade(db, grade, payload)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=grade.school_id,
+        action="UPDATE", resource_type="Grade", resource_id=grade.id,
+        details={k: str(v) for k, v in payload.items()}
+    )
     return {
         "id": updated.id,
         "school_id": updated.school_id,
         "name": getattr(updated, "name", "")
     }
+
+
+@router.delete("/{grade_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_grade(
+    grade_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"]))
+):
+    grade = grade_crud.get_grade(db, grade_id)
+    if not grade:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Grade not found")
+
+    if str(current_user.role).upper() != "SUPER_ADMIN" and grade.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    # Prevent deleting referenced academic history
+    if getattr(grade, "sections", None) and len(grade.sections) > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete grade with existing sections. Remove or transfer sections first."
+        )
+
+    grade_name = getattr(grade, "name", "")
+    school_id = grade.school_id
+    grade_crud.delete_grade(db, grade)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school_id,
+        action="DELETE", resource_type="Grade", resource_id=grade_id,
+        details={"name": grade_name}
+    )
+    return None

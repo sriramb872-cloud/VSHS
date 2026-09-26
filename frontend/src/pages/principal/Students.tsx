@@ -7,9 +7,11 @@ import { gradesService } from '../../services/grades';
 import { sectionsService } from '../../services/sections';
 import { Student, Grade, Section } from '../../types';
 import { EmptyState, LoadingSkeleton, ErrorState } from '../../components/shared';
+import { EditModal } from '../../components/EditModal';
 
 export const Students: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -176,6 +178,13 @@ export const Students: React.FC = () => {
       setSubmitting(false);
     }
   };
+  const updateStudentLifecycle = async (student: Student, student_status: 'ACTIVE' | 'INACTIVE' | 'WITHDRAWN') => {
+    const updated = await studentsService.updateStudent(student.id, { student_status });
+    setStudents(items => items.map(item => item.id === student.id ? updated : item));
+  };
+  const editStudent = (student: Student) => {
+    setEditingStudent(student);
+  };
 
   const filteredStudents = students.filter(
     (st) =>
@@ -268,7 +277,7 @@ export const Students: React.FC = () => {
                 </div>
               </div>
 
-              <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <div className="flex items-center gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => editStudent(st)}>Edit</button><button type="button" className="text-xs text-emerald-700" onClick={() => updateStudentLifecycle(st, st.student_status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}>{st.student_status === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}</button><button type="button" className="text-xs text-rose-700" onClick={() => updateStudentLifecycle(st, 'WITHDRAWN')}>Withdraw</button><ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" /></div>
             </div>
           ))}
         </div>
@@ -569,6 +578,62 @@ export const Students: React.FC = () => {
             <button type="button" onClick={() => setCreatedCredentials(null)} className="w-full h-11 rounded-xl bg-emerald-600 text-white text-xs font-bold">Done</button>
           </div>
         </div>
+      )}
+
+      {editingStudent && (
+        <EditModal
+          title="Edit Student Profile"
+          fields={[
+            { key: 'full_name', label: 'Full Name', required: true },
+            { key: 'mobile', label: 'Student Mobile', type: 'tel' },
+            { key: 'email', label: 'Email', type: 'email' },
+            { key: 'date_of_birth', label: 'Date of Birth', type: 'date' },
+            {
+              key: 'gender',
+              label: 'Gender',
+              type: 'select',
+              options: [
+                { value: 'MALE', label: 'Male' },
+                { value: 'FEMALE', label: 'Female' },
+                { value: 'OTHER', label: 'Other' },
+              ],
+            },
+            { key: 'blood_group', label: 'Blood Group' },
+            { key: 'father_name', label: 'Father Name' },
+            { key: 'father_mobile', label: 'Father Mobile', type: 'tel' },
+            { key: 'mother_name', label: 'Mother Name' },
+            { key: 'mother_mobile', label: 'Mother Mobile', type: 'tel' },
+            { key: 'guardian_mobile', label: 'Guardian Contact', type: 'tel' },
+            { key: 'address', label: 'Address', type: 'textarea' },
+            { key: 'admission_date', label: 'Admission Date', type: 'date' },
+            { key: 'roll_number', label: 'Roll Number' },
+          ]}
+          initialValues={{
+            full_name: editingStudent.display_name || editingStudent.full_name || '',
+            mobile: editingStudent.mobile || '',
+            email: editingStudent.email || '',
+            date_of_birth: editingStudent.date_of_birth ? editingStudent.date_of_birth.slice(0, 10) : '',
+            gender: editingStudent.gender || 'MALE',
+            blood_group: editingStudent.blood_group || '',
+            father_name: editingStudent.father_name || '',
+            father_mobile: editingStudent.father_mobile || '',
+            mother_name: editingStudent.mother_name || '',
+            mother_mobile: editingStudent.mother_mobile || '',
+            guardian_mobile: editingStudent.guardian_mobile || '',
+            address: editingStudent.address || '',
+            admission_date: editingStudent.admission_date ? editingStudent.admission_date.slice(0, 10) : '',
+            roll_number: editingStudent.roll_number || '',
+          }}
+          onSubmit={async (values) => {
+            const updated = await studentsService.updateStudent(editingStudent.id, {
+              ...values,
+              display_name: values.full_name,
+            });
+            setStudents(items => items.map(item => (item.id === editingStudent.id ? { ...item, ...updated } : item)));
+            setEditingStudent(null);
+          }}
+          onClose={() => setEditingStudent(null)}
+        />
       )}
     </div>
   );

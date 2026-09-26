@@ -36,7 +36,7 @@ class AnnouncementBase(BaseModel):
     status: AnnouncementStatus = Field(AnnouncementStatus.DRAFT, description="Status of announcement")
 
 class AnnouncementCreate(AnnouncementBase):
-    pass
+    school_id: Optional[int] = Field(None, description="School ID (required for Super Admin)")
 
 class AnnouncementUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=255)

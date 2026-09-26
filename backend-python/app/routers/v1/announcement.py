@@ -55,24 +55,30 @@ def create_announcement(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_teacher),
 ):
-    return AnnouncementService.create_announcement(db, obj_in=obj_in, current_user=current_user)
+    result = AnnouncementService.create_announcement(db, obj_in=obj_in, current_user=current_user)
+    write_audit_log(db, user_id=current_user.id, school_id=current_user.school_id, action="CREATE", resource_type="Announcement", resource_id=getattr(result, "id", None), details={"title": getattr(result, "title", "")})
+    return result
 
 @router.put("/{announcement_id}", response_model=AnnouncementResponse)
 def update_announcement(
     announcement_id: int,
     obj_in: AnnouncementUpdate,
     db: Session = Depends(deps.get_db),
-    current_user: UserModel = Depends(deps.get_current_active_user),
+    current_user: UserModel = Depends(deps.require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"])),
 ):
-    return AnnouncementService.update_announcement(db, announcement_id=announcement_id, obj_in=obj_in, current_user=current_user)
+    result = AnnouncementService.update_announcement(db, announcement_id=announcement_id, obj_in=obj_in, current_user=current_user)
+    write_audit_log(db, user_id=current_user.id, school_id=current_user.school_id, action="UPDATE", resource_type="Announcement", resource_id=announcement_id)
+    return result
 
 @router.delete("/{announcement_id}", response_model=AnnouncementResponse)
 def delete_announcement(
     announcement_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: UserModel = Depends(deps.get_current_active_user),
+    current_user: UserModel = Depends(deps.require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"])),
 ):
-    return AnnouncementService.delete_announcement(db, announcement_id=announcement_id, current_user=current_user)
+    result = AnnouncementService.delete_announcement(db, announcement_id=announcement_id, current_user=current_user)
+    write_audit_log(db, user_id=current_user.id, school_id=current_user.school_id, action="DELETE", resource_type="Announcement", resource_id=announcement_id)
+    return result
 
 @router.post("/{announcement_id}/publish", response_model=AnnouncementResponse)
 def publish_announcement(
@@ -92,4 +98,4 @@ def archive_announcement(
 ):
     result = AnnouncementService.archive_announcement(db, announcement_id=announcement_id, current_user=current_user)
     write_audit_log(db, user_id=current_user.id, school_id=current_user.school_id, action="ARCHIVE", resource_type="Announcement", resource_id=announcement_id)
-    return result
+    return result

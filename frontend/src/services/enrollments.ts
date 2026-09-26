@@ -24,4 +24,9 @@ export const enrollmentsService = {
   async deleteEnrollment(id: number): Promise<void> {
     await api.delete(`/student-enrollments/${id}`);
   },
+
+  async updateEnrollment(id: number, payload: { section_id?: number; academic_year_id?: number; roll_number?: string }): Promise<StudentEnrollment> {
+    const response = await api.patch<StudentEnrollment>(`/student-enrollments/${id}`, payload);
+    return response.data;
+  },
 };

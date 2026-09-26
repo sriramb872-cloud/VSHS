@@ -12,6 +12,7 @@ from app.schemas.timetable import (
 )
 from app.services.timetable import TimetableService
 from app.models.user import UserModel
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/timetables", tags=["Timetables"])
 
@@ -85,7 +86,9 @@ def create_timetable(
     school_id = current_user.school_id
     if not school_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
-    return TimetableService.create_timetable(db, obj_in=obj_in, school_id=school_id)
+    res = TimetableService.create_timetable(db, obj_in=obj_in, school_id=school_id)
+    write_audit_log(db, user_id=current_user.id, school_id=school_id, action="CREATE", resource_type="Timetable", resource_id=res["id"], details={})
+    return res
 
 
 @router.put("/{timetable_id}", response_model=TimetableResponse)
@@ -97,7 +100,9 @@ def update_timetable(
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
-    return TimetableService.update_timetable(db, timetable_id=timetable_id, obj_in=obj_in, school_id=school_id)
+    res = TimetableService.update_timetable(db, timetable_id=timetable_id, obj_in=obj_in, school_id=school_id)
+    write_audit_log(db, user_id=current_user.id, school_id=school_id, action="UPDATE", resource_type="Timetable", resource_id=timetable_id, details={})
+    return res
 
 
 @router.delete("/{timetable_id}", response_model=TimetableResponse)
@@ -107,7 +112,9 @@ def delete_timetable(
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
-    return TimetableService.delete_timetable(db, timetable_id=timetable_id, school_id=school_id)
+    res = TimetableService.delete_timetable(db, timetable_id=timetable_id, school_id=school_id)
+    write_audit_log(db, user_id=current_user.id, school_id=school_id, action="DELETE", resource_type="Timetable", resource_id=timetable_id, details={})
+    return res
 
 
 @router.post("/{timetable_id}/copy", response_model=TimetableResponse, status_code=status.HTTP_201_CREATED)
@@ -118,4 +125,10 @@ def copy_timetable(
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
-    return TimetableService.copy_timetable(db, timetable_id=timetable_id, copy_in=copy_in, school_id=school_id)
+    res = TimetableService.copy_timetable(db, timetable_id=timetable_id, copy_in=copy_in, school_id=school_id)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school_id, action="COPY", resource_type="Timetable",
+        resource_id=res.get("id") if isinstance(res, dict) else getattr(res, "id", None),
+        details={"source_timetable_id": timetable_id},
+    )
+    return res

@@ -2,11 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Plus } from 'lucide-react';
 import { MobileListItem, EmptyState, LoadingSkeleton } from '../../components/shared';
+import { EditModal, ConfirmDialog } from '../../components/EditModal';
 import { gradesService } from '../../services/grades';
 import { Grade } from '../../types';
 
 export const Grades: React.FC = () => {
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [editingGrade, setEditingGrade] = useState<Grade | null>(null);
+  const [deletingGrade, setDeletingGrade] = useState<Grade | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [gradeName, setGradeName] = useState('');
@@ -29,6 +32,12 @@ export const Grades: React.FC = () => {
         setGradeName('');
       })
       .catch(() => setError('Failed to create grade'));
+  };
+  const updateGrade = (grade: Grade) => {
+    setEditingGrade(grade);
+  };
+  const removeGrade = (grade: Grade) => {
+    setDeletingGrade(grade);
   };
 
   return (
@@ -77,9 +86,42 @@ export const Grades: React.FC = () => {
               title={g.name}
               icon={<Award className="w-5 h-5 text-emerald-600" />}
               avatarBg="bg-emerald-50 text-emerald-600"
+              actions={<div className="flex gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => updateGrade(g)}>Edit</button><button type="button" className="text-xs text-rose-700" onClick={() => removeGrade(g)}>Archive</button></div>}
             />
           ))}
         </div>
+      )}
+
+      {editingGrade && (
+        <EditModal
+          title="Edit Grade Level"
+          fields={[
+            { key: 'name', label: 'Grade Name', required: true },
+          ]}
+          initialValues={{
+            name: editingGrade.name,
+          }}
+          onSubmit={async (values) => {
+            const updated = await gradesService.updateGrade(editingGrade.id, { name: values.name.trim() });
+            setGrades(items => items.map(item => (item.id === editingGrade.id ? updated : item)));
+            setEditingGrade(null);
+          }}
+          onClose={() => setEditingGrade(null)}
+        />
+      )}
+
+      {deletingGrade && (
+        <ConfirmDialog
+          title="Archive Grade"
+          message={`Are you sure you want to archive ${deletingGrade.name}? This is allowed only when it has no active dependencies.`}
+          confirmLabel="Archive"
+          confirmVariant="danger"
+          onConfirm={async () => {
+            await gradesService.deleteGrade(deletingGrade.id);
+            setGrades(items => items.filter(item => item.id !== deletingGrade.id));
+          }}
+          onClose={() => setDeletingGrade(null)}
+        />
       )}
     </div>
   );

@@ -22,4 +22,8 @@ export const subjectsService = {
     const response = await api.patch<Subject>(`/subjects/${id}`, payload);
     return response.data;
   },
+
+  async deleteSubject(id: number): Promise<void> {
+    await api.delete(`/subjects/${id}`);
+  },
 };

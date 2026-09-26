@@ -245,6 +245,53 @@ class NotificationService:
         return crud_notification.mark_all_as_read(db, current_user=current_user)
 
     @staticmethod
+    def notify_announcement(db: Session, announcement) -> None:
+        """Create a Notification row for a published Announcement.
+
+        Maps Announcement.audience / target_role to the appropriate
+        notification_type so the existing visibility filters work correctly.
+        """
+        audience = str(getattr(announcement, "target_role", None) or "School-Wide").upper()
+
+        # Map announcement audience → notification_type + category
+        if audience in ("SCHOOL-WIDE", "SCHOOL_WIDE", "ALL"):
+            notif_type = "PUBLIC"
+            category = "PUBLIC"
+        elif audience in ("TEACHER", "STAFF", "STAFF_ONLY"):
+            notif_type = "STAFF_ONLY"
+            category = "STAFF"
+        elif audience in ("CLASS_ONLY", "CLASS"):
+            notif_type = "CLASS_ONLY"
+            category = "CLASS"
+        else:
+            # Default to school-wide public
+            notif_type = "PUBLIC"
+            category = "PUBLIC"
+
+        title = getattr(announcement, "title", "Announcement")
+        content = getattr(announcement, "content", "") or getattr(announcement, "description", "")
+        school_id = getattr(announcement, "school_id", None)
+        sender_id = getattr(announcement, "created_by", None) or getattr(announcement, "author_id", None)
+        target_class_id = getattr(announcement, "section_id", None)
+
+        try:
+            crud_notification.create(
+                db,
+                title=title,
+                message=content,
+                notification_type=notif_type,
+                sender_id=sender_id,
+                sender_role="PRINCIPAL",
+                school_id=school_id,
+                category=category,
+                target_class_id=target_class_id,
+                reference_id=getattr(announcement, "id", None),
+            )
+        except Exception:
+            # Notification delivery is best-effort — never block the announcement save
+            pass
+
+    @staticmethod
     def delete_notification(db: Session, notification_id: int, current_user: User) -> bool:
         db_obj = crud_notification.get(db, notification_id=notification_id)
         if not db_obj:

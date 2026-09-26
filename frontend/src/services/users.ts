@@ -27,6 +27,14 @@ export const usersService = {
     const response = await api.patch<AppUser>(`/users/${id}`, payload);
     return response.data;
   },
+
+  async resetUserPassword(id: number, password: string): Promise<void> {
+    await api.post(`/users/${id}/reset-password`, { password });
+  },
+
+  async setUserActive(id: number, active: boolean): Promise<AppUser> {
+    return this.updateUser(id, { is_active: active ? 'ACTIVE' : 'INACTIVE' } as UserUpdatePayload);
+  },
 };
 
 export default usersService;

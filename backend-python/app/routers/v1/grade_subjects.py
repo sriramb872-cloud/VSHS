@@ -7,6 +7,9 @@ from app.api.deps import get_db, require_roles, get_current_active_user
 from app.models.user import User
 from app.models import GradeSubject
 from app.models.grade import Grade
+from app.models.subject import Subject
+from app.models.teacher import Teacher
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/grade-subjects", tags=["Grade Subjects"])
 
@@ -43,6 +46,27 @@ def assign_subject_to_grade(
 
     _assert_grade_in_school(db, current_user, grade_id)
 
+    grade = db.query(Grade).filter(Grade.id == grade_id).first()
+    if not grade:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Grade not found")
+    effective_school_id = grade.school_id
+
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject or subject.school_id != effective_school_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Subject does not belong to the grade's school",
+        )
+
+    teacher_id = payload.get("teacher_id")
+    if teacher_id:
+        teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+        if not teacher or teacher.school_id != effective_school_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Teacher does not belong to the grade's school",
+            )
+
     existing = db.query(GradeSubject).filter(
         GradeSubject.grade_id == grade_id, GradeSubject.subject_id == subject_id
     ).first()
@@ -53,6 +77,11 @@ def assign_subject_to_grade(
     db.add(item)
     db.commit()
     db.refresh(item)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="CREATE", resource_type="GradeSubject", resource_id=item.id,
+        details={"grade_id": item.grade_id, "subject_id": item.subject_id}
+    )
     return {"id": item.id, "grade_id": item.grade_id, "subject_id": getattr(item, "subject_id", None)}
 
 
@@ -68,4 +97,9 @@ def remove_grade_subject(
     _assert_grade_in_school(db, current_user, item.grade_id)
     db.delete(item)
     db.commit()
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="DELETE", resource_type="GradeSubject", resource_id=assignment_id,
+        details={"grade_id": item.grade_id, "subject_id": item.subject_id}
+    )
     return None

@@ -3,18 +3,25 @@ import React, { useEffect, useState } from 'react';
 import { reportCardService } from '../../services/reportcard';
 import { ReportCardResponse } from '../../types/reportcard';
 import { ReportCardView } from '../../components/reportcard';
+import { academicYearsService } from '../../services/academicYears';
 
 export const TeacherReportCardsPage: React.FC = () => {
   const [reportCards, setReportCards] = useState<ReportCardResponse[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [currentRemarks, setCurrentRemarks] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [academicYearId, setAcademicYearId] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    reportCardService
-      .listReportCards({ academic_year_id: 1 })
+    academicYearsService.listAcademicYears()
+      .then(years => {
+        const activeYear = years.find(year => year.is_active) || years[0];
+        setAcademicYearId(activeYear?.id ?? null);
+        return activeYear ? reportCardService.listReportCards({ academic_year_id: activeYear.id }) : null;
+      })
       .then(data => {
+        if (!data) return;
         setReportCards(data.items);
         if (data.items.length > 0) {
           setSelectedStudentId(data.items[0].student_id);
@@ -28,14 +35,14 @@ export const TeacherReportCardsPage: React.FC = () => {
   const selectedReport = reportCards.find(r => r.student_id === selectedStudentId);
 
   const handleSaveRemarks = async () => {
-    if (!selectedStudentId) return;
+    if (!selectedStudentId || !academicYearId) return;
     try {
-      const updated = await reportCardService.updateRemarks(selectedStudentId, 1, currentRemarks);
+      const updated = await reportCardService.updateRemarks(selectedStudentId, academicYearId, currentRemarks);
       setReportCards(prev => prev.map(r => (r.student_id === selectedStudentId ? updated : r)));
-      alert('Teacher remarks updated successfully!');
+      setFeedback({ type: 'success', text: 'Teacher remarks updated successfully!' });
     } catch (error) {
       console.error('Failed to update remarks', error);
-      alert('Failed to update remarks');
+      setFeedback({ type: 'error', text: 'Failed to update remarks' });
     }
   };
 
@@ -45,6 +52,18 @@ export const TeacherReportCardsPage: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900">Manage Report Cards</h1>
         <p className="text-sm text-gray-500 mt-1">Review system-generated report cards and update instructor remarks.</p>
       </div>
+
+      {feedback && (
+        <div
+          className={`p-3 rounded-xl text-xs font-medium ${
+            feedback.type === 'success'
+              ? 'bg-blue-50 border border-blue-200 text-blue-800'
+              : 'bg-rose-50 border border-rose-200 text-rose-700'
+          }`}
+        >
+          {feedback.text}
+        </div>
+      )}
 
       <div className="flex gap-2 overflow-x-auto pb-2">
         {reportCards.map(rc => (

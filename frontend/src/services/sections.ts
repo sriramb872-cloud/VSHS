@@ -22,4 +22,8 @@ export const sectionsService = {
     const response = await api.patch<Section>(`/sections/${id}`, payload);
     return response.data;
   },
+
+  async deleteSection(id: number): Promise<void> {
+    await api.delete(`/sections/${id}`);
+  },
 };

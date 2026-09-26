@@ -94,6 +94,7 @@ export interface PrincipalUpdatePayload {
   employee_id?: string;
   joining_date?: string;
   is_active?: boolean;
+  status?: 'ACTIVE' | 'INACTIVE' | 'OFFBOARDED';
   school_id?: number;
 }
 
@@ -501,16 +502,29 @@ export interface Announcement {
 
 export interface AnnouncementCreatePayload {
   title: string;
+  description: string;
   content?: string;
-  audience?: string;
+  audience: string;
+  academic_year_id?: number;
   grade_id?: number;
   section_id?: number;
+  priority?: string;
+  publish_date: string;
+  expiry_date?: string;
+  status?: string;
 }
 
 export interface AnnouncementUpdatePayload {
   title?: string;
+  description?: string;
   content?: string;
   audience?: string;
+  academic_year_id?: number;
+  grade_id?: number;
+  section_id?: number;
+  priority?: string;
+  publish_date?: string;
+  expiry_date?: string;
   status?: string;
 }
 

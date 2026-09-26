@@ -22,4 +22,8 @@ export const academicYearsService = {
     const response = await api.patch<AcademicYear>(`/academic-years/${id}`, payload);
     return response.data;
   },
+
+  async deleteAcademicYear(id: number): Promise<void> {
+    await api.delete(`/academic-years/${id}`);
+  },
 };

@@ -40,6 +40,43 @@ class CRUDAnnouncement:
         items = query.order_by(Announcement.publish_date.desc()).offset(skip).limit(limit).all()
         return items, total
 
+    def get_multi_for_student(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        school_id: Optional[int] = None,
+        grade_id: Optional[int] = None,
+        section_id: Optional[int] = None,
+    ) -> Tuple[List[Announcement], int]:
+        from sqlalchemy import or_, and_
+        query = db.query(Announcement).filter(
+            or_(Announcement.status_value == "Published", Announcement.is_active == True)
+        )
+        if school_id is not None:
+            query = query.filter(Announcement.school_id == school_id)
+
+        audience_conditions = [
+            Announcement.target_role.in_(["School-Wide", "Students", "ALL"])
+        ]
+        if grade_id is not None:
+            audience_conditions.append(and_(Announcement.target_role == "Grade", Announcement.grade_id == grade_id))
+        if section_id is not None:
+            audience_conditions.append(and_(Announcement.target_role == "Section", Announcement.section_id == section_id))
+
+        query = query.filter(or_(*audience_conditions))
+
+        from datetime import datetime
+        now = datetime.utcnow()
+        query = query.filter(
+            or_(Announcement.expiry_date.is_(None), Announcement.expiry_date >= now)
+        )
+
+        total = query.count()
+        items = query.order_by(Announcement.publish_date.desc()).offset(skip).limit(limit).all()
+        return items, total
+
     def create(self, db: Session, *, obj_in: AnnouncementCreate, author_id: int, school_id: int) -> Announcement:
         audience_val = obj_in.audience.value if hasattr(obj_in.audience, "value") else str(obj_in.audience) if obj_in.audience else "School-Wide"
         priority_val = obj_in.priority.value if hasattr(obj_in.priority, "value") else str(obj_in.priority) if obj_in.priority else "Normal"

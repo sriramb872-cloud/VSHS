@@ -23,7 +23,7 @@ class Exam(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     status = Column(
-        Enum("SCHEDULED", "MARKS_IN_PROGRESS", "PUBLISHED", name="exam_status"),
+        Enum("SCHEDULED", "MARKS_IN_PROGRESS", "PUBLISHED", "ARCHIVED", name="exam_status"),
         default="SCHEDULED",
         nullable=False,
     )

@@ -84,6 +84,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
   }
 
   const isPublished = (exam.status || '').toUpperCase() === 'PUBLISHED';
+  const isMarksInProgress = (exam.status || '').toUpperCase() === 'MARKS_IN_PROGRESS';
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
@@ -124,7 +125,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
             <p className="text-xs text-slate-500 mt-1">{exam.exam_type}</p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span
               className={`px-3 py-1 rounded-full text-xs font-bold ${
                 isPublished
@@ -237,7 +238,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
               </p>
             </div>
 
-            {!isPublished && (
+            {!isPublished && !isMarksInProgress && (
               <button
                 onClick={() => setPublishDialogOpen(true)}
                 className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
@@ -311,7 +312,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
 
       {/* Publish Confirmation Modal */}
       <ConfirmDialog
-        open={publishDialogOpen}
+        isOpen={publishDialogOpen}
         title="Publish Exam Results?"
         message={
           !marksStatus?.is_all_submitted
@@ -319,7 +320,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
             : 'Publishing will release results to all students and lock further mark entries. Continue?'
         }
         confirmLabel={publishing ? 'Publishing...' : 'Confirm & Publish'}
-        variant={!marksStatus?.is_all_submitted ? 'danger' : 'primary'}
+        isDanger={!marksStatus?.is_all_submitted}
         onConfirm={handlePublish}
         onCancel={() => setPublishDialogOpen(false)}
       />

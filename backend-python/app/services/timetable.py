@@ -148,7 +148,7 @@ class TimetableService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Teacher does not belong to this school")
 
         # Prevent double-booking: same teacher, same day, overlapping time window,
-        # regardless of section — a teacher physically cannot teach two classes at once.
+        # regardless of section Ã¢â‚¬â€ a teacher physically cannot teach two classes at once.
         day = data.get("day_of_week")
         conflict = db.query(Timetable).filter(
             Timetable.teacher_id == data["teacher_id"],
@@ -238,6 +238,24 @@ class TimetableService:
                 detail="End time must be later than start time"
             )
 
+
+        effective_teacher_id = data.get("teacher_id", timetable.teacher_id)
+        effective_day = data.get("day_of_week", timetable.day_of_week)
+        conflict = db.query(Timetable).filter(
+            Timetable.id != timetable_id,
+            Timetable.teacher_id == effective_teacher_id,
+            Timetable.day_of_week == effective_day,
+            Timetable.start_time < end_t,
+            Timetable.end_time > start_t,
+        ).first()
+        if conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"This teacher is already scheduled on {effective_day} from "
+                    f"{conflict.start_time} to {conflict.end_time} (section {conflict.section_id})."
+                ),
+            )
         updated = crud_timetable.update(db, db_obj=timetable, obj_in=data)
         return serialize_timetable(updated)
 
@@ -286,6 +304,8 @@ class TimetableService:
             "end_time": source.end_time,
             "room_number": source.room_number,
         }
-        created = crud_timetable.create(db, school_id=source.school_id, obj_in=data)
-        return serialize_timetable(created)
+        # Route through the fully-validated create path instead of crud_timetable.create() directly
+        # This gives Copy the same grade/section/subject/teacher/academic-year school checks
+        # and the same conflict detection as a normal Create, for free.
+        return TimetableService.create_timetable(db, obj_in=TimetableCreate(**data), school_id=source.school_id)
 

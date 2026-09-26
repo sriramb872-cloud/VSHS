@@ -10,6 +10,7 @@ export interface User {
   display_name: string;
   role: 'SUPER_ADMIN' | 'PRINCIPAL' | 'TEACHER' | 'STUDENT';
   is_active: string;
+  must_change_password?: boolean;
 }
 
 interface AuthContextType {
@@ -17,7 +18,9 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
+  mustChangePassword: boolean;
   login: (mobile: string, password: string) => Promise<User>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -27,6 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('scholaris_access_token'));
   const [loading, setLoading] = useState<boolean>(true);
+  const [mustChangePassword, setMustChangePassword] = useState<boolean>(false);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -38,6 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const response = await api.get<User>('/auth/me');
         setUser(response.data);
+        setMustChangePassword(!!response.data.must_change_password);
         setToken(storedToken);
       } catch (err) {
         localStorage.removeItem('scholaris_access_token');
@@ -60,8 +65,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const userResponse = await api.get<User>('/auth/me');
     setUser(userResponse.data);
+    setMustChangePassword(!!response.must_change_password || !!userResponse.data.must_change_password);
     window.dispatchEvent(new Event('scholaris:pet-greeting'));
     return userResponse.data;
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    await authService.changePassword(currentPassword, newPassword);
+    setMustChangePassword(false);
+    if (user) {
+      const userResponse = await api.get<User>('/auth/me');
+      setUser(userResponse.data);
+    }
   };
 
   const logout = () => {
@@ -81,7 +96,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         token,
         loading,
         isAuthenticated: !!user,
+        mustChangePassword,
         login,
+        changePassword,
         logout,
       }}
     >

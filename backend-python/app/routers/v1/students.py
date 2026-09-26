@@ -145,7 +145,11 @@ def create_student_profile(
         school_id = teacher.school_id
         section_id = assigned_sec.id
     else:
-        school_id = payload.get("school_id") or current_user.school_id
+        if user_role == "PRINCIPAL":
+            school_id = current_user.school_id
+            payload = {k: v for k, v in payload.items() if k != "school_id"}
+        else:
+            school_id = payload.get("school_id") or current_user.school_id
         if not school_id and user_role != "SUPER_ADMIN":
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
         section_id = payload.get("section_id")
@@ -415,6 +419,8 @@ def get_student(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
     role = str(current_user.role).upper()
+    if role == "STUDENT" and student.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     if role != "SUPER_ADMIN" and student.school_id != current_user.school_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
@@ -494,4 +500,12 @@ def update_student(
 
     sanitized_payload = {k: v for k, v in payload.items() if k in allowed_fields}
     updated = student_crud.update_student(db, student, sanitized_payload)
+    if "student_status" in sanitized_payload and student.user:
+        status_val = sanitized_payload["student_status"]
+        student.user.is_active = "ACTIVE" if status_val == "ACTIVE" else "INACTIVE"
+    write_audit_log(
+        db, user_id=current_user.id, school_id=student.school_id,
+        action="UPDATE", resource_type="Student", resource_id=student.id,
+        details={k: str(v) for k, v in sanitized_payload.items() if k != "password"}
+    )
     return serialize_student(updated)

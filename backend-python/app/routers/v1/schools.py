@@ -110,3 +110,57 @@ def update_school(
         "code": getattr(updated, "code", ""),
         "is_active": getattr(updated, "is_active", True)
     }
+
+
+@router.post("/{school_id}/lifecycle", response_model=dict)
+def update_school_lifecycle(
+    school_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["SUPER_ADMIN"])),
+):
+    school = school_crud.get_school(db, school_id)
+    if not school:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="School not found")
+    action = str(payload.get("action", "")).upper()
+    if action not in {"DEACTIVATE", "REACTIVATE"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Action must be DEACTIVATE or REACTIVATE")
+    updated = school_crud.update_school(db, school, {"is_active": action == "REACTIVATE"})
+    write_audit_log(db, user_id=current_user.id, school_id=updated.id, action=action,
+                    resource_type="School", resource_id=updated.id, details={})
+    return {"id": updated.id, "name": updated.name, "code": updated.code, "is_active": updated.is_active}
+
+
+@router.patch("/{school_id}/status", response_model=dict)
+def update_school_status(
+    school_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["SUPER_ADMIN"]))
+):
+    """Activate or deactivate a school (SUPER_ADMIN only)."""
+    school = school_crud.get_school(db, school_id)
+    if not school:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="School not found")
+
+    new_status = payload.get("is_active")
+    if new_status is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="is_active is required")
+
+    old_status = getattr(school, "is_active", None)
+    school.is_active = bool(new_status)
+    db.commit()
+    db.refresh(school)
+
+    action = "ACTIVATE" if new_status else "DEACTIVATE"
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school.id,
+        action=action, resource_type="School", resource_id=school.id,
+        details={"is_active": new_status, "previous": old_status},
+    )
+    return {
+        "id": school.id,
+        "name": getattr(school, "name", ""),
+        "code": getattr(school, "code", ""),
+        "is_active": getattr(school, "is_active", True)
+    }

@@ -97,11 +97,13 @@ def get_current_user(
 
 def get_current_active_user(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> User:
     """
-    Verifies that the authenticated current user account is active.
+    Verifies that the authenticated current user account is active,
+    and (for non-Super-Admins) that their school is also active.
 
-    Raises HTTP 403 Forbidden if the account is inactive.
+    Raises HTTP 403 Forbidden if the account or school is inactive.
     """
 
     account_status = getattr(
@@ -115,6 +117,16 @@ def get_current_active_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user account",
         )
+
+    role = str(getattr(current_user, "role", "")).upper()
+    if role != "SUPER_ADMIN" and current_user.school_id:
+        from app.models.school import School
+        school = db.query(School).filter(School.id == current_user.school_id).first()
+        if school is not None and school.is_active is False:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your school account has been deactivated",
+            )
 
     return current_user
 

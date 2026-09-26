@@ -225,6 +225,30 @@ class ExamService:
             return None
         if school_id is not None and db_obj.school_id != school_id:
             return None
+        if db_obj.status == "PUBLISHED":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Published exams cannot be edited. Use the reopen workflow first."
+            )
+        # Cross-entity validation when grade/section/academic_year are being changed
+        data = obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, "model_dump") else obj_in.dict(exclude_unset=True)
+        effective_ay = data.get("academic_year_id", db_obj.academic_year_id)
+        effective_grade = data.get("grade_id", db_obj.grade_id)
+        effective_section = data.get("section_id", db_obj.section_id)
+        target_school = school_id or db_obj.school_id
+        from app.models.academic_year import AcademicYear
+        from app.models.grade import Grade
+        from app.models.section import Section
+        ay = db.query(AcademicYear).filter(AcademicYear.id == effective_ay, AcademicYear.school_id == target_school).first()
+        grade = db.query(Grade).filter(Grade.id == effective_grade, Grade.school_id == target_school).first()
+        section = db.query(Section).filter(Section.id == effective_section).first()
+        if not ay:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Academic year does not belong to this school")
+        if not grade:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grade does not belong to this school")
+        if not section or section.school_id != target_school or section.grade_id != effective_grade:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Section does not belong to the selected grade/school")
+
         updated = crud_exam.update(db, db_obj=db_obj, obj_in=obj_in)
         return ExamService._format_exam_response(crud_exam.get(db, exam_id=updated.id))
 
@@ -235,8 +259,72 @@ class ExamService:
             return False
         if school_id is not None and db_obj.school_id != school_id:
             return False
+
+        from app.models.exam_subject import ExamSubject
+        from app.models.marks import Marks
+        has_marks = (
+            db.query(Marks)
+            .join(ExamSubject, Marks.exam_subject_id == ExamSubject.id)
+            .filter(ExamSubject.exam_id == exam_id)
+            .first()
+            is not None
+        )
+        if has_marks or db_obj.status == "PUBLISHED":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This exam has recorded marks and cannot be deleted. Archive or cancel it instead."
+            )
         crud_exam.remove(db, id=exam_id)
         return True
+
+    @staticmethod
+    def archive_exam(db: Session, exam_id: int, school_id: Optional[int] = None) -> Optional[ExamResponse]:
+        db_obj = crud_exam.get(db, exam_id=exam_id)
+        if not db_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
+        if school_id is not None and db_obj.school_id != school_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        db_obj.status = "ARCHIVED"
+        db.commit()
+        db.refresh(db_obj)
+        return ExamService._format_exam_response(db_obj)
+
+    @staticmethod
+    def reopen_exam(db: Session, exam_id: int, school_id: Optional[int] = None) -> Optional[ExamResponse]:
+        """Revert a PUBLISHED exam back to MARKS_IN_PROGRESS so teachers can correct marks."""
+        db_obj = crud_exam.get(db, exam_id=exam_id)
+        if not db_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
+        if school_id is not None and db_obj.school_id != school_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        if db_obj.status != "PUBLISHED":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only PUBLISHED exams can be reopened for marks correction",
+            )
+        db_obj.status = "MARKS_IN_PROGRESS"
+        db.commit()
+        db.refresh(db_obj)
+        return ExamService._format_exam_response(db_obj)
+
+    @staticmethod
+    def republish_exam(db: Session, exam_id: int, school_id: Optional[int] = None) -> Optional[ExamResponse]:
+        """Re-publish a MARKS_IN_PROGRESS exam after corrections."""
+        db_obj = crud_exam.get(db, exam_id=exam_id)
+        if not db_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
+        if school_id is not None and db_obj.school_id != school_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        if db_obj.status != "MARKS_IN_PROGRESS":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only MARKS_IN_PROGRESS exams can be republished",
+            )
+        db_obj.status = "PUBLISHED"
+        db.commit()
+        db.refresh(db_obj)
+        return ExamService._format_exam_response(db_obj)
+
 
     @staticmethod
     def get_exam_subjects(

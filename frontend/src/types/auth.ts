@@ -7,6 +7,7 @@ export interface LoginRequest {
 export interface TokenResponse {
   access_token: string;
   token_type: string;
+  must_change_password?: boolean;
   role?: 'SUPER_ADMIN' | 'PRINCIPAL' | 'TEACHER' | 'STUDENT';
   full_name?: string;
   user_id?: number;
@@ -20,6 +21,7 @@ export interface AuthenticatedUser {
   display_name: string;
   role: 'SUPER_ADMIN' | 'PRINCIPAL' | 'TEACHER' | 'STUDENT';
   is_active: boolean;
+  must_change_password?: boolean;
 }
 
 export interface AuthState {

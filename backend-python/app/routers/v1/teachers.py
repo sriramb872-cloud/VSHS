@@ -130,7 +130,12 @@ def create_teacher_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"]))
 ):
-    school_id = payload.get("school_id") or current_user.school_id
+    user_role = str(current_user.role).upper()
+    if user_role == "PRINCIPAL":
+        school_id = current_user.school_id
+        payload = {k: v for k, v in payload.items() if k != "school_id"}
+    else:
+        school_id = payload.get("school_id") or current_user.school_id
     if not school_id and str(current_user.role).upper() != "SUPER_ADMIN":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
 
@@ -428,5 +433,12 @@ def update_teacher(
     sanitized_payload = {k: v for k, v in payload.items() if k in allowed_fields}
     if "status" in sanitized_payload and teacher.user:
         teacher.user.is_active = sanitized_payload["status"]
+    elif "is_active" in sanitized_payload and teacher.user:
+        teacher.user.is_active = "ACTIVE" if (sanitized_payload["is_active"] is True or sanitized_payload["is_active"] == "ACTIVE") else "INACTIVE"
     updated = teacher_crud.update_teacher(db, teacher, sanitized_payload)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=teacher.school_id,
+        action="UPDATE", resource_type="Teacher", resource_id=teacher.id,
+        details={k: str(v) for k, v in sanitized_payload.items() if k != "password"}
+    )
     return serialize_teacher(updated, db=db)

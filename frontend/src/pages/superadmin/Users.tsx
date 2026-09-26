@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Users as UsersIcon, Search } from 'lucide-react';
 import { MobileListItem, EmptyState, LoadingSkeleton, StatusBadge, ErrorState } from '../../components/shared';
+import { EditModal } from '../../components/EditModal';
 import { usersService } from '../../services/users';
 import { AppUser, UserRole } from '../../types';
 
@@ -17,6 +18,8 @@ const ROLES: { value: string; label: string }[] = [
 export const SuperAdminUsers: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [users, setUsers] = useState<AppUser[]>([]);
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [resettingUser, setResettingUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
@@ -50,6 +53,21 @@ export const SuperAdminUsers: React.FC = () => {
     PRINCIPAL: 'bg-emerald-50 text-emerald-600',
     TEACHER: 'bg-blue-50 text-blue-600',
     STUDENT: 'bg-amber-50 text-amber-600',
+  };
+  const setUserActive = async (user: AppUser, active: boolean) => {
+    const updated = await usersService.setUserActive(user.id, active);
+    setUsers(items => items.map(item => item.id === user.id ? updated : item));
+  };
+  const resetPassword = (user: AppUser) => {
+    setResettingUser(user);
+  };
+
+  const generateTemporaryPassword = () => {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    const values = new Uint32Array(14);
+    if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(values);
+    else values.fill(Math.floor(Math.random() * alphabet.length));
+    return Array.from(values, value => alphabet[value % alphabet.length]).join('');
   };
 
   return (
@@ -100,9 +118,51 @@ export const SuperAdminUsers: React.FC = () => {
               avatarBg={roleColor[u.role] || 'bg-slate-50 text-slate-600'}
               badge={<StatusBadge status={u.is_active || 'INACTIVE'} />}
               metaText={u.role}
+              actions={<div className="flex gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => setEditingUser(u)}>Edit</button><button type="button" className="text-xs text-emerald-700" onClick={() => setUserActive(u, !(u.is_active === true || u.is_active === 'ACTIVE'))}>{u.is_active === true || u.is_active === 'ACTIVE' ? 'Deactivate' : 'Activate'}</button><button type="button" className="text-xs text-slate-700" onClick={() => resetPassword(u)}>Reset Password</button><button type="button" className="text-xs text-rose-700" onClick={() => setUserActive(u, false)}>Offboard</button></div>}
             />
           ))}
         </div>
+      )}
+
+      {editingUser && (
+        <EditModal
+          title="Edit User"
+          fields={[
+            { key: 'full_name', label: 'Full Name', required: true },
+            { key: 'email', label: 'Email', type: 'email' },
+            { key: 'mobile', label: 'Mobile', type: 'tel' },
+          ]}
+          initialValues={{
+            full_name: editingUser.display_name || '',
+            email: editingUser.email || '',
+            mobile: editingUser.mobile || '',
+          }}
+          onSubmit={async (values) => {
+            const updated = await usersService.updateUser(editingUser.id, {
+              display_name: values.full_name,
+              full_name: values.full_name,
+              email: values.email || undefined,
+              mobile: values.mobile || undefined,
+            } as any);
+            setUsers(current => current.map(u => (u.id === updated.id ? { ...u, ...updated } : u)));
+            setEditingUser(null);
+          }}
+          onClose={() => setEditingUser(null)}
+        />
+      )}
+
+      {resettingUser && (
+        <EditModal
+          title={`Reset Password — ${resettingUser.display_name || resettingUser.mobile}`}
+          fields={[
+            { key: 'password', label: 'New Temporary Password', type: 'password', required: true },
+          ]}
+          initialValues={{ password: generateTemporaryPassword() }}
+          onSubmit={async (values) => {
+            await usersService.resetUserPassword(resettingUser.id, values.password);
+          }}
+          onClose={() => setResettingUser(null)}
+        />
       )}
     </div>
   );

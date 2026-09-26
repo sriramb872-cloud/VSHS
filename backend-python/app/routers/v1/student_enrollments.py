@@ -9,6 +9,7 @@ from app.models.student_enrollment import StudentEnrollment
 from app.models.section import Section
 from app.models.student import Student
 from app.models.user import User
+from app.core.audit import write_audit_log
 from app.models.academic_year import AcademicYear
 
 router = APIRouter(prefix="/student-enrollments", tags=["Student Enrollments"])
@@ -170,6 +171,35 @@ def enroll_student(
     return serialize_enrollment(item)
 
 
+@router.patch("/{enrollment_id}", response_model=dict)
+def update_enrollment(
+    enrollment_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"])),
+):
+    item = se_crud.get_student_enrollment(db, enrollment_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
+    school_id = item.student.school_id if item.student else None
+    if str(current_user.role).upper() != "SUPER_ADMIN" and school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    section_id = payload.get("section_id", item.section_id)
+    academic_year_id = payload.get("academic_year_id", item.academic_year_id)
+    section = db.query(Section).filter(Section.id == section_id).first()
+    academic_year = db.query(AcademicYear).filter(AcademicYear.id == academic_year_id).first()
+    if not section or not academic_year or section.school_id != school_id or academic_year.school_id != school_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Section and academic year must belong to the student's school")
+    action_type = "TRANSFER" if ("section_id" in payload and payload["section_id"] != item.section_id) else "UPDATE"
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school_id,
+        action=action_type, resource_type="StudentEnrollment", resource_id=enrollment_id,
+        details={"updates": payload},
+    )
+    payload.pop("student_id", None)
+    return serialize_enrollment(se_crud.update_student_enrollment(db, item, payload))
+
+
 @router.delete("/{enrollment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_enrollment(
     enrollment_id: int,
@@ -184,5 +214,10 @@ def remove_enrollment(
         if item.student and item.student.school_id != current_user.school_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    write_audit_log(
+        db, user_id=current_user.id, school_id=item.student.school_id if item.student else None,
+        action="DELETE", resource_type="StudentEnrollment", resource_id=enrollment_id,
+        details={},
+    )
     se_crud.delete_student_enrollment(db, item)
     return None

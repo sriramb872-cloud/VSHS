@@ -2,11 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Plus } from 'lucide-react';
 import { MobileListItem, EmptyState, LoadingSkeleton } from '../../components/shared';
+import { EditModal, ConfirmDialog } from '../../components/EditModal';
 import { subjectsService } from '../../services/subjects';
 import { Subject } from '../../types';
 
 export const Subjects: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [subjectName, setSubjectName] = useState('');
@@ -29,6 +32,12 @@ export const Subjects: React.FC = () => {
         setSubjectName('');
       })
       .catch(() => setError('Failed to create subject'));
+  };
+  const updateSubject = (subject: Subject) => {
+    setEditingSubject(subject);
+  };
+  const removeSubject = (subject: Subject) => {
+    setDeletingSubject(subject);
   };
 
   return (
@@ -77,9 +86,42 @@ export const Subjects: React.FC = () => {
               title={sub.name}
               icon={<BookOpen className="w-5 h-5 text-emerald-600" />}
               avatarBg="bg-emerald-50 text-emerald-600"
+              actions={<div className="flex gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => updateSubject(sub)}>Edit</button><button type="button" className="text-xs text-rose-700" onClick={() => removeSubject(sub)}>Archive</button></div>}
             />
           ))}
         </div>
+      )}
+
+      {editingSubject && (
+        <EditModal
+          title="Edit Subject"
+          fields={[
+            { key: 'name', label: 'Subject Name', required: true },
+          ]}
+          initialValues={{
+            name: editingSubject.name,
+          }}
+          onSubmit={async (values) => {
+            const updated = await subjectsService.updateSubject(editingSubject.id, { name: values.name.trim() });
+            setSubjects(items => items.map(item => (item.id === editingSubject.id ? updated : item)));
+            setEditingSubject(null);
+          }}
+          onClose={() => setEditingSubject(null)}
+        />
+      )}
+
+      {deletingSubject && (
+        <ConfirmDialog
+          title="Archive Subject"
+          message={`Are you sure you want to archive ${deletingSubject.name}? This is allowed only when it has no active dependencies.`}
+          confirmLabel="Archive"
+          confirmVariant="danger"
+          onConfirm={async () => {
+            await subjectsService.deleteSubject(deletingSubject.id);
+            setSubjects(items => items.filter(item => item.id !== deletingSubject.id));
+          }}
+          onClose={() => setDeletingSubject(null)}
+        />
       )}
     </div>
   );

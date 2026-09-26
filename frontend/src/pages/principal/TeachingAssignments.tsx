@@ -10,6 +10,7 @@ import { teacherSubjectsService } from '../../services/teacherSubjects';
 import { useAuth } from '../../contexts/AuthContext';
 import { Grade, Section, Subject, Teacher, GradeSubject, TeacherSubject } from '../../types';
 import { EmptyState, LoadingSkeleton } from '../../components/shared';
+import { EditModal } from '../../components/EditModal';
 
 export const TeachingAssignments: React.FC = () => {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ export const TeachingAssignments: React.FC = () => {
   const [sections, setSections] = useState<Section[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [editingAssignment, setEditingAssignment] = useState<TeacherSubject | null>(null);
   const [loadingInitial, setLoadingInitial] = useState<boolean>(true);
 
   // Tab A state
@@ -606,6 +608,14 @@ export const TeachingAssignments: React.FC = () => {
 
                       <button
                         type="button"
+                        onClick={() => setEditingAssignment(assignment)}
+                        className="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 active:scale-95 transition-all"
+                        title="Edit assignment"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
                         aria-label="Remove assignment"
                         disabled={isDeleting}
                         onClick={() => handleRemoveAssignment(assignment.id)}
@@ -625,6 +635,47 @@ export const TeachingAssignments: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {editingAssignment && (
+        <EditModal
+          title="Edit Teaching Assignment"
+          fields={[
+            {
+              key: 'teacher_id',
+              label: 'Teacher',
+              type: 'select',
+              required: true,
+              options: teachers.map(t => ({
+                value: t.id,
+                label: `${t.display_name || t.full_name}${t.employee_id ? ` (${t.employee_id})` : ''}`,
+              })),
+            },
+            {
+              key: 'subject_id',
+              label: 'Subject',
+              type: 'select',
+              required: true,
+              options: subjects.map(s => ({
+                value: s.id,
+                label: `${s.name}${s.code ? ` (${s.code})` : ''}`,
+              })),
+            },
+          ]}
+          initialValues={{
+            teacher_id: editingAssignment.teacher_id,
+            subject_id: editingAssignment.subject_id,
+          }}
+          onSubmit={async (values) => {
+            const updated = await teacherSubjectsService.update(editingAssignment.id, {
+              teacher_id: Number(values.teacher_id),
+              subject_id: Number(values.subject_id),
+            });
+            setSchoolTeacherAssignments(items => items.map(item => (item.id === editingAssignment.id ? updated : item)));
+            setEditingAssignment(null);
+          }}
+          onClose={() => setEditingAssignment(null)}
+        />
       )}
     </div>
   );

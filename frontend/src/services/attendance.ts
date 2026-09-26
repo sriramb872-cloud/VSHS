@@ -50,6 +50,14 @@ export const attendanceService = {
     const response = await api.get(`/attendance/student/${studentId}`);
     return response.data;
   },
+  async updateAttendance(id: number, payload: { status?: string; remarks?: string }): Promise<AttendanceRecord> {
+    const response = await api.patch<AttendanceRecord>(`/attendance/${id}`, payload);
+    return response.data;
+  },
+  async voidAttendance(id: number): Promise<AttendanceRecord> {
+    const response = await api.post<AttendanceRecord>(`/attendance/${id}/void`);
+    return response.data;
+  },
 };
 
 export default attendanceService;

@@ -26,6 +26,25 @@ from app.schemas.marks import (
 
 class MarksService:
     @staticmethod
+    def _marks_lifecycle_state(exam: Exam) -> str:
+        st = (getattr(exam, "status", None) or "DRAFT").upper()
+        if st == "PUBLISHED":
+            return "PUBLISHED"
+        if st in ("LOCKED", "CLOSED"):
+            return "LOCKED"
+        if st in ("SUBMITTED", "MARKS_IN_PROGRESS"):
+            return "SUBMITTED"
+        return "DRAFT"
+
+    @staticmethod
+    def _assert_marks_editable(exam: Exam, current_user: User, allow_correction: bool = False) -> None:
+        state = MarksService._marks_lifecycle_state(exam)
+        role = str(current_user.role).upper()
+        if state == "LOCKED" and role != "SUPER_ADMIN":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Marks are locked")
+        if state == "PUBLISHED" and role not in ("SUPER_ADMIN", "PRINCIPAL") and not allow_correction:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Published marks cannot be edited")
+    @staticmethod
     def _check_submission_permission(
         db: Session,
         exam_subject: ExamSubject,
@@ -40,8 +59,8 @@ class MarksService:
                 detail="You do not have permission to submit marks",
             )
 
-        # Check locked status
-        if (exam.status or "").upper() == "PUBLISHED" and user_role != "SUPER_ADMIN":
+        # Check locked status — SUPER_ADMIN and PRINCIPAL may correct published marks
+        if (exam.status or "").upper() == "PUBLISHED" and user_role not in ("SUPER_ADMIN", "PRINCIPAL"):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Exam marks are locked because the exam has already been published",
@@ -293,11 +312,14 @@ class MarksService:
         exam_subject_id: Optional[int] = None,
         student_id: Optional[int] = None,
         school_id: Optional[int] = None,
+        exam_subject_ids: Optional[List[int]] = None,
     ) -> Tuple[List[MarkResponse], int]:
         query = db.query(Marks)
 
         if school_id is not None:
             query = query.filter(Marks.school_id == school_id)
+        if exam_subject_ids is not None:
+            query = query.filter(Marks.exam_subject_id.in_(exam_subject_ids))
         if exam_subject_id is not None:
             query = query.filter(Marks.exam_subject_id == exam_subject_id)
         if exam_id is not None:

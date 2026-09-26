@@ -22,4 +22,9 @@ export const schoolsService = {
     const response = await api.patch<School>(`/schools/${id}`, payload);
     return response.data;
   },
+
+  async updateSchoolLifecycle(id: number, action: 'DEACTIVATE' | 'REACTIVATE'): Promise<School> {
+    const response = await api.post<School>(`/schools/${id}/lifecycle`, { action });
+    return response.data;
+  },
 };

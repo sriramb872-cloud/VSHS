@@ -5,9 +5,11 @@ import { Users, Plus, Phone, Briefcase, Calendar, ChevronRight, Mail, X, Save, A
 import { teachersService } from '../../services/teachers';
 import { Teacher } from '../../types';
 import { EmptyState, LoadingSkeleton, StatusBadge, ErrorState } from '../../components/shared';
+import { EditModal } from '../../components/EditModal';
 
 export const Teachers: React.FC = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -142,6 +144,13 @@ export const Teachers: React.FC = () => {
       setSubmitting(false);
     }
   };
+  const updateTeacherLifecycle = async (teacher: Teacher, status: 'ACTIVE' | 'INACTIVE' | 'OFFBOARDED') => {
+    const updated = await teachersService.updateTeacher(teacher.id, { status });
+    setTeachers(items => items.map(item => item.id === teacher.id ? updated : item));
+  };
+  const editTeacher = (teacher: Teacher) => {
+    setEditingTeacher(teacher);
+  };
 
   return (
     <div className="space-y-4">
@@ -204,6 +213,7 @@ export const Teachers: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={t.status || (t.is_active ? 'ACTIVE' : 'INACTIVE')} />
+                  <div className="flex gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => editTeacher(t)}>Edit</button><button type="button" className="text-xs text-emerald-700" onClick={() => updateTeacherLifecycle(t, t.is_active ? 'INACTIVE' : 'ACTIVE')}>{t.is_active ? 'Deactivate' : 'Reactivate'}</button><button type="button" className="text-xs text-rose-700" onClick={() => updateTeacherLifecycle(t, 'OFFBOARDED')}>Offboard</button></div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
                 </div>
               </div>
@@ -512,6 +522,43 @@ export const Teachers: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {editingTeacher && (
+        <EditModal
+          title="Edit Faculty Profile"
+          fields={[
+            { key: 'full_name', label: 'Full Name', required: true },
+            { key: 'mobile', label: 'Mobile Number', type: 'tel' },
+            { key: 'email', label: 'Email', type: 'email' },
+            { key: 'employee_id', label: 'Employee ID' },
+            { key: 'qualification', label: 'Qualification' },
+            { key: 'department', label: 'Department' },
+            { key: 'specialization', label: 'Specialization' },
+            { key: 'joining_date', label: 'Joining Date', type: 'date' },
+            { key: 'address', label: 'Address', type: 'textarea' },
+          ]}
+          initialValues={{
+            full_name: editingTeacher.display_name || editingTeacher.full_name || '',
+            mobile: editingTeacher.mobile || '',
+            email: editingTeacher.email || '',
+            employee_id: editingTeacher.employee_id || '',
+            qualification: editingTeacher.qualification || '',
+            department: editingTeacher.department || '',
+            specialization: editingTeacher.specialization || '',
+            joining_date: editingTeacher.joining_date ? editingTeacher.joining_date.slice(0, 10) : '',
+            address: editingTeacher.address || '',
+          }}
+          onSubmit={async (values) => {
+            const updated = await teachersService.updateTeacher(editingTeacher.id, {
+              ...values,
+              display_name: values.full_name,
+            });
+            setTeachers(items => items.map(item => (item.id === editingTeacher.id ? { ...item, ...updated } : item)));
+            setEditingTeacher(null);
+          }}
+          onClose={() => setEditingTeacher(null)}
+        />
       )}
     </div>
   );

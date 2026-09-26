@@ -1,5 +1,6 @@
 // src/types/announcement.ts
 export type AnnouncementAudience = 'School-Wide' | 'Teachers' | 'Students' | 'Parents' | 'Grade' | 'Section';
+export type SelectableAnnouncementAudience = Exclude<AnnouncementAudience, 'Parents'>;
 export type AnnouncementPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
 export type AnnouncementStatus = 'Draft' | 'Published' | 'Archived';
 

@@ -1,6 +1,6 @@
 // src/pages/principal/Exams.tsx
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Calendar, Award, Layers, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Trash2, Calendar, Award, Layers, CheckCircle2, Clock, Edit2, Archive, RotateCcw, RefreshCw } from 'lucide-react';
 import { examService } from '../../services/exam';
 import { gradesService } from '../../services/grades';
 import { sectionsService } from '../../services/sections';
@@ -9,6 +9,7 @@ import { timetableService } from '../../services/timetable';
 import { Exam, ExamCreatePayload, ExamSubjectSchedule } from '../../types/exam';
 import { Grade, Section, AcademicYear } from '../../types';
 import { LoadingSkeleton, EmptyState, ConfirmDialog } from '../../components/shared';
+import { EditModal, Field } from '../../components/EditModal';
 
 export const PrincipalExamsPage: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -22,6 +23,10 @@ export const PrincipalExamsPage: React.FC = () => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [archiveId, setArchiveId] = useState<number | null>(null);
+  const [reopenId, setReopenId] = useState<number | null>(null);
+  const [republishId, setRepublishId] = useState<number | null>(null);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Form state
@@ -158,6 +163,61 @@ export const PrincipalExamsPage: React.FC = () => {
     } catch (err: any) {
       setFeedback({ type: 'error', text: err.response?.data?.detail || 'Failed to publish examination' });
     }
+  };
+
+  const handleArchive = async () => {
+    if (!archiveId) return;
+    try {
+      await examService.archiveExam(archiveId);
+      setFeedback({ type: 'success', text: 'Exam archived successfully.' });
+      await loadData();
+    } catch (err: any) {
+      setFeedback({ type: 'error', text: err.response?.data?.detail || 'Failed to archive exam' });
+    } finally {
+      setArchiveId(null);
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!reopenId) return;
+    try {
+      await examService.reopenMarks(reopenId);
+      setFeedback({ type: 'success', text: 'Exam reopened for marks correction.' });
+      await loadData();
+    } catch (err: any) {
+      setFeedback({ type: 'error', text: err.response?.data?.detail || 'Failed to reopen exam' });
+    } finally {
+      setReopenId(null);
+    }
+  };
+
+  const handleRepublish = async () => {
+    if (!republishId) return;
+    try {
+      await examService.republishMarks(republishId);
+      setFeedback({ type: 'success', text: 'Exam results republished successfully.' });
+      await loadData();
+    } catch (err: any) {
+      setFeedback({ type: 'error', text: err.response?.data?.detail || 'Failed to republish exam' });
+    } finally {
+      setRepublishId(null);
+    }
+  };
+
+  const handleEditExam = async (values: Record<string, any>) => {
+    if (!editingExam) return;
+    await examService.updateExam(editingExam.id, {
+      name: values.name,
+      exam_type: values.exam_type,
+      assessment_mode: values.assessment_mode,
+      academic_year_id: Number(values.academic_year_id),
+      grade_id: Number(values.grade_id),
+      section_id: Number(values.section_id),
+      start_date: values.start_date,
+      end_date: values.end_date,
+    });
+    setFeedback({ type: 'success', text: 'Exam updated successfully.' });
+    await loadData();
   };
 
   const filteredSections = sections.filter(s => s.grade_id === Number(formData.grade_id));
@@ -405,11 +465,22 @@ export const PrincipalExamsPage: React.FC = () => {
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : exam.status === 'MARKS_IN_PROGRESS'
                             ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : exam.status === 'ARCHIVED'
+                            ? 'bg-slate-100 text-slate-500 border border-slate-200'
                             : 'bg-blue-50 text-blue-700 border border-blue-200'
                         }`}
                       >
                         {exam.status}
                       </span>
+                      {exam.status !== 'PUBLISHED' && exam.status !== 'ARCHIVED' && (
+                        <button
+                          onClick={() => setEditingExam(exam)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                          title="Edit Exam"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => setDeleteId(exam.id)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
@@ -417,7 +488,34 @@ export const PrincipalExamsPage: React.FC = () => {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                      {!isPublished && (
+                      {(isPublished || exam.exam_subjects?.some(s => s.is_marks_submitted)) && (
+                        <button
+                          onClick={() => setArchiveId(exam.id)}
+                          className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-colors"
+                          title="Archive Exam"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      )}
+                      {isPublished && (
+                        <button
+                          onClick={() => setReopenId(exam.id)}
+                          className="px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold inline-flex items-center gap-1"
+                          title="Reopen Marks"
+                        >
+                          <RotateCcw className="w-3 h-3" /> Reopen
+                        </button>
+                      )}
+                      {exam.status === 'MARKS_IN_PROGRESS' && (
+                        <button
+                          onClick={() => setRepublishId(exam.id)}
+                          className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold inline-flex items-center gap-1"
+                          title="Republish Results"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Republish
+                        </button>
+                      )}
+                      {!isPublished && exam.status !== 'ARCHIVED' && (
                         <button
                           onClick={() => handlePublish(exam.id)}
                           className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold"
@@ -427,6 +525,7 @@ export const PrincipalExamsPage: React.FC = () => {
                       )}
                     </div>
                   </div>
+
 
                   <div className="grid grid-cols-2 gap-2 mt-4 text-xs text-slate-600">
                     <div className="flex items-center gap-1.5">
@@ -487,14 +586,99 @@ export const PrincipalExamsPage: React.FC = () => {
 
       {/* Delete Confirmation */}
       <ConfirmDialog
-        open={deleteId !== null}
+        isOpen={deleteId !== null}
         title="Delete Examination?"
         message="This will delete this exam window, all subject schedules, and recorded marks."
         confirmLabel="Delete"
-        variant="danger"
+        isDanger
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
       />
+
+      {/* Archive Confirmation */}
+      <ConfirmDialog
+        isOpen={archiveId !== null}
+        title="Archive Examination?"
+        message="Archiving will lock this exam from further edits. Marks data will be preserved."
+        confirmLabel="Archive"
+        isDanger={false}
+        onConfirm={handleArchive}
+        onCancel={() => setArchiveId(null)}
+      />
+
+      {/* Reopen Marks Confirmation */}
+      <ConfirmDialog
+        isOpen={reopenId !== null}
+        title="Reopen Marks for Correction?"
+        message="This will set the exam back to MARKS_IN_PROGRESS, allowing teachers to correct submitted marks. Students will not be notified until you republish."
+        confirmLabel="Reopen"
+        isDanger
+        onConfirm={handleReopen}
+        onCancel={() => setReopenId(null)}
+      />
+
+      {/* Republish Confirmation */}
+      <ConfirmDialog
+        isOpen={republishId !== null}
+        title="Republish Exam Results?"
+        message="This will re-publish the corrected marks and make results visible to students again."
+        confirmLabel="Republish"
+        isDanger={false}
+        onConfirm={handleRepublish}
+        onCancel={() => setRepublishId(null)}
+      />
+
+      {/* Edit Exam Modal */}
+      {editingExam && (
+        <EditModal
+          title="Edit Examination"
+          fields={[
+            { key: 'name', label: 'Exam Name', required: true },
+            { key: 'exam_type', label: 'Exam Type Label' },
+            {
+              key: 'assessment_mode',
+              label: 'Assessment Mode',
+              type: 'select',
+              options: [
+                { value: 'FORMATIVE', label: 'Formative' },
+                { value: 'SUMMATIVE', label: 'Summative' },
+              ],
+            },
+            {
+              key: 'academic_year_id',
+              label: 'Academic Year',
+              type: 'select',
+              options: academicYears.map(ay => ({ value: ay.id, label: ay.name })),
+            },
+            {
+              key: 'grade_id',
+              label: 'Grade',
+              type: 'select',
+              options: grades.map(g => ({ value: g.id, label: g.name })),
+            },
+            {
+              key: 'section_id',
+              label: 'Section',
+              type: 'select',
+              options: sections.map(s => ({ value: s.id, label: s.name })),
+            },
+            { key: 'start_date', label: 'Start Date', type: 'date' },
+            { key: 'end_date', label: 'End Date', type: 'date' },
+          ]}
+          initialValues={{
+            name: editingExam.name,
+            exam_type: editingExam.exam_type,
+            assessment_mode: editingExam.assessment_mode,
+            academic_year_id: editingExam.academic_year_id,
+            grade_id: editingExam.grade_id,
+            section_id: editingExam.section_id,
+            start_date: editingExam.start_date,
+            end_date: editingExam.end_date,
+          }}
+          onSubmit={handleEditExam}
+          onClose={() => setEditingExam(null)}
+        />
+      )}
     </div>
   );
 };

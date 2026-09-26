@@ -2,23 +2,29 @@
 import React, { useState, useEffect } from 'react';
 import { School, Plus } from 'lucide-react';
 import { MobileListItem, EmptyState, LoadingSkeleton } from '../../components/shared';
+import { EditModal, ConfirmDialog } from '../../components/EditModal';
 import { sectionsService } from '../../services/sections';
 import { gradesService } from '../../services/grades';
-import { Grade, Section } from '../../types';
+import { teachersService } from '../../services/teachers';
+import { Grade, Section, Teacher } from '../../types';
 
 export const Sections: React.FC = () => {
   const [sections, setSections] = useState<Section[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [editingSection, setEditingSection] = useState<Section | null>(null);
+  const [deletingSection, setDeletingSection] = useState<Section | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [sectionName, setSectionName] = useState('');
   const [gradeId, setGradeId] = useState('');
 
   useEffect(() => {
-    Promise.all([sectionsService.listSections(), gradesService.listGrades()])
-      .then(([sectionData, gradeData]) => {
+    Promise.all([sectionsService.listSections(), gradesService.listGrades(), teachersService.listTeachers()])
+      .then(([sectionData, gradeData, teacherData]) => {
         setSections(sectionData);
         setGrades(gradeData);
+        setTeachers(teacherData);
       })
       .catch(() => setError('Failed to load sections'))
       .finally(() => setLoading(false));
@@ -39,6 +45,12 @@ export const Sections: React.FC = () => {
         setGradeId('');
       })
       .catch(() => setError('Failed to create section'));
+  };
+  const editSection = (section: Section) => {
+    setEditingSection(section);
+  };
+  const removeSection = (section: Section) => {
+    setDeletingSection(section);
   };
 
   return (
@@ -101,9 +113,58 @@ export const Sections: React.FC = () => {
               subtitle={`Grade ID: ${s.grade_id}`}
               icon={<School className="w-5 h-5 text-emerald-600" />}
               avatarBg="bg-emerald-50 text-emerald-600"
+              actions={<div className="flex gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => editSection(s)}>Edit</button><button type="button" className="text-xs text-rose-700" onClick={() => removeSection(s)}>Archive</button></div>}
             />
           ))}
         </div>
+      )}
+
+      {editingSection && (
+        <EditModal
+          title="Edit Section"
+          fields={[
+            { key: 'name', label: 'Section Name', required: true },
+            {
+              key: 'class_teacher_id',
+              label: 'Class Teacher',
+              type: 'select',
+              options: [
+                { value: '', label: 'None (Unassigned)' },
+                ...teachers.map(t => ({
+                  value: t.id,
+                  label: `${t.display_name || t.full_name}${t.employee_id ? ` (${t.employee_id})` : ''}`,
+                })),
+              ],
+            },
+          ]}
+          initialValues={{
+            name: editingSection.name,
+            class_teacher_id: editingSection.class_teacher_id || '',
+          }}
+          onSubmit={async (values) => {
+            const updated = await sectionsService.updateSection(editingSection.id, {
+              name: values.name.trim(),
+              class_teacher_id: values.class_teacher_id ? Number(values.class_teacher_id) : null,
+            } as any);
+            setSections(items => items.map(item => (item.id === editingSection.id ? { ...item, ...updated } : item)));
+            setEditingSection(null);
+          }}
+          onClose={() => setEditingSection(null)}
+        />
+      )}
+
+      {deletingSection && (
+        <ConfirmDialog
+          title="Archive Section"
+          message={`Are you sure you want to archive ${deletingSection.name}? This is allowed only when it has no active dependencies.`}
+          confirmLabel="Archive"
+          confirmVariant="danger"
+          onConfirm={async () => {
+            await sectionsService.deleteSection(deletingSection.id);
+            setSections(items => items.filter(item => item.id !== deletingSection.id));
+          }}
+          onClose={() => setDeletingSection(null)}
+        />
       )}
     </div>
   );

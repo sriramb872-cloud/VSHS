@@ -12,6 +12,7 @@ from app.schemas.calendar_event import (
 )
 from app.services.calendar_event import CalendarEventService
 from app.models.user import UserModel
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/calendar-events", tags=["Calendar Events"])
 
@@ -59,7 +60,13 @@ def create_calendar_event(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
-    return CalendarEventService.create_event(db, obj_in=obj_in, current_user=current_user)
+    event = CalendarEventService.create_event(db, obj_in=obj_in, current_user=current_user)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="CREATE", resource_type="CalendarEvent", resource_id=event.id,
+        details={},
+    )
+    return event
 
 
 @router.put("/{event_id}", response_model=CalendarEventResponse)
@@ -69,7 +76,13 @@ def update_calendar_event_put(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
-    return CalendarEventService.update_event(db, event_id=event_id, obj_in=obj_in, current_user=current_user)
+    event = CalendarEventService.update_event(db, event_id=event_id, obj_in=obj_in, current_user=current_user)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="UPDATE", resource_type="CalendarEvent", resource_id=event_id,
+        details={},
+    )
+    return event
 
 
 @router.patch("/{event_id}", response_model=CalendarEventResponse)
@@ -79,7 +92,13 @@ def update_calendar_event_patch(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
-    return CalendarEventService.update_event(db, event_id=event_id, obj_in=obj_in, current_user=current_user)
+    event = CalendarEventService.update_event(db, event_id=event_id, obj_in=obj_in, current_user=current_user)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="UPDATE", resource_type="CalendarEvent", resource_id=event_id,
+        details={},
+    )
+    return event
 
 
 @router.delete("/{event_id}", response_model=CalendarEventResponse)
@@ -88,4 +107,10 @@ def delete_calendar_event(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
-    return CalendarEventService.delete_event(db, event_id=event_id, current_user=current_user)
+    event = CalendarEventService.delete_event(db, event_id=event_id, current_user=current_user)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="DELETE", resource_type="CalendarEvent", resource_id=event_id,
+        details={},
+    )
+    return event

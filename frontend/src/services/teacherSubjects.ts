@@ -14,6 +14,10 @@ export const teacherSubjectsService = {
     const res = await api.post<TeacherSubject>('/teacher-subjects', payload);
     return res.data;
   },
+  async update(id: number, payload: Partial<TeacherSubjectCreatePayload>): Promise<TeacherSubject> {
+    const res = await api.patch<TeacherSubject>(`/teacher-subjects/${id}`, payload);
+    return res.data;
+  },
   async remove(id: number): Promise<void> {
     await api.delete(`/teacher-subjects/${id}`);
   },

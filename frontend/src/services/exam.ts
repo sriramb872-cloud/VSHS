@@ -50,4 +50,16 @@ export const examService = {
     const response = await api.post<ExamPublishResponse>(`/exams/${examId}/publish`);
     return response.data;
   },
+  async archiveExam(id: number): Promise<Exam> {
+    const response = await api.post<Exam>(`/exams/${id}/archive`);
+    return response.data;
+  },
+  async reopenMarks(examId: number): Promise<{ exam_id: number; status: string }> {
+    const response = await api.post<{ exam_id: number; status: string }>(`/exams/${examId}/reopen-marks`);
+    return response.data;
+  },
+  async republishMarks(examId: number): Promise<{ exam_id: number; status: string }> {
+    const response = await api.post<{ exam_id: number; status: string }>(`/exams/${examId}/republish`);
+    return response.data;
+  },
 };

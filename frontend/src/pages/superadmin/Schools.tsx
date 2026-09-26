@@ -35,6 +35,10 @@ export const SuperAdminSchools: React.FC = () => {
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
       s.code?.toLowerCase().includes(search.toLowerCase())
   );
+  const updateLifecycle = async (school: School) => {
+    const updated = await schoolsService.updateSchoolLifecycle(school.id, school.is_active ? 'DEACTIVATE' : 'REACTIVATE');
+    setSchools(items => items.map(item => item.id === school.id ? updated : item));
+  };
 
   return (
     <div className="space-y-4">
@@ -99,6 +103,9 @@ export const SuperAdminSchools: React.FC = () => {
                     title="View"
                   >
                     <Eye className="w-4 h-4" />
+                  </button>
+                  <button type="button" onClick={() => updateLifecycle(sch)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" title={sch.is_active ? 'Deactivate' : 'Reactivate'}>
+                    {sch.is_active ? 'Deactivate' : 'Reactivate'}
                   </button>
                   <button
                     type="button"

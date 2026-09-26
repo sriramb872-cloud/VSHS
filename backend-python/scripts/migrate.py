@@ -39,3 +39,14 @@ with engine.begin() as _conn:
     _user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
     if _user_columns and "must_change_password" not in _user_columns:
         _conn.execute(text("ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT FALSE"))
+    _att_columns = {column["name"] for column in inspect(engine).get_columns("attendance_records")}
+    if _att_columns and "remarks" not in _att_columns:
+        _conn.execute(text("ALTER TABLE attendance_records ADD COLUMN remarks VARCHAR(255) NULL"))
+    try:
+        _conn.execute(text("ALTER TABLE attendance_records MODIFY COLUMN status ENUM('PRESENT', 'ABSENT', 'LATE', 'LEAVE', 'VOID') NOT NULL"))
+    except Exception:
+        pass
+    try:
+        _conn.execute(text("ALTER TABLE exams MODIFY COLUMN status ENUM('SCHEDULED', 'MARKS_IN_PROGRESS', 'PUBLISHED', 'ARCHIVED') NOT NULL DEFAULT 'SCHEDULED'"))
+    except Exception:
+        pass

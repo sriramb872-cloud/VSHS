@@ -248,7 +248,12 @@ def update_principal(
             if k == "full_name":
                 p.display_name = str(v).strip()
             elif k == "status":
-                p.is_active = str(v).strip()
+                normalized_status = str(v).strip().upper()
+                if normalized_status not in {"ACTIVE", "INACTIVE", "OFFBOARDED"}:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid principal status")
+                p.is_active = normalized_status
+            elif k == "is_active":
+                p.is_active = "ACTIVE" if v is True or str(v).upper() == "ACTIVE" else "INACTIVE"
             elif k == "school_id":
                 existing = db.query(User).filter(
                     User.school_id == v, User.role == "PRINCIPAL", User.id != p.id
@@ -278,4 +283,9 @@ def update_principal(
 
     db.commit()
     db.refresh(p)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=p.school_id,
+        action="UPDATE", resource_type="Principal", resource_id=p.id,
+        details={k: str(v) for k, v in payload.items() if k != "password"}
+    )
     return serialize_principal(p, db=db)

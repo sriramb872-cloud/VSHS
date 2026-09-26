@@ -75,6 +75,13 @@ class CalendarEventService:
                 detail="School ID is required to create a calendar event"
             )
 
+        effective_end = obj_in.end_date if obj_in.end_date is not None else obj_in.start_date
+        if obj_in.start_date is not None and effective_end is not None and effective_end < obj_in.start_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="end_date cannot be before start_date"
+            )
+
         return crud_calendar_event.create(db, obj_in=obj_in, school_id=school_id)
 
     @staticmethod
@@ -89,6 +96,21 @@ class CalendarEventService:
             )
 
         event = CalendarEventService.get_event(db, event_id, current_user=current_user)
+
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, "model_dump") else obj_in.dict(exclude_unset=True)
+
+        new_start = update_data.get("start_date") if update_data.get("start_date") is not None else event.start_date
+        if update_data.get("end_date") is not None:
+            new_end = update_data["end_date"]
+            if new_start is not None and new_end is not None and new_end < new_start:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="end_date cannot be before start_date"
+                )
+
         return crud_calendar_event.update(db, db_obj=event, obj_in=obj_in)
 
     @staticmethod

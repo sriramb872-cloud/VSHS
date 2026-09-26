@@ -38,9 +38,17 @@ def authenticate_user(db: Session, mobile: str, password: str) -> Optional[User]
         account_status = getattr(user, "is_active", "ACTIVE")
         if account_status != "ACTIVE":
             continue
+        # Block login if the user's school has been deactivated
+        role = str(getattr(user, "role", "")).upper()
+        if role != "SUPER_ADMIN" and user.school_id:
+            from app.models.school import School
+            school = db.query(School).filter(School.id == user.school_id).first()
+            if school is not None and school.is_active is False:
+                continue  # treat deactivated school same as inactive account — skip this user
         if verify_password(password, user.password_hash):
             return user
     return None
+
 
 
 def create_user_token(user: User) -> str:

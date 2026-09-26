@@ -12,6 +12,11 @@ export const authService = {
     localStorage.removeItem('scholaris_access_token');
   },
 
+  async changePassword(current_password: string, new_password: string): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>('/auth/change-password', { current_password, new_password });
+    return response.data;
+  },
+
   getCurrentUserFromStorage(): string | null {
     return localStorage.getItem('scholaris_access_token');
   }

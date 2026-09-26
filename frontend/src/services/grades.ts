@@ -22,4 +22,8 @@ export const gradesService = {
     const response = await api.patch<Grade>(`/grades/${id}`, payload);
     return response.data;
   },
+
+  async deleteGrade(id: number): Promise<void> {
+    await api.delete(`/grades/${id}`);
+  },
 };

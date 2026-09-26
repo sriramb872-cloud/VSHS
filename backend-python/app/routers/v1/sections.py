@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, require_roles, get_current_active_user
 from app.crud import section as section_crud, grade as grade_crud
 from app.models.user import User
+from app.models.teacher import Teacher
+from app.models.attendance import Attendance
+from app.models.timetable import Timetable
+from app.models.exam import Exam
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/sections", tags=["Sections"])
 
@@ -110,10 +115,65 @@ def update_section(
     if str(current_user.role).upper() != "SUPER_ADMIN" and section.school_id != current_user.school_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    if "grade_id" in payload and payload["grade_id"]:
+        grade = grade_crud.get_grade(db, int(payload["grade_id"]))
+        if not grade or (str(current_user.role).upper() != "SUPER_ADMIN" and grade.school_id != current_user.school_id):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grade does not belong to your school")
+
+    if "class_teacher_id" in payload and payload["class_teacher_id"]:
+        teacher = db.query(Teacher).filter(Teacher.id == int(payload["class_teacher_id"])).first()
+        if not teacher or (str(current_user.role).upper() != "SUPER_ADMIN" and teacher.school_id != current_user.school_id):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Class teacher does not belong to your school")
+
     updated = section_crud.update_section(db, section, payload)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=section.school_id,
+        action="UPDATE", resource_type="Section", resource_id=section.id,
+        details={k: str(v) for k, v in payload.items()}
+    )
     return {
         "id": updated.id,
         "school_id": updated.school_id,
         "grade_id": updated.grade_id,
-        "name": getattr(updated, "name", "")
+        "name": getattr(updated, "name", ""),
+        "class_teacher_id": getattr(updated, "class_teacher_id", None)
     }
+
+
+@router.delete("/{section_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_section(
+    section_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"]))
+):
+    section = section_crud.get_section(db, section_id)
+    if not section:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
+
+    if str(current_user.role).upper() != "SUPER_ADMIN" and section.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    blocking = []
+    if getattr(section, "enrollments", None) and len(section.enrollments) > 0:
+        blocking.append("student enrollments")
+    if db.query(Attendance).filter(Attendance.section_id == section_id).first():
+        blocking.append("attendance records")
+    if db.query(Timetable).filter(Timetable.section_id == section_id).first():
+        blocking.append("timetable entries")
+    if db.query(Exam).filter(Exam.section_id == section_id).first():
+        blocking.append("exams")
+    if blocking:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot delete: this section has {', '.join(blocking)}. Archive it instead."
+        )
+
+    sec_name = getattr(section, "name", "")
+    school_id = section.school_id
+    section_crud.delete_section(db, section)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school_id,
+        action="DELETE", resource_type="Section", resource_id=section_id,
+        details={"name": sec_name}
+    )
+    return None

@@ -39,6 +39,7 @@ class UserResponse(BaseModel):
     display_name: str
     role: str
     is_active: str
+    must_change_password: bool = False
 
     class Config:
         from_attributes = True

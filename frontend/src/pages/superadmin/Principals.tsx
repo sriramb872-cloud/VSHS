@@ -3,12 +3,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Search, Plus, X, AlertCircle } from 'lucide-react';
 import { MobileListItem, EmptyState, LoadingSkeleton, StatusBadge, ErrorState } from '../../components/shared';
+import { EditModal } from '../../components/EditModal';
 import { principalsService } from '../../services/principals';
 import { schoolsService } from '../../services/schools';
 import { Principal, School } from '../../types';
 
 export const SuperAdminPrincipals: React.FC = () => {
   const [principals, setPrincipals] = useState<Principal[]>([]);
+  const [editingPrincipal, setEditingPrincipal] = useState<Principal | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -80,6 +82,13 @@ export const SuperAdminPrincipals: React.FC = () => {
       p.mobile?.includes(search) ||
       (p.school_id && schoolMap.get(p.school_id)?.toLowerCase().includes(search.toLowerCase()))
   );
+  const updatePrincipalStatus = async (principal: Principal, status: 'ACTIVE' | 'INACTIVE' | 'OFFBOARDED') => {
+    const updated = await principalsService.updatePrincipal(principal.id, { status });
+    setPrincipals(items => items.map(item => item.id === principal.id ? updated : item));
+  };
+  const editPrincipal = (principal: Principal) => {
+    setEditingPrincipal(principal);
+  };
 
   const handleCreatePrincipal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +235,7 @@ export const SuperAdminPrincipals: React.FC = () => {
                       }
                     : undefined
                 }
+                actions={<div className="flex gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => editPrincipal(p)}>Edit</button><button type="button" className="text-xs text-emerald-700" onClick={() => updatePrincipalStatus(p, p.is_active === true ? 'INACTIVE' : 'ACTIVE')}>{p.is_active === true ? 'Deactivate' : 'Reactivate'}</button><button type="button" className="text-xs text-rose-700" onClick={() => updatePrincipalStatus(p, 'OFFBOARDED')}>Offboard</button></div>}
               />
             );
           })}
@@ -472,6 +482,42 @@ export const SuperAdminPrincipals: React.FC = () => {
         </div>
       )}
 
+      {editingPrincipal && (
+        <EditModal
+          title="Edit Principal Profile"
+          fields={[
+            { key: 'full_name', label: 'Full Name', required: true },
+            { key: 'mobile', label: 'Mobile Number', type: 'tel' },
+            { key: 'email', label: 'Email', type: 'email' },
+            { key: 'employee_id', label: 'Employee ID' },
+            { key: 'joining_date', label: 'Joining Date', type: 'date' },
+            {
+              key: 'school_id',
+              label: 'Assigned School',
+              type: 'select',
+              options: schools.map(s => ({ value: s.id, label: `${s.name} (${s.code})` })),
+            },
+          ]}
+          initialValues={{
+            full_name: editingPrincipal.display_name || editingPrincipal.full_name || '',
+            mobile: editingPrincipal.mobile || '',
+            email: editingPrincipal.email || '',
+            employee_id: editingPrincipal.employee_id || '',
+            joining_date: editingPrincipal.joining_date ? String(editingPrincipal.joining_date).slice(0, 10) : '',
+            school_id: editingPrincipal.school_id || '',
+          }}
+          onSubmit={async (values) => {
+            const updated = await principalsService.updatePrincipal(editingPrincipal.id, {
+              ...values,
+              display_name: values.full_name,
+              school_id: values.school_id ? Number(values.school_id) : undefined,
+            });
+            setPrincipals(items => items.map(item => (item.id === editingPrincipal.id ? { ...item, ...updated } : item)));
+            setEditingPrincipal(null);
+          }}
+          onClose={() => setEditingPrincipal(null)}
+        />
+      )}
     </div>
   );
 };

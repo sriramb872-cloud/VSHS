@@ -157,12 +157,18 @@ def create_exam(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="School context not found",
         )
-    return ExamService.create_exam(
+    result = ExamService.create_exam(
         db,
         obj_in=obj_in,
         school_id=school_id,
         created_by_id=current_user.id,
     )
+    write_audit_log(
+        db, user_id=current_user.id, school_id=school_id,
+        action="CREATE", resource_type="Exam", resource_id=getattr(result, "id", None),
+        details={"name": getattr(result, "name", "")},
+    )
+    return result
 
 
 @router.patch("/{exam_id}", response_model=ExamResponse)
@@ -179,6 +185,11 @@ def update_exam(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Exam not found or unauthorized to edit",
         )
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="UPDATE", resource_type="Exam", resource_id=exam_id,
+        details={"updates": str(obj_in.model_dump(exclude_none=True))[:500]},
+    )
     return exam
 
 
@@ -195,4 +206,54 @@ def delete_exam(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Exam not found or unauthorized to delete",
         )
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="DELETE", resource_type="Exam", resource_id=exam_id,
+        details={},
+    )
     return None
+
+
+@router.post("/{exam_id}/archive", response_model=ExamResponse)
+def archive_exam(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: UserModel = Depends(deps.get_current_active_principal),
+):
+    school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
+    exam = ExamService.archive_exam(db, exam_id=exam_id, school_id=school_id)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="ARCHIVE", resource_type="Exam", resource_id=exam_id, details={}
+    )
+    return exam
+
+
+@router.post("/{exam_id}/reopen-marks", response_model=ExamResponse)
+def reopen_marks(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: UserModel = Depends(deps.get_current_active_principal),
+):
+    school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
+    exam = ExamService.reopen_exam(db, exam_id=exam_id, school_id=school_id)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="REOPEN_MARKS", resource_type="Exam", resource_id=exam_id, details={}
+    )
+    return exam
+
+
+@router.post("/{exam_id}/republish", response_model=ExamResponse)
+def republish_exam(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: UserModel = Depends(deps.get_current_active_principal),
+):
+    school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
+    exam = ExamService.republish_exam(db, exam_id=exam_id, school_id=school_id)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=current_user.school_id,
+        action="REPUBLISH", resource_type="Exam", resource_id=exam_id, details={}
+    )
+    return exam
