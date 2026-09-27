@@ -1,5 +1,5 @@
 // src/layouts/AppShell.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   GraduationCap,
@@ -21,8 +21,10 @@ import {
   Award,
   Clock,
   Shield,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { usePWA } from '../contexts/PWAContext';
 import BottomNav, { PrimaryNavItem } from '../components/shared/BottomNav';
 import { SecondaryNavItem } from '../components/shared/MoreSheet';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
@@ -59,6 +61,21 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { logout, user } = useAuth();
+  // Reused PWA install plumbing (see src/contexts/PWAContext.tsx): it already
+  // captures `beforeinstallprompt`, tracks standalone mode and owns the
+  // single-use `prompt()`/`userChoice` cycle, so the dropdown only has to
+  // decide whether to render the item and to guard against a double click.
+  const { canInstall, isStandalone, promptInstall } = usePWA();
+  const [installing, setInstalling] = useState(false);
+  /**
+   * Synchronous re-entry guard.
+   *
+   * `installing` alone is not enough: two clicks in the same tick both run
+   * against the same render, so the handler would see `installing === false`
+   * twice and call `prompt()` twice on a single-use `BeforeInstallPromptEvent`.
+   * The ref flips immediately, before React re-renders.
+   */
+  const installingRef = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -77,6 +94,36 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   const handleLogout = () => {
     logout();
+  };
+
+  /**
+   * Show "Install App" only when the browser actually gave us an install
+   * opportunity: a captured `beforeinstallprompt` (Chromium/Edge desktop +
+   * Android) and not already running standalone. iOS Safari never fires that
+   * event, so no dead button is rendered there.
+   */
+  const showInstallItem = canInstall && !isStandalone;
+
+  const handleInstallApp = async () => {
+    // `BeforeInstallPromptEvent.prompt()` is single-use and can only be shown
+    // once per captured event, so ignore repeats while one is in flight.
+    if (installingRef.current || installing || !showInstallItem) return;
+    installingRef.current = true;
+    setInstalling(true);
+    try {
+      // `promptInstall` calls prompt(), awaits userChoice and clears the
+      // stored event; it resolves to 'unavailable' instead of throwing when
+      // the browser no longer offers an install.
+      await promptInstall();
+    } catch {
+      // `promptInstall` swallows its own errors; this is belt and braces so a
+      // rejected promise can never leave the item permanently disabled.
+    } finally {
+      // `appinstalled` hides the item via `canInstall`; this only re-enables
+      // it when the prompt was dismissed, so the user can try again later.
+      installingRef.current = false;
+      setInstalling(false);
+    }
   };
 
   // Primary bottom nav items (first 4 items) & secondary items for More drawer
@@ -227,6 +274,18 @@ export const AppShell: React.FC<AppShellProps> = ({
                     <p className="text-xs font-bold text-slate-900 truncate">{user?.display_name || roleLabel}</p>
                     <p className="text-[11px] text-slate-500 truncate">{user?.role || role}</p>
                   </div>
+                  {showInstallItem && (
+                    <button
+                      type="button"
+                      onClick={handleInstallApp}
+                      disabled={installing}
+                      aria-busy={installing}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:hover:bg-transparent"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Install App</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       setUserMenuOpen(false);
