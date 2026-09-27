@@ -68,19 +68,33 @@ def list_enrollments(
         teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
         if not teacher:
             return []
-        assigned_sec = db.query(Section).filter(
-            Section.class_teacher_id == teacher.id,
-            Section.school_id == teacher.school_id
-        ).first()
-        if not assigned_sec:
+
+        # A teacher may see the roster of any section they are legitimately
+        # assigned to - as class teacher, through an explicit teacher_subject
+        # row, or through a timetable slot. Restricting this to class teachers
+        # only meant a subject teacher opened the marks grid for a class they
+        # teach and got "No students enrolled", making it impossible to enter
+        # marks for their own subject. This mirrors the assignment rules used
+        # by MarksService._check_submission_permission.
+        allowed_section_ids = teacher_crud.get_assigned_section_ids(db, teacher)
+
+        if not allowed_section_ids:
             return []
+
+        if section_id is not None:
+            if section_id not in allowed_section_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are not assigned to this section",
+                )
+            allowed_section_ids = {section_id}
 
         items, attendance_map = se_crud.get_enrollments(
             db,
             school_id=teacher.school_id,
             academic_year_id=academic_year_id,
             grade_id=None,
-            section_id=assigned_sec.id,
+            section_ids=allowed_section_ids,
             skip=skip,
             limit=limit
         )

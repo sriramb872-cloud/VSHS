@@ -233,6 +233,9 @@ export const Students: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="card" count={4} />
+      ) : error ? (
+        // Don't claim "no students found" when the list simply failed to load.
+        null
       ) : filteredStudents.length === 0 ? (
         <EmptyState
           title="No Students Found"

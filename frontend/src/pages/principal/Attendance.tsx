@@ -75,7 +75,7 @@ export const Attendance: React.FC = () => {
   const handleStartEdit = (record: AttendanceRecord) => {
     setEditingId(record.id);
     setEditStatus(record.status);
-    setEditRemarks((record as any).remarks || '');
+    setEditRemarks(record.remarks || '');
   };
 
   const handleSaveEdit = async (id: number) => {
@@ -87,7 +87,7 @@ export const Attendance: React.FC = () => {
         remarks: editRemarks,
       });
       setHistoryRecords(prev =>
-        prev.map(r => (r.id === id ? { ...r, status: updated.status, remarks: (updated as any).remarks } : r))
+        prev.map(r => (r.id === id ? { ...r, status: updated.status, remarks: updated.remarks } : r))
       );
       setEditingId(null);
     } catch (err: any) {
@@ -270,7 +270,7 @@ export const Attendance: React.FC = () => {
                         <p className="text-sm font-semibold text-slate-900">Student #{record.student_id}</p>
                         <p className="text-xs text-slate-500">
                           Section #{record.section_id} · Date: {record.date}
-                          {(record as any).remarks ? ` · Remarks: ${(record as any).remarks}` : ''}
+                          {record.remarks ? ` · Remarks: ${record.remarks}` : ''}
                         </p>
                       </div>
                     </div>

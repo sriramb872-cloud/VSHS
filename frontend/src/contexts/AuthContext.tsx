@@ -7,10 +7,16 @@ export interface User {
   id: number;
   school_id: number | null;
   mobile: string;
+  email?: string | null;
   display_name: string;
   role: 'SUPER_ADMIN' | 'PRINCIPAL' | 'TEACHER' | 'STUDENT';
   is_active: string;
   must_change_password?: boolean;
+  /**
+   * Path under `/media`, e.g. `/media/profile_photos/photo_user_10_ab12cd34.png`.
+   * Set by `POST /files/profile-photo` and returned by `GET /users/me`.
+   */
+  profile_photo?: string | null;
 }
 
 interface AuthContextType {
@@ -20,6 +26,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   mustChangePassword: boolean;
   login: (mobile: string, password: string) => Promise<User>;
+  refreshUser: () => Promise<User | null>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
 }
@@ -70,8 +77,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return userResponse.data;
   };
 
-  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
-    await authService.changePassword(currentPassword, newPassword);
+  /**
+   * Re-read the current user from the server. Used after a profile edit so the
+   * header/sidebar name and email stay in sync with what was just saved.
+   */
+  const refreshUser = async (): Promise<User | null> => {
+    try {
+      const response = await api.get<User>('/auth/me');
+      setUser(response.data);
+      setMustChangePassword(!!response.data.must_change_password);
+      return response.data;
+    } catch {
+      return null;
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {    await authService.changePassword(currentPassword, newPassword);
     setMustChangePassword(false);
     if (user) {
       const userResponse = await api.get<User>('/auth/me');
@@ -98,6 +119,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
         mustChangePassword,
         login,
+        refreshUser,
         changePassword,
         logout,
       }}

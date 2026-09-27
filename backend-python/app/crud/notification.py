@@ -70,7 +70,10 @@ class CRUDNotification:
 
             cond_public = and_(
                 Notification.notification_type == "PUBLIC",
-                Notification.school_id == school_id if school_id else True
+                # A student always belongs to a school. The old fallback of
+                # "no school -> match any" would have exposed other tenants'
+                # public announcements to a student row with a NULL school_id.
+                Notification.school_id == school_id if school_id else False,
             )
             cond_class = and_(
                 Notification.notification_type == "CLASS_ONLY",
@@ -101,13 +104,36 @@ class CRUDNotification:
                 query = query.filter(or_(cond_public, cond_class, cond_class_teacher, cond_direct))
 
         elif role == "TEACHER":
-            teacher_cond = or_(
-                and_(Notification.notification_type == "PUBLIC", Notification.school_id == school_id) if school_id else (Notification.notification_type == "PUBLIC"),
-                and_(Notification.notification_type == "STAFF_ONLY", Notification.school_id == school_id) if school_id else (Notification.notification_type == "STAFF_ONLY"),
-                Notification.sender_id == current_user.id,
-                Notification.user_id == current_user.id,
-            )
-            query = query.filter(teacher_cond)
+            # A notification is only visible inside its own tenant.
+            # `sender_id == me` / `user_id == me` mean "addressed to me", not a
+            # licence to read another school's content: an earlier version
+            # OR-ed those clauses in unconstrained, so a principal of school 7
+            # could read a school 6 notification they had sent before the
+            # marks tenant check existed. Notifications with a NULL school_id
+            # are platform-level and are allowed through.
+            if school_id:
+                query = query.filter(
+                    or_(
+                        and_(
+                            Notification.school_id == school_id,
+                            Notification.notification_type.in_(["PUBLIC", "STAFF_ONLY"]),
+                        ),
+                        and_(
+                            Notification.school_id.is_(None),
+                            or_(
+                                Notification.sender_id == current_user.id,
+                                Notification.user_id == current_user.id,
+                            ),
+                        ),
+                    )
+                )
+            else:
+                query = query.filter(
+                    or_(
+                        Notification.sender_id == current_user.id,
+                        Notification.user_id == current_user.id,
+                    )
+                )
             if category:
                 query = query.filter(Notification.category == category)
             if notification_type:
@@ -118,8 +144,13 @@ class CRUDNotification:
                 query = query.filter(
                     or_(
                         Notification.school_id == school_id,
-                        Notification.sender_id == current_user.id,
-                        Notification.user_id == current_user.id
+                        and_(
+                            Notification.school_id.is_(None),
+                            or_(
+                                Notification.sender_id == current_user.id,
+                                Notification.user_id == current_user.id,
+                            ),
+                        ),
                     )
                 )
             if category:

@@ -32,6 +32,10 @@ class HomeworkResponse(HomeworkBase):
     subject_name: Optional[str] = None
     grade_name: Optional[str] = None
     section_name: Optional[str] = None
+    # Display name of the teacher who set the homework. Populated by
+    # `_enrich_with_names` alongside subject/grade/section; the homework
+    # detail screens render it, so without it those cards were blank.
+    teacher_name: Optional[str] = None
 
     class Config:
         from_attributes = True

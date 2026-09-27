@@ -50,7 +50,6 @@ export const SuperAdminDashboardPage: React.FC = () => {
       {/* Primary Metrics Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
-          title="Total Schools"
           label="Schools"
           value={data.total_schools}
           icon={<Building className="w-5 h-5 text-indigo-600" />}
@@ -58,7 +57,6 @@ export const SuperAdminDashboardPage: React.FC = () => {
           onClick={() => navigate('/superadmin/schools')}
         />
         <StatCard
-          title="Active Schools"
           label="Active"
           value={data.active_schools}
           icon={<Activity className="w-5 h-5 text-emerald-600" />}
@@ -66,7 +64,6 @@ export const SuperAdminDashboardPage: React.FC = () => {
           badgeText="Operational"
         />
         <StatCard
-          title="Total Principals"
           label="Principals"
           value={data.total_principals}
           icon={<Users className="w-5 h-5 text-purple-600" />}
@@ -74,7 +71,6 @@ export const SuperAdminDashboardPage: React.FC = () => {
           onClick={() => navigate('/superadmin/principals')}
         />
         <StatCard
-          title="Total Teachers"
           label="Teachers"
           value={data.total_teachers}
           icon={<Users className="w-5 h-5 text-blue-600" />}
@@ -87,22 +83,34 @@ export const SuperAdminDashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <StatCard
-            title="System Health"
             label="Health Status"
-            value={data.system_health || 'Healthy'}
-            subtitle="All core services operational"
+            value={data.system_health || 'Unknown'}
+            subtitle={
+              data.database_latency_ms != null
+                ? `Database ${data.database_latency_ms} ms · measured now`
+                : 'Measured on every load'
+            }
             icon={<Activity className="w-5 h-5 text-emerald-600" />}
             iconBgClass="bg-emerald-50 text-emerald-600"
           />
           <StatCard
-            title="Storage Usage"
-            label="Cloud Storage"
-            value={data.storage_usage || 'Normal'}
-            subtitle="Encrypted storage quota"
+            label="Media Storage"
+            value={data.storage_usage || 'Unknown'}
+            subtitle={
+              data.storage_detail?.disk?.percent_used != null
+                ? `Host disk ${data.storage_detail.disk.percent_used}% used · no app quota defined`
+                : 'Measured size of the media directory'
+            }
             icon={<HardDrive className="w-5 h-5 text-amber-600" />}
             iconBgClass="bg-amber-50 text-amber-600"
           />
         </div>
+
+        {data.system_health_detail && (
+          <p className="text-[11px] text-slate-500">
+            Health check: {data.system_health_detail}
+          </p>
+        )}
 
         {/* Quick Actions Card */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">

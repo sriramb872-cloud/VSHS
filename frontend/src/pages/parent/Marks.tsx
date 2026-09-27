@@ -42,13 +42,15 @@ export const ParentMarksPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {marks.map(mark => {
-            const exam = exams[mark.exam_id];
+            // `Mark.max_marks` is the max for that mark's exam subject;
+            // `Exam` has no `maximum_marks` field (that lives on ExamSubject).
+            const exam = mark.exam_id ? exams[mark.exam_id] : undefined;
             return (
               <MarkCard
                 key={mark.id}
                 mark={mark}
-                examName={exam?.name}
-                maximumMarks={exam?.maximum_marks}
+                examName={exam?.name ?? mark.exam_name ?? undefined}
+                maximumMarks={mark.max_marks}
               />
             );
           })}

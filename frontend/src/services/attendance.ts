@@ -1,6 +1,7 @@
 // src/services/attendance.ts
 import api from './api';
 import { AttendanceRecord, AttendanceMarkPayload } from '../types';
+import { AttendanceReport } from '../types/attendance-report';
 
 export interface AttendanceParams {
   section_id?: number;
@@ -8,6 +9,24 @@ export interface AttendanceParams {
   student_id?: number;
   skip?: number;
   limit?: number;
+}
+
+export interface AttendanceSummary {
+  student_id: number;
+  total_days: number;
+  present_days: number;
+  absent_days: number;
+  late_days: number;
+  leave_days: number;
+  percentage: number;
+  records: Array<{ id: number; date: string; status: string; remarks?: string | null }>;
+}
+
+export interface AttendanceReportParams {
+  start_date: string;
+  end_date: string;
+  grade_id?: number;
+  section_id?: number;
 }
 
 export const attendanceService = {
@@ -37,19 +56,20 @@ export const attendanceService = {
     return response.data;
   },
 
-  async getStudentAttendanceSummary(studentId: number): Promise<{
-    student_id: number;
-    total_days: number;
-    present_days: number;
-    absent_days: number;
-    late_days: number;
-    leave_days: number;
-    percentage: number;
-    records: Array<{ id: number; date: string; status: string; remarks?: string }>;
-  }> {
-    const response = await api.get(`/attendance/student/${studentId}`);
+  async getStudentAttendanceSummary(studentId: number): Promise<AttendanceSummary> {
+    const response = await api.get<AttendanceSummary>(`/attendance/student/${studentId}`);
     return response.data;
   },
+
+  /**
+   * Aggregated attendance over a date range, scoped server-side to the
+   * caller's tenant. Available to SUPER_ADMIN, PRINCIPAL and TEACHER.
+   */
+  async getAttendanceReport(params: AttendanceReportParams): Promise<AttendanceReport> {
+    const response = await api.get<AttendanceReport>('/attendance/reports/summary', { params });
+    return response.data;
+  },
+
   async updateAttendance(id: number, payload: { status?: string; remarks?: string }): Promise<AttendanceRecord> {
     const response = await api.patch<AttendanceRecord>(`/attendance/${id}`, payload);
     return response.data;

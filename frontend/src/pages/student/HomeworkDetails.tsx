@@ -19,7 +19,7 @@ export const StudentHomeworkDetailsPage: React.FC = () => {
       setError(null);
       homeworkService
         .getHomeworkById(Number(id))
-        .then(setHomework)
+        .then((hw) => setHomework(hw))
         .catch(err => {
           console.error('Failed to load homework details', err);
           setError('Failed to load homework details.');

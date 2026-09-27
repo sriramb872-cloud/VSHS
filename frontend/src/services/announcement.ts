@@ -6,12 +6,16 @@ import {
   AnnouncementUpdatePayload,
   AnnouncementListResponse,
 } from '../types';
+import type { AnnouncementStatus, AnnouncementAudience } from '../types/announcement';
 
 export interface AnnouncementParams {
-  audience?: string;
+  audience?: AnnouncementAudience;
   grade_id?: number;
   section_id?: number;
-  status?: string;
+  // Typed to the backend's AnnouncementStatus enum ("Draft" | "Published" |
+  // "Archived"). It used to be a bare `string`, which let the student portal
+  // send "PUBLISHED" and get a 422 from FastAPI's enum validation.
+  status?: AnnouncementStatus;
   skip?: number;
   limit?: number;
 }

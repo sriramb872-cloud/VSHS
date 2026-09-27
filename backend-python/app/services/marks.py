@@ -45,6 +45,63 @@ class MarksService:
         if state == "PUBLISHED" and role not in ("SUPER_ADMIN", "PRINCIPAL") and not allow_correction:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Published marks cannot be edited")
     @staticmethod
+    def _validate_submission_students(
+        db: Session,
+        exam: Exam,
+        marks: List,
+    ) -> None:
+        """Reject empty submissions and students outside the exam's section.
+
+        Two integrity rules that both submission paths need:
+
+        1. An empty submission is never a legitimate "marks completed" signal.
+           Previously an empty grid still flipped ``is_marks_submitted`` to
+           True and notified the class teacher that the subject was done,
+           which made the ``is_all_submitted`` readiness flag meaningless.
+
+        2. Every student being marked must actually be enrolled in the section
+           this exam belongs to. Without this check a teacher assigned to one
+           section could POST marks for any student id in the school (including
+           students of a different section), because the permission check above
+           only inspects the *exam subject*, never the students in the payload.
+        """
+        if not marks:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No marks were supplied. Enter at least one student's marks before submitting.",
+            )
+
+        section = db.query(Section).filter(Section.id == exam.section_id).first()
+        if not section:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Exam section not found",
+            )
+
+        enrolled_student_ids = {
+            row[0]
+            for row in db.query(StudentEnrollment.student_id)
+            .filter(
+                StudentEnrollment.section_id == exam.section_id,
+                StudentEnrollment.academic_year_id == exam.academic_year_id,
+            )
+            .all()
+        }
+        if not enrolled_student_ids:
+            return
+
+        foreign = sorted({item.student_id for item in marks} - enrolled_student_ids)
+        if foreign:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Student(s) "
+                    + ", ".join(f"#{sid}" for sid in foreign)
+                    + " are not enrolled in this exam's section"
+                ),
+            )
+
+    @staticmethod
     def _check_submission_permission(
         db: Session,
         exam_subject: ExamSubject,
@@ -66,13 +123,22 @@ class MarksService:
                 detail="Exam marks are locked because the exam has already been published",
             )
 
+        # Tenant boundary: everyone except SUPER_ADMIN is scoped to their own
+        # school. This used to be inside the TEACHER branch only, so a principal
+        # of one school could write marks into any other school's exam.
+        if user_role != "SUPER_ADMIN" and current_user.school_id != exam.school_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to submit marks for this school's examination",
+            )
+
         # If teacher, verify teacher is assigned
         if user_role == "TEACHER":
             teacher = db.query(Teacher).filter(Teacher.user_id == current_user.id).first()
             if not teacher:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Teacher profile not found")
 
-            if teacher.school_id != exam.school_id or current_user.school_id != exam.school_id:
+            if teacher.school_id != exam.school_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="You are not authorized to submit marks for this school's examination",
@@ -153,6 +219,7 @@ class MarksService:
             )
 
         MarksService._check_submission_permission(db, exam_subject, exam, current_user)
+        MarksService._validate_submission_students(db, exam, payload.marks)
 
         # Validate marks values
         for item in payload.marks:
@@ -235,6 +302,7 @@ class MarksService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
 
         MarksService._check_submission_permission(db, exam_subject, exam, current_user)
+        MarksService._validate_submission_students(db, exam, payload.marks)
 
         # Validate formative components
         for item in payload.marks:

@@ -1,6 +1,11 @@
 // src/services/homework.ts
 import api from './api';
-import { Homework, HomeworkCreatePayload, HomeworkUpdatePayload, HomeworkListResponse } from '../types';
+import {
+  Homework,
+  HomeworkCreatePayload,
+  HomeworkUpdatePayload,
+  HomeworkListResponse,
+} from '../types/homework';
 
 export interface HomeworkParams {
   academic_year_id?: number;

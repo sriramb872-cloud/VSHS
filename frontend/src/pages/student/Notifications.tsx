@@ -1,6 +1,6 @@
 // src/pages/student/Notifications.tsx
 import React, { useState, useEffect } from 'react';
-import { Bell, Globe, School, UserCheck } from 'lucide-react';
+import { Bell, Globe, School, UserCheck, CheckCheck } from 'lucide-react';
 import { EmptyState, LoadingSkeleton } from '../../components/shared';
 import { notificationService } from '../../services/notification';
 import { Notification, NotificationCategory } from '../../types/notification';
@@ -10,13 +10,18 @@ export const StudentNotifications: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<NotificationCategory>('PUBLIC');
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [markingAll, setMarkingAll] = useState<boolean>(false);
 
   const fetchNotifications = (cat: NotificationCategory) => {
     setLoading(true);
     setError(null);
     notificationService
       .listNotifications({ category: cat })
-      .then((data) => setNotifications(data.items || []))
+      .then((data) => {
+        setNotifications(data.items || []);
+        setUnreadCount(data.unread_count ?? 0);
+      })
       .catch(() => setError('Failed to load notifications'))
       .finally(() => setLoading(false));
   };
@@ -24,6 +29,29 @@ export const StudentNotifications: React.FC = () => {
   useEffect(() => {
     fetchNotifications(activeCategory);
   }, [activeCategory]);
+
+  const handleMarkAllRead = async () => {
+    setMarkingAll(true);
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch {
+      setError('Failed to mark notifications as read');
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const handleMarkRead = async (id: number) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, is_read: true } : n)));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch {
+      setError('Failed to mark notification as read');
+    }
+  };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -66,9 +94,21 @@ export const StudentNotifications: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Notifications & Announcements</h1>
-        <p className="text-xs text-slate-500">Read school alerts, class notices, and updates from your class teacher</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Notifications & Announcements</h1>
+          <p className="text-xs text-slate-500">Read school alerts, class notices, and updates from your class teacher</p>
+        </div>
+        {unreadCount > 0 && (
+          <button
+            onClick={handleMarkAllRead}
+            disabled={markingAll}
+            className="self-start flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-50 text-orange-700 text-xs font-semibold hover:bg-orange-100 disabled:opacity-60"
+          >
+            <CheckCheck className="w-4 h-4" />
+            {markingAll ? 'Marking...' : 'Mark All Read'}
+          </button>
+        )}
       </div>
 
       {error && (
@@ -134,7 +174,12 @@ export const StudentNotifications: React.FC = () => {
           {notifications.map((notif) => (
             <div
               key={notif.id}
-              className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs hover:border-orange-200 transition-all flex items-start gap-3.5"
+              onClick={() => !notif.is_read && handleMarkRead(notif.id)}
+              className={`bg-white border rounded-2xl p-4 shadow-xs transition-all flex items-start gap-3.5 ${
+                notif.is_read
+                  ? 'border-slate-200/80 hover:border-orange-200'
+                  : 'border-orange-200 bg-orange-50/30 cursor-pointer hover:border-orange-300'
+              }`}
             >
               <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 mt-0.5">
                 {getCategoryIcon(notif.category || notif.notification_type)}

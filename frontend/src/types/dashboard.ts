@@ -1,4 +1,22 @@
 // src/types/dashboard.ts
+
+/** Real measurement returned by `app/services/health.py`. */
+export interface StorageDetail {
+  media_path: string;
+  media_available: boolean;
+  used_bytes: number;
+  file_count: number;
+  used_human: string;
+  disk?: {
+    total_bytes: number;
+    used_bytes: number;
+    free_bytes: number;
+    /** A genuine percentage: `shutil.disk_usage` reports the real capacity. */
+    percent_used: number | null;
+  } | null;
+  label: string;
+}
+
 export interface SuperAdminDashboard {
   total_schools: number;
   total_principals: number;
@@ -6,8 +24,13 @@ export interface SuperAdminDashboard {
   total_students: number;
   active_schools: number;
   recent_activity: any[];
+  /** Measured per request: "Healthy" | "Degraded" | "Unavailable" | "Unknown". */
   system_health: string;
+  system_health_detail?: string | null;
+  database_latency_ms?: number | null;
+  /** Measured media-directory usage, e.g. "12.4 MB in 3 files". */
   storage_usage: string;
+  storage_detail?: StorageDetail | null;
 }
 
 export interface PrincipalDashboard {

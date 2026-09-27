@@ -1,4 +1,5 @@
 from typing import Optional
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models.student import Student
 from app.models.teacher import Teacher
@@ -7,22 +8,35 @@ from app.models.student_enrollment import StudentEnrollment
 
 class CRUDDashboard:
     def get_super_admin_stats(self, db: Session) -> dict:
-        try:
-            total_teachers = db.query(Teacher).count()
-        except Exception:
-            total_teachers = 0
+        """Platform-wide counts for the Super Admin dashboard / analytics.
 
-        try:
-            total_students = db.query(Student).count()
-        except Exception:
-            total_students = 0
+        The school and principal counts used to be hard-coded to 1, so the
+        dashboard and analytics pages reported a single school no matter how
+        many were actually onboarded. Everything is now counted from the
+        database.
+
+        No broad ``except Exception: return 0`` wrappers here on purpose: they
+        silently turn a coding mistake (e.g. referencing a non-existent
+        attribute) into a plausible-looking zero, which is exactly how the
+        hard-coded placeholders went unnoticed. If a table really is missing,
+        ``create_all`` should have created it and a 500 with a traceback is the
+        honest outcome.
+        """
+        from app.models.school import School
+        from app.models.user import User
 
         return {
-            "total_schools": 1,
-            "total_principals": 1,
-            "total_teachers": total_teachers,
-            "total_students": total_students,
-            "active_schools": 1,
+            "total_schools": db.query(func.count(School.id)).scalar() or 0,
+            "active_schools": db.query(func.count(School.id))
+            .filter(School.is_active.is_(True))
+            .scalar()
+            or 0,
+            "total_principals": db.query(func.count(User.id))
+            .filter(User.role == "PRINCIPAL")
+            .scalar()
+            or 0,
+            "total_teachers": db.query(func.count(Teacher.id)).scalar() or 0,
+            "total_students": db.query(func.count(Student.id)).scalar() or 0,
         }
 
     def get_principal_stats(self, db: Session, school_id: Optional[int], academic_year_id: Optional[int] = None) -> dict:

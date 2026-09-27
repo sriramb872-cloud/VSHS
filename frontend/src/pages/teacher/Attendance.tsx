@@ -4,8 +4,9 @@ import { EmptyState, LoadingSkeleton, StatusBadge } from '../../components/share
 import { teachersService } from '../../services/teachers';
 import { studentsService } from '../../services/students';
 import { attendanceService } from '../../services/attendance';
-import { Teacher, AttendanceRecord } from '../../types';
+import { Teacher, Student, AttendanceRecord, AttendanceStatus } from '../../types';
 import { timetableService } from '../../services/timetable';
+import errorMessage from '../../helpers/errorMessage';
 import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
 import { ConfirmDialog } from '../../components/EditModal';
 
@@ -15,6 +16,8 @@ export const TeacherAttendance: React.FC = () => {
   const [classSection, setClassSection] = useState<any | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [attendanceMap, setAttendanceMap] = useState<Record<number, string>>({});
+  /** Per-student remarks entered while marking, sent with the create payload. */
+  const [remarksMap, setRemarksMap] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -34,47 +37,73 @@ export const TeacherAttendance: React.FC = () => {
   const [voidTargetId, setVoidTargetId] = useState<number | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    teachersService
-      .getMyTeacherProfile()
-      .then(profile => {
+    let cancelled = false;
+
+    // Fetch the class-teacher section first, then the roster/attendance/timetable
+    // for it. Written as a single async function so the tuple stays a concrete
+    // type instead of a union with the "no section" fallback branch.
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const profile = await teachersService.getMyTeacherProfile();
+        if (cancelled) return;
         setTeacherProfile(profile);
+
         const section = profile.class_teacher_section;
         setClassSection(section || null);
 
-        if (section) {
-          return Promise.all([
-            studentsService.listStudents({ section_id: section.id }),
-            attendanceService.getAttendance({ section_id: section.id, attendance_date: selectedDate }),
-            timetableService.listTimetables(),
-          ]);
+        if (!section) {
+          // No class-teacher assignment: nothing to mark, and the schedule is
+          // cleared (matches the previous no-section behaviour).
+          setTimetable([]);
+          return;
         }
-        return [null, null, { items: [] }];
-      })
-      .then(([stList, attRecords, schedule]: any) => {
+
+        const [roster, attRecords, schedule] = await Promise.all([
+          studentsService.listStudents({ section_id: section.id }),
+          attendanceService.getAttendance({
+            section_id: section.id,
+            attendance_date: selectedDate,
+          }),
+          timetableService.listTimetables(),
+        ]);
+        if (cancelled) return;
+
         setTimetable(schedule?.items || []);
-        if (stList) {
-          setStudents(stList);
-          const map: Record<number, string> = {};
-          stList.forEach((s: any) => {
-            map[s.id] = 'PRESENT';
+        setStudents(roster);
+        const map: Record<number, string> = {};
+        const remarks: Record<number, string> = {};
+        roster.forEach((s: Student) => {
+          map[s.id] = 'PRESENT';
+        });
+        if (Array.isArray(attRecords)) {
+          attRecords.forEach((r: AttendanceRecord) => {
+            if (r.student_id && r.status) {
+              map[r.student_id] = r.status.toUpperCase();
+            }
+            // Seed the remarks inputs from what is already stored, so
+            // re-marking a day does not silently wipe saved remarks.
+            if (r.student_id && r.remarks) {
+              remarks[r.student_id] = r.remarks;
+            }
           });
-          if (Array.isArray(attRecords)) {
-            attRecords.forEach((r: any) => {
-              if (r.student_id && r.status) {
-                map[r.student_id] = r.status.toUpperCase();
-              }
-            });
-          }
-          setAttendanceMap(map);
         }
-      })
-      .catch(err => {
+        setAttendanceMap(map);
+        setRemarksMap(remarks);
+        setHistoryRecords(Array.isArray(attRecords) ? attRecords : []);
+      } catch (err) {
         console.error(err);
         setError('Failed to load class teacher attendance records.');
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedDate]);
 
   const daySlots = timetable
@@ -99,15 +128,22 @@ export const TeacherAttendance: React.FC = () => {
         student_id: st.id,
         section_id: classSection.id,
         date: selectedDate,
-        status: (attendanceMap[st.id] || 'PRESENT') as any,
+        status: (attendanceMap[st.id] || 'PRESENT') as AttendanceStatus,
+        // Remarks are part of the create payload. They used to be impossible
+        // to set here even though the column exists and the correction dialog
+        // could set them afterwards.
+        remarks: remarksMap[st.id]?.trim() || null,
       }));
 
-      await attendanceService.markBulkAttendance(records);
+      const saved = await attendanceService.markBulkAttendance(records);
+      // Adopt the server's view (ids + persisted remarks) so the list and the
+      // correction dialog agree with the database.
+      setHistoryRecords(saved);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError('Failed to save attendance. Please try again.');
+      setError(errorMessage(err, 'Failed to save attendance. Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -133,7 +169,7 @@ export const TeacherAttendance: React.FC = () => {
   const handleStartEdit = (record: AttendanceRecord) => {
     setEditingId(record.id);
     setEditStatus(record.status);
-    setEditRemarks((record as any).remarks || '');
+    setEditRemarks(record.remarks || '');
   };
 
   const handleSaveEdit = async (id: number) => {
@@ -145,7 +181,7 @@ export const TeacherAttendance: React.FC = () => {
         remarks: editRemarks,
       });
       setHistoryRecords(prev =>
-        prev.map(r => (r.id === id ? { ...r, status: updated.status, remarks: (updated as any).remarks } : r))
+        prev.map(r => (r.id === id ? { ...r, status: updated.status, remarks: updated.remarks } : r))
       );
       setEditingId(null);
     } catch (err: any) {
@@ -287,6 +323,17 @@ export const TeacherAttendance: React.FC = () => {
                         {st.roll_number && (
                           <p className="text-xs text-slate-400">Roll No: {st.roll_number}</p>
                         )}
+                        <input
+                          type="text"
+                          value={remarksMap[st.id] ?? ''}
+                          onChange={(e) =>
+                            setRemarksMap((prev) => ({ ...prev, [st.id]: e.target.value }))
+                          }
+                          placeholder="Remarks (optional)"
+                          maxLength={255}
+                          aria-label={`Remarks for ${st.display_name || st.full_name || st.id}`}
+                          className="mt-1.5 w-full h-8 px-2 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        />
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0">
                         <button
@@ -384,6 +431,16 @@ export const TeacherAttendance: React.FC = () => {
               {historyRecords.map((record) => {
                 const isEditing = editingId === record.id;
                 const isVoid = record.status === 'VOID';
+                // `GET /attendance` returns only student_id, but the roster for
+                // this section is already loaded, so resolve the name locally
+                // instead of showing a bare id.
+                const rosterStudent = students.find(
+                  (s: Student) => s.id === record.student_id
+                ) as Student | undefined;
+                const studentName =
+                  rosterStudent?.display_name ||
+                  rosterStudent?.full_name ||
+                  `Student #${record.student_id}`;
                 return (
                   <div
                     key={record.id}
@@ -393,13 +450,15 @@ export const TeacherAttendance: React.FC = () => {
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-bold text-blue-700">{record.student_id}</span>
+                        <span className="text-sm font-bold text-blue-700">
+                          {studentName.charAt(0).toUpperCase()}
+                        </span>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Student #{record.student_id}</p>
+                        <p className="text-sm font-semibold text-slate-900">{studentName}</p>
                         <p className="text-xs text-slate-500">
                           Date: {record.date}
-                          {(record as any).remarks ? ` · Remarks: ${(record as any).remarks}` : ''}
+                          {record.remarks ? ` · Remarks: ${record.remarks}` : ''}
                         </p>
                       </div>
                     </div>

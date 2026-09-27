@@ -15,6 +15,10 @@ const ROLES: { value: string; label: string }[] = [
   { value: 'STUDENT', label: 'Student' },
 ];
 
+/** `users.account_status` is a string column; "ACTIVE" is the only active value. */
+const isUserActive = (user: AppUser): boolean =>
+  String(user.is_active).toUpperCase() === 'ACTIVE';
+
 export const SuperAdminUsers: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -101,7 +105,7 @@ export const SuperAdminUsers: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="list" count={5} />
-      ) : users.length === 0 ? (
+      ) : error ? null : users.length === 0 ? (
         <EmptyState
           title="No Users Found"
           description="No users match your current filters."
@@ -118,7 +122,7 @@ export const SuperAdminUsers: React.FC = () => {
               avatarBg={roleColor[u.role] || 'bg-slate-50 text-slate-600'}
               badge={<StatusBadge status={u.is_active || 'INACTIVE'} />}
               metaText={u.role}
-              actions={<div className="flex gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => setEditingUser(u)}>Edit</button><button type="button" className="text-xs text-emerald-700" onClick={() => setUserActive(u, !(u.is_active === true || u.is_active === 'ACTIVE'))}>{u.is_active === true || u.is_active === 'ACTIVE' ? 'Deactivate' : 'Activate'}</button><button type="button" className="text-xs text-slate-700" onClick={() => resetPassword(u)}>Reset Password</button><button type="button" className="text-xs text-rose-700" onClick={() => setUserActive(u, false)}>Offboard</button></div>}
+              actions={<div className="flex gap-1" onClick={event => event.stopPropagation()}><button type="button" className="text-xs text-indigo-700" onClick={() => setEditingUser(u)}>Edit</button><button type="button" className="text-xs text-emerald-700" onClick={() => setUserActive(u, !isUserActive(u))}>{isUserActive(u) ? 'Deactivate' : 'Activate'}</button><button type="button" className="text-xs text-slate-700" onClick={() => resetPassword(u)}>Reset Password</button><button type="button" className="text-xs text-rose-700" onClick={() => setUserActive(u, false)}>Offboard</button></div>}
             />
           ))}
         </div>

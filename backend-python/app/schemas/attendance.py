@@ -14,6 +14,11 @@ class AttendanceCreate(BaseModel):
     date: date
     status: AttendanceStatus
     recorded_by: Optional[int] = None
+    # Persisted on the `attendance_records.remarks` column. It used to be
+    # dropped silently: the column existed and PATCH /attendance/{id} accepted
+    # it, but the create schema had no such field and crud's whitelist dropped
+    # it too, so create/update behaved differently for the same input.
+    remarks: Optional[str] = Field(None, max_length=255)
 
 
 class StudentAttendanceItem(BaseModel):

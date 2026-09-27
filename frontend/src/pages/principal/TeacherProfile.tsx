@@ -62,7 +62,7 @@ export const TeacherProfile: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="card" count={2} />
-      ) : !teacher ? (
+      ) : error ? null : !teacher ? (
         <EmptyState
           title="Teacher Profile Not Found"
           description="The requested faculty record could not be retrieved."

@@ -25,7 +25,7 @@ export const SuperAdminSchoolDetails: React.FC = () => {
 
   useEffect(() => { fetchSchool(); }, [id]);
 
-  if (loading) return <LoadingSkeleton type="form" count={3} />;
+  if (loading) return <LoadingSkeleton type="card" count={3} />;
   if (error || !school) return <ErrorState title="School Not Found" message="Could not load school details." onRetry={fetchSchool} />;
 
   return (

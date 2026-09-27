@@ -1,6 +1,6 @@
 // src/pages/teacher/Notifications.tsx
 import React, { useState, useEffect } from 'react';
-import { Bell, Plus, Trash2, Users, School, Globe, CheckCircle, AlertCircle, UserCheck } from 'lucide-react';
+import { Bell, Plus, Trash2, Users, School, Globe, CheckCircle, AlertCircle, UserCheck, CheckCheck } from 'lucide-react';
 import { EmptyState, LoadingSkeleton } from '../../components/shared';
 import { notificationService } from '../../services/notification';
 import { Notification, NotificationType, TeacherClassInfo } from '../../types/notification';
@@ -10,6 +10,8 @@ export const TeacherNotifications: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('ALL');
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [markingAll, setMarkingAll] = useState<boolean>(false);
 
   // Teacher Class Info
   const [classInfo, setClassInfo] = useState<TeacherClassInfo>({
@@ -30,12 +32,39 @@ export const TeacherNotifications: React.FC = () => {
 
   const fetchNotifications = () => {
     setLoading(true);
+    setError(null);
     const params = activeTab !== 'ALL' ? { category: activeTab } : undefined;
     notificationService
       .listNotifications(params)
-      .then((data) => setNotifications(data.items))
+      .then((data) => {
+        setNotifications(data.items);
+        setUnreadCount(data.unread_count ?? 0);
+      })
       .catch(() => setError('Failed to load notifications'))
       .finally(() => setLoading(false));
+  };
+
+  const handleMarkAllRead = async () => {
+    setMarkingAll(true);
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch {
+      setError('Failed to mark notifications as read');
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const handleMarkRead = async (id: number) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, is_read: true } : n)));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch {
+      setError('Failed to mark notification as read');
+    }
   };
 
   useEffect(() => {
@@ -165,13 +194,25 @@ export const TeacherNotifications: React.FC = () => {
               : 'View received alerts and send public or class announcements'}
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Send Notification
-        </button>
+        <div className="flex flex-col gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              disabled={markingAll}
+              className="self-start flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 disabled:opacity-60"
+            >
+              <CheckCheck className="w-4 h-4" />
+              {markingAll ? 'Marking...' : 'Mark All Read'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Send Notification
+          </button>
+        </div>
       </div>
 
       {successMessage && (
@@ -221,7 +262,12 @@ export const TeacherNotifications: React.FC = () => {
           {notifications.map((notif) => (
             <div
               key={notif.id}
-              className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs hover:border-blue-200 transition-all flex flex-col sm:flex-row items-start justify-between gap-3"
+              onClick={() => !notif.is_read && handleMarkRead(notif.id)}
+              className={`bg-white border rounded-2xl p-4 shadow-xs transition-all flex flex-col sm:flex-row items-start justify-between gap-3 ${
+                notif.is_read
+                  ? 'border-slate-200/80 hover:border-blue-200'
+                  : 'border-blue-200 bg-blue-50/30 cursor-pointer hover:border-blue-300'
+              }`}
             >
               <div className="flex items-start gap-3.5 flex-1 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">

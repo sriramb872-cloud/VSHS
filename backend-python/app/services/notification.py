@@ -236,7 +236,19 @@ class NotificationService:
         db_obj = crud_notification.get(db, notification_id=notification_id)
         if not db_obj:
             return None
-        # Per-user read receipt — does NOT affect any other recipient's state
+        # Only notifications the caller is allowed to *see* may be marked read.
+        # Previously this looked the row up by id alone, so any authenticated
+        # user could write a read receipt against a notification outside their
+        # audience (e.g. a student marking a CLASS_TEACHER notice) and confirm
+        # that the id exists.
+        visible = (
+            crud_notification._visible_query(db, current_user, None, None)
+            .filter(Notification.id == notification_id)
+            .first()
+        )
+        if not visible:
+            return None
+        # Per-user read receipt - does NOT affect any other recipient's state
         crud_notification.mark_read(db, notification_id=notification_id, user_id=current_user.id)
         return crud_notification.serialize(db_obj, is_read=True)
 

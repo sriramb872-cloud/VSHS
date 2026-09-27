@@ -40,6 +40,9 @@ class UserResponse(BaseModel):
     role: str
     is_active: str
     must_change_password: bool = False
+    # Set by POST /files/profile-photo. Omitted here, an uploaded photo was
+    # stored but never sent back, so no client could display it.
+    profile_photo: Optional[str] = None
 
     class Config:
         from_attributes = True

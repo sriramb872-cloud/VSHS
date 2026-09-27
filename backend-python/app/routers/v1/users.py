@@ -30,6 +30,9 @@ def serialize_user(u: User) -> dict:
         "full_name": u.display_name,
         "role": u.role,
         "is_active": u.is_active,
+        # Was missing, so a photo uploaded through POST /files/profile-photo was
+        # written to the column but never sent back to any client.
+        "profile_photo": getattr(u, "profile_photo", None),
         "created_at": u.created_at,
         "updated_at": u.updated_at,
     }

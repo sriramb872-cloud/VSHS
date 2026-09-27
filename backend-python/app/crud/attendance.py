@@ -4,7 +4,17 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.models import Attendance
 
-_VALID_ATTENDANCE_FIELDS = {"student_id", "section_id", "date", "status", "recorded_by"}
+# Writable columns for an attendance row. `remarks` was missing here, so
+# `create_attendance` silently discarded it even though the column exists and
+# `PATCH /attendance/{id}` allowed updating it.
+_VALID_ATTENDANCE_FIELDS = {
+    "student_id",
+    "section_id",
+    "date",
+    "status",
+    "recorded_by",
+    "remarks",
+}
 
 
 def get_attendance(db: Session, attendance_id: int) -> Optional[Attendance]:
@@ -52,8 +62,12 @@ def create_attendance(db: Session, data: dict) -> Attendance:
 
 
 def update_attendance(db: Session, db_item: Attendance, data: dict) -> Attendance:
+    # Apply the same whitelist as create_attendance. This used to setattr every
+    # key it was handed, so an arbitrary payload could have written to columns
+    # that are not part of the attendance contract.
     for key, value in data.items():
-        setattr(db_item, key, value)
+        if key in _VALID_ATTENDANCE_FIELDS:
+            setattr(db_item, key, value)
     db.commit()
     db.refresh(db_item)
     return db_item

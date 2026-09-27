@@ -16,6 +16,7 @@ from app.models.exam import Exam
 from app.models.student_enrollment import StudentEnrollment
 from app.models.academic_year import AcademicYear
 from app.services.timetable import serialize_timetable
+from app.services.health import check_system_health, measure_storage
 from app.schemas.dashboard import (
     SuperAdminDashboardResponse,
     PrincipalDashboardResponse,
@@ -30,6 +31,10 @@ class DashboardService:
         if str(current_user.role).upper() != "SUPER_ADMIN":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
         stats = crud_dashboard.get_super_admin_stats(db)
+        # Measured, not asserted: a live DB round trip + upload-dir writability
+        # check, and the real on-disk size of the media directory.
+        health, latency_ms, health_detail = check_system_health(db)
+        storage = measure_storage()
         return SuperAdminDashboardResponse(
             total_schools=stats["total_schools"],
             total_principals=stats["total_principals"],
@@ -37,8 +42,11 @@ class DashboardService:
             total_students=stats["total_students"],
             active_schools=stats["active_schools"],
             recent_activity=[],
-            system_health="Healthy",
-            storage_usage="45%"
+            system_health=health,
+            system_health_detail=health_detail,
+            database_latency_ms=latency_ms,
+            storage_usage=storage["label"],
+            storage_detail=storage,
         )
 
     @staticmethod

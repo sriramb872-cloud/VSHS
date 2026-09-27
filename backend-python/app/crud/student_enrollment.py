@@ -54,6 +54,7 @@ def get_enrollments(
     academic_year_id: Optional[int] = None,
     grade_id: Optional[int] = None,
     section_id: Optional[int] = None,
+    section_ids: Optional[List[int]] = None,
     skip: int = 0,
     limit: int = 100
 ) -> Tuple[List[StudentEnrollment], Dict[int, float]]:
@@ -67,6 +68,10 @@ def get_enrollments(
 
     if section_id:
         query = query.filter(StudentEnrollment.section_id == section_id)
+    elif section_ids:
+        # Explicit allow-list of sections (used for teachers, who may be
+        # assigned to more than one section).
+        query = query.filter(StudentEnrollment.section_id.in_(list(section_ids)))
     elif grade_id:
         query = query.join(StudentEnrollment.section).filter(Section.grade_id == grade_id)
 

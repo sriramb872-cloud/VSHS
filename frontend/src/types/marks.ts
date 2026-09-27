@@ -1,15 +1,28 @@
 // src/types/marks.ts
+/**
+ * Mirrors the backend `MarkResponse` schema (app/schemas/marks.py).
+ * The `exam_*`/`subject_*`/`grade_id`/`section_id` context block is emitted by
+ * `GET /marks/` for the principal Marks Monitor screen.
+ */
 export interface Mark {
   id: number;
   exam_subject_id: number;
   student_id: number;
-  student_name?: string;
-  roll_number?: string;
+  student_name?: string | null;
+  roll_number?: string | null;
   marks_obtained: number;
   max_marks: number;
-  remarks?: string;
+  remarks?: string | null;
   created_at: string;
-  updated_at?: string;
+  updated_at?: string | null;
+  exam_id?: number | null;
+  exam_name?: string | null;
+  subject_id?: number | null;
+  subject_name?: string | null;
+  grade_id?: number | null;
+  section_id?: number | null;
+  academic_year_id?: number | null;
+  teacher_id?: number | null;
 }
 
 export interface MarksListResponse {

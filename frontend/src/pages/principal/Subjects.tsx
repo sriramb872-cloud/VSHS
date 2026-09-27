@@ -25,6 +25,7 @@ export const Subjects: React.FC = () => {
   const handleCreateSubject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!subjectName.trim()) return;
+    setError(null);
     subjectsService
       .createSubject({ name: subjectName.trim() })
       .then(newSubject => {
@@ -72,7 +73,7 @@ export const Subjects: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="list" count={3} />
-      ) : subjects.length === 0 ? (
+      ) : error ? null : subjects.length === 0 ? (
         <EmptyState
           title="No Subjects Configured"
           description="Create your first subject in the catalog above."

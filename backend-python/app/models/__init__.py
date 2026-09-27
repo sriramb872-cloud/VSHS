@@ -26,6 +26,7 @@ from app.models.calendar_event import CalendarEvent
 from app.models.timetable import Timetable
 from app.models.audit_log import AuditLog
 from app.models.role import Role
+from app.models.upload import Upload
 from app.models.app_settings import SystemSettings, SchoolSettings, UserAppSettings
 
 __all__ = [
@@ -56,6 +57,7 @@ __all__ = [
     "Timetable",
     "AuditLog",
     "Role",
+    "Upload",
     "SystemSettings",
     "SchoolSettings",
     "UserAppSettings",

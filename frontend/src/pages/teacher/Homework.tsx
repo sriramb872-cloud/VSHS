@@ -127,11 +127,11 @@ export const TeacherHomeworkPage: React.FC = () => {
       )}
 
       <ConfirmDialog
-        open={deleteId !== null}
+        isOpen={deleteId !== null}
         title="Delete Homework?"
         message="This will permanently delete this homework assignment."
         confirmLabel="Delete"
-        variant="danger"
+        isDanger
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
       />

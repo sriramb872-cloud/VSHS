@@ -37,6 +37,7 @@ export const Sections: React.FC = () => {
       setError('Section name must be 10 characters or fewer.');
       return;
     }
+    setError(null);
     sectionsService
       .createSection({ name: sectionName.trim(), grade_id: Number(gradeId) })
       .then(newSection => {
@@ -98,7 +99,7 @@ export const Sections: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="list" count={3} />
-      ) : sections.length === 0 ? (
+      ) : error ? null : sections.length === 0 ? (
         <EmptyState
           title="No Sections Found"
           description="Create your first class section above."

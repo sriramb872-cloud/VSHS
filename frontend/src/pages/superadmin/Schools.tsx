@@ -73,7 +73,7 @@ export const SuperAdminSchools: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="list" count={4} />
-      ) : filteredSchools.length === 0 ? (
+      ) : error ? null : filteredSchools.length === 0 ? (
         <EmptyState
           title="No Schools Found"
           description={search ? 'No school matches your search criteria.' : 'There are no schools onboarded yet.'}

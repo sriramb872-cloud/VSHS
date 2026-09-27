@@ -35,7 +35,7 @@ export const SuperAdminAuditLogs: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="list" count={5} />
-      ) : logs.length === 0 ? (
+      ) : error ? null : logs.length === 0 ? (
         <EmptyState
           title="No Audit Logs"
           description="No system activity has been recorded yet."

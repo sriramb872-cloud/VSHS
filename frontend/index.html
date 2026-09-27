@@ -2,15 +2,72 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="SCHOLARIS — Modern School ERP for students, teachers, principals and administrators." />
+    <!--
+      viewport-fit=cover lets the installed app draw under the notch/rounded
+      corners on iOS and Android. The app's own layout already reserves space
+      for the sticky header and the mobile bottom navigation, so nothing is
+      hidden behind a system bar.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="SCHOLARIS — Modern School ERP for students, teachers, principals and administrators."
+    />
+
     <title>SCHOLARIS School ERP</title>
+
+    <!-- PWA -->
+    <!--
+      The manifest is hand-authored in public/manifest.webmanifest rather than
+      generated, so it is served identically by `npm run dev` and by the
+      production build.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!--
+      theme-color drives the browser/OS chrome colour. #1e1b4b is indigo-950,
+      the colour the app already uses for its own chrome: the AppShell sidebar
+      and the AuthLayout sign-in gradient.
+    -->
+    <meta name="theme-color" content="#1e1b4b" />
+    <meta name="color-scheme" content="light" />
+
+    <!-- Standalone-capable hints. `mobile-web-app-capable` is deprecated in
+         favour of manifest `display`, but is still honoured by some Android
+         launchers, and `apple-mobile-web-app-capable` is the only signal iOS
+         uses. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- Standalone launch keeps the app's own status-bar spacing; this stops
+         iOS from shrinking the viewport to a letterboxed "compatibility" area. -->
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="SCHOLARIS" />
+    <meta name="application-name" content="SCHOLARIS" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      SCHOLARIS requires JavaScript. Please enable it to continue.
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

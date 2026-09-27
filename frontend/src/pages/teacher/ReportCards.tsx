@@ -7,13 +7,19 @@ import { academicYearsService } from '../../services/academicYears';
 
 export const TeacherReportCardsPage: React.FC = () => {
   const [reportCards, setReportCards] = useState<ReportCardResponse[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [currentRemarks, setCurrentRemarks] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [academicYearId, setAcademicYearId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // A student can have one report card per exam in a year, so the card must be
+  // identified by student *and* exam - keying on student_id alone made the
+  // second card unreachable and sent remarks to the wrong exam.
+  const cardKey = (card: ReportCardResponse) => `${card.student_id}:${card.exam_id ?? 'year'}`;
+
   useEffect(() => {
+    setLoading(true);
     academicYearsService.listAcademicYears()
       .then(years => {
         const activeYear = years.find(year => year.is_active) || years[0];
@@ -22,9 +28,8 @@ export const TeacherReportCardsPage: React.FC = () => {
       })
       .then(data => {
         if (!data) return;
-        setReportCards(data.items);
-        if (data.items.length > 0) {
-          setSelectedStudentId(data.items[0].student_id);
+        setReportCards(data.items);        if (data.items.length > 0) {
+          setSelectedKey(cardKey(data.items[0]));
           setCurrentRemarks(data.items[0].teacher_remarks || '');
         }
       })
@@ -32,17 +37,27 @@ export const TeacherReportCardsPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const selectedReport = reportCards.find(r => r.student_id === selectedStudentId);
+  const selectedReport = reportCards.find(r => cardKey(r) === selectedKey);
 
   const handleSaveRemarks = async () => {
-    if (!selectedStudentId || !academicYearId) return;
+    if (!selectedReport || !academicYearId) return;
     try {
-      const updated = await reportCardService.updateRemarks(selectedStudentId, academicYearId, currentRemarks);
-      setReportCards(prev => prev.map(r => (r.student_id === selectedStudentId ? updated : r)));
+      const updated = await reportCardService.updateRemarks(
+        selectedReport.student_id,
+        academicYearId,
+        currentRemarks,
+        selectedReport.exam_id ?? undefined
+      );
+      setReportCards(prev =>
+        prev.map(r => (cardKey(r) === selectedKey ? { ...r, ...updated } : r))
+      );
       setFeedback({ type: 'success', text: 'Teacher remarks updated successfully!' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update remarks', error);
-      setFeedback({ type: 'error', text: 'Failed to update remarks' });
+      setFeedback({
+        type: 'error',
+        text: error?.response?.data?.detail || 'Failed to update remarks',
+      });
     }
   };
 
@@ -68,18 +83,19 @@ export const TeacherReportCardsPage: React.FC = () => {
       <div className="flex gap-2 overflow-x-auto pb-2">
         {reportCards.map(rc => (
           <button
-            key={rc.student_id}
+            key={cardKey(rc)}
             onClick={() => {
-              setSelectedStudentId(rc.student_id);
+              setSelectedKey(cardKey(rc));
               setCurrentRemarks(rc.teacher_remarks || '');
             }}
             className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
-              selectedStudentId === rc.student_id
+              selectedKey === cardKey(rc)
                 ? 'bg-indigo-600 text-white'
                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
-            Student #{rc.student_id}
+            {rc.student_name || `Student #${rc.student_id}`}
+            {rc.exam_name ? ` · ${rc.exam_name}` : ''}
           </button>
         ))}
       </div>

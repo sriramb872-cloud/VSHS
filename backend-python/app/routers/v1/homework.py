@@ -11,7 +11,7 @@ from app.schemas.homework import (
     HomeworkUpdate,
 )
 from app.services.homework import HomeworkService
-from app.models.user import UserModel
+from app.models.user import User, UserModel
 from app.models.teacher import Teacher
 from app.models.teacher_subject import TeacherSubject
 from app.models.homework import Homework
@@ -87,15 +87,25 @@ def _enrich_with_names(db: Session, items):
     subject_ids = {h.subject_id for h in homework_list if h.subject_id}
     grade_ids = {h.grade_id for h in homework_list if h.grade_id}
     section_ids = {h.section_id for h in homework_list if h.section_id}
+    teacher_ids = {h.teacher_id for h in homework_list if h.teacher_id}
 
     subjects = {s.id: s.name for s in db.query(Subject).filter(Subject.id.in_(subject_ids)).all()} if subject_ids else {}
     grades = {g.id: g.name for g in db.query(Grade).filter(Grade.id.in_(grade_ids)).all()} if grade_ids else {}
     sections = {s.id: s.name for s in db.query(Section).filter(Section.id.in_(section_ids)).all()} if section_ids else {}
+    # teacher_id on Homework points at the Teacher row; the display name lives
+    # on the linked User.
+    teachers = {}
+    if teacher_ids:
+        teacher_rows = db.query(Teacher).filter(Teacher.id.in_(teacher_ids)).all()
+        user_ids = [t.user_id for t in teacher_rows if t.user_id]
+        users = {u.id: u.display_name for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
+        teachers = {t.id: users.get(t.user_id) for t in teacher_rows}
 
     for h in homework_list:
         h.subject_name = subjects.get(h.subject_id)
         h.grade_name = grades.get(h.grade_id)
         h.section_name = sections.get(h.section_id)
+        h.teacher_name = teachers.get(h.teacher_id)
 
     return homework_list[0] if single else homework_list
 

@@ -1,12 +1,22 @@
 // src/pages/principal/Settings.tsx
 import React, { useEffect, useState } from 'react';
 import { settingsService } from '../../services/settings';
+import { PrincipalSettings } from '../../types/settings';
 
 import { Save, Settings2 } from 'lucide-react';
 import { LoadingSkeleton } from '../../components/shared';
 
+/** The free-text school fields this form edits. */
+type EditableField =
+  | 'school_name'
+  | 'school_address'
+  | 'phone_number'
+  | 'email'
+  | 'academic_year'
+  | 'school_timings';
+
 export const PrincipalSettingsPage: React.FC = () => {
-  const [settings, setSettings] = useState<Record<string, unknown> | null>(null);
+  const [settings, setSettings] = useState<PrincipalSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -15,7 +25,7 @@ export const PrincipalSettingsPage: React.FC = () => {
   useEffect(() => {
     settingsService
       .getPrincipalSettings()
-      .then(setSettings)
+      .then((data) => setSettings(data))
       .catch(() => setError('Failed to load settings'))
       .finally(() => setLoading(false));
   }, []);
@@ -27,7 +37,8 @@ export const PrincipalSettingsPage: React.FC = () => {
     setError('');
     setMessage('');
     try {
-      const updated = await settingsService.updatePrincipalSettings(settings);
+      const { id: _id, ...payload } = settings;
+      const updated = await settingsService.updatePrincipalSettings(payload);
       setSettings(updated);
       setMessage('School settings updated successfully!');
       setTimeout(() => setMessage(''), 3000);
@@ -38,7 +49,7 @@ export const PrincipalSettingsPage: React.FC = () => {
     }
   };
 
-  const fields: { key: string; label: string; type?: string }[] = [
+  const fields: { key: EditableField; label: string; type?: string }[] = [
     { key: 'school_name', label: 'School Name' },
     { key: 'school_address', label: 'School Address' },
     { key: 'phone_number', label: 'Phone Number', type: 'tel' },
@@ -82,7 +93,7 @@ export const PrincipalSettingsPage: React.FC = () => {
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">{label}</label>
                 <input
                   type={type ?? 'text'}
-                  value={(settings as any)[key] ?? ''}
+                  value={settings[key] ?? ''}
                   onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
                   className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />

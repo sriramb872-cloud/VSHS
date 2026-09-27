@@ -62,7 +62,10 @@ export const PrincipalAnnouncementsPage: React.FC = () => {
     loadData();
   }, []);
 
-  const currentAcademicYear = academicYears.find(ay => ay.is_current) || academicYears[0];
+  // The backend field is `is_active`; `is_current` does not exist on
+  // AcademicYear, so this used to always fall through to the first year and
+  // attach the announcement to the wrong academic year.
+  const currentAcademicYear = academicYears.find(ay => ay.is_active) || academicYears[0];
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

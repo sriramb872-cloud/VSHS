@@ -15,6 +15,12 @@ dist/
 build/
 .next/
 
+# Runtime upload storage (user-supplied profile photos; must never be committed)
+backend-python/media/
+
+# Local QA / dev server logs
+backend-python/qa-*.log
+
 # System / OS files
 .DS_Store
 Thumbs.db

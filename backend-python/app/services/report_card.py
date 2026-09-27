@@ -420,10 +420,14 @@ class ReportCardService:
 
     @staticmethod
     def update_remarks(
-        db: Session, student_id: int, academic_year_id: int, teacher_remarks: str
+        db: Session,
+        student_id: int,
+        academic_year_id: int,
+        teacher_remarks: str,
+        exam_id: Optional[int] = None,
     ) -> ReportCardResponse:
         report = crud_report_card.get_by_student_and_year(
-            db, student_id=student_id, academic_year_id=academic_year_id
+            db, student_id=student_id, academic_year_id=academic_year_id, exam_id=exam_id
         )
         if not report:
             raise HTTPException(

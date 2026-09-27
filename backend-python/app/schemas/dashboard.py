@@ -9,8 +9,13 @@ class SuperAdminDashboardResponse(BaseModel):
     total_students: int
     active_schools: int
     recent_activity: List[Any] = []
-    system_health: str = "Healthy"
-    storage_usage: str = "45%"
+    # Measured at request time by app.services.health - see that module. The
+    # previous values ("Healthy" / "45%") were hard-coded literals.
+    system_health: str = "Unknown"
+    system_health_detail: Optional[str] = None
+    database_latency_ms: Optional[float] = None
+    storage_usage: str = "Unknown"
+    storage_detail: Optional[dict] = None
 
     class Config:
         from_attributes = True

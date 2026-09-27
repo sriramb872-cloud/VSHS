@@ -16,6 +16,28 @@ from app.core.audit import write_audit_log
 router = APIRouter(prefix="/report-cards", tags=["Report Cards"])
 
 
+def _assert_section_in_school(db: Session, current_user: UserModel, section_id: int) -> None:
+    """Reject a section that does not belong to the caller's school.
+
+    SUPER_ADMIN is platform-wide and may target any school. Everyone else is
+    scoped to their own ``school_id``.
+    """
+    from app.models.section import Section
+
+    section = db.query(Section).filter(Section.id == section_id).first()
+    if not section:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Section not found"
+        )
+    if str(current_user.role).upper() == "SUPER_ADMIN":
+        return
+    if not current_user.school_id or section.school_id != current_user.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Section does not belong to your school",
+        )
+
+
 @router.post("/generate", response_model=ReportCardListResponse)
 def generate_report_cards(
     academic_year_id: int,
@@ -30,6 +52,12 @@ def generate_report_cards(
     PUBLISHED exams only. Safe to re-run for the same section/year/term —
     existing rows are updated rather than duplicated.
     """
+    # The section id arrives as a query parameter, so it must be checked
+    # against the caller's school. Without this a principal of one school could
+    # regenerate (and thereby overwrite, including clearing `exam_id`) another
+    # school's report cards.
+    _assert_section_in_school(db, current_user, section_id)
+
     items = ReportCardService.generate_report_cards(
         db, academic_year_id=academic_year_id, section_id=section_id, term_name=term_name, exam_id=exam_id
     )
@@ -104,11 +132,18 @@ def update_report_card_remarks(
     student_id: int,
     academic_year_id: int,
     obj_in: ReportCardRemarksUpdate,
+    exam_id: Optional[int] = Query(
+        None,
+        description=(
+            "Scope the update to one examination. Without it the service "
+            "matches the student's first card for the year, which is the "
+            "wrong card as soon as a year has more than one exam."
+        ),
+    ),
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_teacher),
 ):
     role = str(current_user.role).upper()
-    school_id = current_user.school_id if role != "SUPER_ADMIN" else None
 
     if role != "SUPER_ADMIN":
         target_student = db.query(Student).filter(Student.id == student_id).first()
@@ -119,5 +154,9 @@ def update_report_card_remarks(
             )
 
     return ReportCardService.update_remarks(
-        db, student_id=student_id, academic_year_id=academic_year_id, teacher_remarks=obj_in.teacher_remarks
+        db,
+        student_id=student_id,
+        academic_year_id=academic_year_id,
+        teacher_remarks=obj_in.teacher_remarks,
+        exam_id=exam_id,
     )

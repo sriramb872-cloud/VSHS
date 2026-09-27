@@ -207,7 +207,7 @@ export const SuperAdminPrincipals: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="list" count={4} />
-      ) : filtered.length === 0 ? (
+      ) : error ? null : filtered.length === 0 ? (
         <EmptyState
           title="No Principals Found"
           description={search ? 'No principals match your search.' : 'No principals registered yet.'}

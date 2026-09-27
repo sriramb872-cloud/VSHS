@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { teachersService } from '../../services/teachers';
 import { LoadingSkeleton } from '../../components/shared';
+import ProfilePhotoUpload from '../../components/shared/ProfilePhotoUpload';
 import { Teacher } from '../../types';
 
 export const TeacherProfile: React.FC = () => {
@@ -134,6 +135,11 @@ export const TeacherProfile: React.FC = () => {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
+      {/* Profile photo */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4">
+        <ProfilePhotoUpload />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

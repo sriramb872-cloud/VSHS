@@ -1,11 +1,59 @@
 # backend-python/app/crud/teacher.py
-from typing import List, Optional
+from typing import List, Optional, Set
 from sqlalchemy.orm import Session
 from app.models import Teacher
 
 
 def get_teacher(db: Session, teacher_id: int) -> Optional[Teacher]:
     return db.query(Teacher).filter(Teacher.id == teacher_id).first()
+
+
+def get_assigned_section_ids(db: Session, teacher: Teacher) -> Set[int]:
+    """Sections this teacher is allowed to see the student roster of.
+
+    A teacher counts as assigned to a section when any of the following holds:
+
+    * they are the section's ``class_teacher_id``;
+    * an explicit ``teacher_subjects`` row links them to the section;
+    * a timetable slot in their school puts them in the section.
+
+    Kept in one place so every "which classes may this teacher touch" decision
+    (roster listing, marks entry, attendance) uses the same rule.
+    """
+    from app.models.section import Section
+    from app.models.teacher_subject import TeacherSubject
+    from app.models.timetable import Timetable
+
+    section_ids: Set[int] = {
+        row[0]
+        for row in db.query(Section.id)
+        .filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id,
+        )
+        .all()
+    }
+    section_ids |= {
+        row[0]
+        for row in db.query(TeacherSubject.section_id)
+        .filter(
+            TeacherSubject.teacher_id == teacher.id,
+            TeacherSubject.school_id == teacher.school_id,
+        )
+        .all()
+        if row[0] is not None
+    }
+    section_ids |= {
+        row[0]
+        for row in db.query(Timetable.section_id)
+        .filter(
+            Timetable.teacher_id == teacher.id,
+            Timetable.school_id == teacher.school_id,
+        )
+        .all()
+        if row[0] is not None
+    }
+    return section_ids
 
 
 def get_teacher_by_user_id(db: Session, user_id: int) -> Optional[Teacher]:

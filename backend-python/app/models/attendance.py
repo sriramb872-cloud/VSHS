@@ -12,6 +12,8 @@ class Attendance(Base):
     student_id = Column(Integer, ForeignKey("students.student_id", ondelete="CASCADE"), nullable=False, index=True)
     section_id = Column(Integer, ForeignKey("sections.section_id", ondelete="CASCADE"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
+    # Keep in sync with `app.models.attendance_record.AttendanceStatus`, which is
+    # the enum the request schemas validate against.
     status = Column(Enum("PRESENT", "ABSENT", "LATE", "LEAVE", "VOID", name="attendance_status"), nullable=False)
     recorded_by = Column(Integer, nullable=True)
     remarks = Column(String(255), nullable=True)

@@ -47,7 +47,7 @@ export const SuperAdminEditSchool: React.FC = () => {
     }
   };
 
-  if (loading) return <LoadingSkeleton type="form" count={3} />;
+  if (loading) return <LoadingSkeleton type="card" count={3} />;
 
   return (
     <div className="max-w-lg mx-auto space-y-5">

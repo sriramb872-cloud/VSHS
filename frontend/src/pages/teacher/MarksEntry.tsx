@@ -210,13 +210,25 @@ export const TeacherMarksEntryPage: React.FC = () => {
       if (isFormative) {
         await marksService.submitFormativeMarks({
           exam_subject_id: examSubjectIdNum,
-          marks: formativeRows.map(r => ({
-            student_id: r.student_id,
-            written_test: Number(r.written_test) || 0,
-            project: Number(r.project) || 0,
-            read_reflection: Number(r.read_reflection) || 0,
-            notebook: Number(r.notebook) || 0,
-          })),
+          // Skip rows the teacher left completely blank. Without this filter
+          // `Number('') || 0` silently turned every empty component into a
+          // recorded 0, so submitting an untouched grid persisted real zeros
+          // and reported the subject as complete.
+          marks: formativeRows
+            .filter(
+              r =>
+                r.written_test !== '' ||
+                r.project !== '' ||
+                r.read_reflection !== '' ||
+                r.notebook !== ''
+            )
+            .map(r => ({
+              student_id: r.student_id,
+              written_test: Number(r.written_test) || 0,
+              project: Number(r.project) || 0,
+              read_reflection: Number(r.read_reflection) || 0,
+              notebook: Number(r.notebook) || 0,
+            })),
         });
       } else {
         const invalidRow = summativeRows.find(

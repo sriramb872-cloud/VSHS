@@ -22,7 +22,6 @@ export const UserSettingsSection: React.FC<UserSettingsSectionProps> = ({ initia
     setMessage('');
     try {
       await settingsService.updateUserSettings({
-        id: 1,
         profile_information: profile,
         notification_preferences: notifications
       });

@@ -189,7 +189,7 @@ class AnnouncementService:
         updated = crud_announcement.update(db, db_obj=announcement, obj_in=obj_in)
 
         if getattr(updated, "status", None) == AnnouncementStatus.PUBLISHED:
-            AnnouncementService._trigger_notifications(updated)
+            AnnouncementService._trigger_notifications(db, updated)
 
         return updated
 
@@ -218,7 +218,7 @@ class AnnouncementService:
         update_in = AnnouncementUpdate(status=AnnouncementStatus.PUBLISHED)
         updated = crud_announcement.update(db, db_obj=announcement, obj_in=update_in)
 
-        AnnouncementService._trigger_notifications(updated)
+        AnnouncementService._trigger_notifications(db, updated)
         return updated
 
     @staticmethod

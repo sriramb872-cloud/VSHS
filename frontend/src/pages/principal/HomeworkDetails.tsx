@@ -72,7 +72,7 @@ export const HomeworkDetails: React.FC = () => {
             <div className="bg-white rounded-xl p-3 border border-slate-200/80 text-center">
               <FileText className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
               <p className="text-xs text-slate-500">Subject</p>
-              <p className="text-xs font-semibold text-slate-900 mt-0.5">{homework.subject}</p>
+              <p className="text-xs font-semibold text-slate-900 mt-0.5">{homework.subject_name || '—'}</p>
             </div>
             <div className="bg-white rounded-xl p-3 border border-slate-200/80 text-center">
               <User className="w-4 h-4 text-emerald-600 mx-auto mb-1" />

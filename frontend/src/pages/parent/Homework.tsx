@@ -12,7 +12,7 @@ export const StudentHomeworkDetailsPage: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      homeworkService.getHomeworkById(Number(id)).then(setHomework).catch(console.error);
+      homeworkService.getHomeworkById(Number(id)).then((hw) => setHomework(hw)).catch(console.error);
     }
   }, [id]);
 

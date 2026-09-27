@@ -26,7 +26,7 @@ export const TeacherDashboardPage: React.FC = () => {
     return (
       <div className="space-y-4">
         <div className="h-24 bg-gradient-to-r from-blue-500 to-sky-600 rounded-2xl animate-pulse" />
-        <LoadingSkeleton type="metric" count={4} />
+        <LoadingSkeleton type="metrics" count={4} />
       </div>
     );
   }
@@ -48,7 +48,17 @@ export const TeacherDashboardPage: React.FC = () => {
     );
   }
 
-  const metrics = [
+  // `onClick` is optional so the render guards below stay meaningful: TS infers
+  // the array element type from the literals, and every current entry supplies
+  // a handler, which made `m.onClick &&` a provably-always-true check.
+  const metrics: {
+    icon: React.ReactNode;
+    label: string;
+    value: string | number;
+    bg: string;
+    color: string;
+    onClick?: () => void;
+  }[] = [
     {
       icon: <Calendar className="w-5 h-5" />,
       label: "Today's Classes",

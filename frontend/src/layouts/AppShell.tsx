@@ -26,6 +26,8 @@ import { useAuth } from '../contexts/AuthContext';
 import BottomNav, { PrimaryNavItem } from '../components/shared/BottomNav';
 import { SecondaryNavItem } from '../components/shared/MoreSheet';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
+import GlobalSearch from '../components/shared/GlobalSearch';
+import UserAvatar from '../components/shared/UserAvatar';
 import { notificationService } from '../services/notification';
 
 export interface NavItem {
@@ -122,12 +124,16 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* User Info & Logout */}
       <div className="p-3 border-t border-white/10 bg-black/10">
         <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs">
-            {user?.display_name ? user.display_name.slice(0, 2).toUpperCase() : (user as any)?.name ? (user as any).name.slice(0, 2).toUpperCase() : <User className="w-4 h-4" />}
-          </div>
+          <UserAvatar
+            src={user?.profile_photo}
+            name={user?.display_name}
+            className="w-8 h-8"
+            rounded="rounded-full"
+            textClassName="text-xs"
+          />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-white truncate">{user?.display_name || (user as any)?.name || roleLabel}</p>
-            <p className="text-[11px] text-white/60 truncate">{user?.mobile || (user as any)?.email || role}</p>
+            <p className="text-xs font-semibold text-white truncate">{user?.display_name || roleLabel}</p>
+            <p className="text-[11px] text-white/60 truncate">{user?.mobile || role}</p>
           </div>
         </div>
         <button
@@ -180,6 +186,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <GlobalSearch role={role} />
             {notificationsPath && (
               <button
                 onClick={() => navigate(notificationsPath)}
@@ -201,11 +208,15 @@ export const AppShell: React.FC<AppShellProps> = ({
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-full hover:bg-slate-100 transition-all border border-slate-200/60 bg-white"
               >
-                <div className="w-7 h-7 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] flex items-center justify-center font-bold text-xs">
-                  {user?.display_name ? user.display_name.slice(0, 2).toUpperCase() : (user as any)?.name ? (user as any).name.slice(0, 2).toUpperCase() : <User className="w-4 h-4" />}
-                </div>
+                <UserAvatar
+                  src={user?.profile_photo}
+                  name={user?.display_name}
+                  className="w-7 h-7"
+                  rounded="rounded-full"
+                  textClassName="text-xs"
+                />
                 <span className="hidden sm:block text-xs font-semibold text-slate-700 truncate max-w-[120px]">
-                  {user?.display_name || (user as any)?.name || roleLabel}
+                  {user?.display_name || roleLabel}
                 </span>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -213,7 +224,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               {userMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200/80 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
                   <div className="px-4 py-2 border-b border-slate-100">
-                    <p className="text-xs font-bold text-slate-900 truncate">{user?.display_name || (user as any)?.name || roleLabel}</p>
+                    <p className="text-xs font-bold text-slate-900 truncate">{user?.display_name || roleLabel}</p>
                     <p className="text-[11px] text-slate-500 truncate">{user?.role || role}</p>
                   </div>
                   <button

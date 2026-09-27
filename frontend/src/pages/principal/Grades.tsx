@@ -25,6 +25,7 @@ export const Grades: React.FC = () => {
   const handleCreateGrade = (e: React.FormEvent) => {
     e.preventDefault();
     if (!gradeName.trim()) return;
+    setError(null);
     gradesService
       .createGrade({ name: gradeName.trim() })
       .then(newGrade => {
@@ -72,7 +73,7 @@ export const Grades: React.FC = () => {
 
       {loading ? (
         <LoadingSkeleton type="list" count={3} />
-      ) : grades.length === 0 ? (
+      ) : error ? null : grades.length === 0 ? (
         <EmptyState
           title="No Grades Configured"
           description="Create your first grade level above."

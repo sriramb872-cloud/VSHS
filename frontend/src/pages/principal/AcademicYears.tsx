@@ -4,7 +4,7 @@ import { CalendarDays, Plus } from 'lucide-react';
 import { MobileListItem, EmptyState, LoadingSkeleton, StatusBadge } from '../../components/shared';
 import { EditModal, ConfirmDialog } from '../../components/EditModal';
 import { academicYearsService } from '../../services/academicYears';
-import { AcademicYear } from '../../types';
+import { AcademicYear, AcademicYearUpdatePayload } from '../../types';
 
 export const AcademicYears: React.FC = () => {
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -29,18 +29,26 @@ export const AcademicYears: React.FC = () => {
     e.preventDefault();
     if (!name.trim()) return;
     setIsCreating(true);
+    setError(null);
     academicYearsService
       .createAcademicYear({ name: name.trim(), start_date: startDate, end_date: endDate, is_active: true })
       .then(newYear => {
         setAcademicYears(prev => [...prev, newYear]);
         setName('');
+        setStartDate('');
+        setEndDate('');
       })
       .catch(() => setError('Failed to create academic year'))
       .finally(() => setIsCreating(false));
   };
-  const updateYear = async (year: AcademicYear, payload: Partial<AcademicYear>) => {
-    const updated = await academicYearsService.updateAcademicYear(year.id, payload);
-    setAcademicYears(items => items.map(item => item.id === year.id ? updated : item));
+  const updateYear = async (year: AcademicYear, payload: AcademicYearUpdatePayload) => {
+    setError(null);
+    try {
+      const updated = await academicYearsService.updateAcademicYear(year.id, payload);
+      setAcademicYears(items => items.map(item => item.id === year.id ? updated : item));
+    } catch {
+      setError(`Failed to update ${year.name}`);
+    }
   };
   const editYear = (year: AcademicYear) => {
     setEditingYear(year);

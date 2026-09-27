@@ -33,7 +33,7 @@ export const usersService = {
   },
 
   async setUserActive(id: number, active: boolean): Promise<AppUser> {
-    return this.updateUser(id, { is_active: active ? 'ACTIVE' : 'INACTIVE' } as UserUpdatePayload);
+    return this.updateUser(id, { is_active: active ? 'ACTIVE' : 'INACTIVE' });
   },
 };
 

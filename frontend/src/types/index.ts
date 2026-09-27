@@ -1,5 +1,9 @@
 // src/types/index.ts — Comprehensive V1 Domain Types
 
+import type { Homework } from './homework';
+import type { Mark } from './marks';
+import type { Exam } from './exam';
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export type UserRole = 'SUPER_ADMIN' | 'PRINCIPAL' | 'TEACHER' | 'STUDENT';
 
@@ -39,11 +43,22 @@ export interface SchoolUpdatePayload {
 export interface AppUser {
   id: number;
   school_id: number | null;
+  /**
+   * Resolved server-side by `serialize_user` in the users router. `null` for
+   * platform-level accounts (a Super Admin is not attached to a school).
+   */
+  school_name?: string | null;
+  school_code?: string | null;
   mobile: string;
   email?: string | null;
   display_name: string;
   role: UserRole;
-  is_active: boolean;
+  /**
+   * Account status. The backend column is `users.account_status`, a string
+   * ("ACTIVE" / "INACTIVE"), and `serialize_user` returns it verbatim - it is
+   * not a boolean.
+   */
+  is_active: string;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -51,7 +66,8 @@ export interface AppUser {
 export interface UserUpdatePayload {
   display_name?: string;
   email?: string;
-  is_active?: boolean;
+  /** Account status; the backend coerces this to "ACTIVE"/"INACTIVE". */
+  is_active?: string;
   mobile?: string;
 }
 
@@ -108,7 +124,8 @@ export interface Student {
   display_name?: string;
   full_name?: string;
   mobile?: string;
-  email?: string;
+  /** Nullable: the backend column is `email = NULL` for most students. */
+  email?: string | null;
   profile_photo?: string | null;
   admission_number?: string;
   student_id_formatted?: string;
@@ -208,7 +225,8 @@ export interface Teacher {
   display_name?: string;
   full_name?: string;
   mobile?: string;
-  email?: string;
+  /** Nullable: the backend column is `email = NULL` for many teachers. */
+  email?: string | null;
   profile_photo?: string | null;
   employee_id?: string | null;
   role_type?: 'Class Teacher' | 'Subject Teacher' | string;
@@ -354,7 +372,17 @@ export interface AcademicYearUpdatePayload {
 }
 
 // ─── Attendance ───────────────────────────────────────────────────────────────
-export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+/**
+ * Mirrors the `attendance_records.status` MySQL ENUM declared in
+ * `backend-python/app/models/attendance.py` and validated by
+ * `AttendanceStatus` in `app/models/attendance_record.py`.
+ *
+ * This union used to be `PRESENT | ABSENT | LATE | EXCUSED`. `EXCUSED` is not a
+ * member of the database ENUM (it was rejected by MySQL with a 500), while
+ * `LEAVE` and `VOID` - which the attendance screens actually offer - were
+ * missing from the type.
+ */
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE' | 'VOID';
 
 export interface AttendanceRecord {
   id: number;
@@ -362,6 +390,8 @@ export interface AttendanceRecord {
   section_id: number;
   date: string;
   status: AttendanceStatus | string;
+  remarks?: string | null;
+  recorded_by?: number | null;
 }
 
 export interface AttendanceMarkPayload {
@@ -369,121 +399,50 @@ export interface AttendanceMarkPayload {
   section_id: number;
   date: string;
   status: AttendanceStatus;
+  /** Persisted on the `remarks` column; accepted by POST /attendance. */
+  remarks?: string | null;
 }
 
 // ─── Exam ─────────────────────────────────────────────────────────────────────
-export interface Exam {
-  id: number;
-  title?: string;
-  name?: string;
-  exam_type?: string;
-  academic_year_id?: number;
-  grade_id?: number;
-  section_id?: number;
-  subject_id?: number;
-  teacher_id?: number;
-  start_date?: string;
-  end_date?: string;
-  date?: string;
-  max_marks?: number;
-  description?: string;
-  status?: string;
-}
-
-export interface ExamCreatePayload {
-  title: string;
-  exam_type?: string;
-  academic_year_id?: number;
-  grade_id?: number;
-  section_id?: number;
-  subject_id?: number;
-  date?: string;
-  max_marks?: number;
-  description?: string;
-}
-
-export interface ExamUpdatePayload {
-  title?: string;
-  exam_type?: string;
-  date?: string;
-  max_marks?: number;
-  description?: string;
-  status?: string;
-}
-
-export interface ExamListResponse {
-  total: number;
-  items: Exam[];
-}
+/**
+ * `Exam` and its payloads are canonically defined in ./exam (mirroring the
+ * backend `ExamResponse` / `ExamCreate` / `ExamUpdate` schemas). The copies
+ * that used to live here were a looser, drifting duplicate.
+ */
+export type {
+  Exam,
+  ExamCreatePayload,
+  ExamUpdatePayload,
+  ExamListResponse,
+  ExamSubject,
+  ExamSubjectSchedule,
+  MarksStatusItem,
+  MarksStatusResponse,
+  ExamPublishResponse,
+} from './exam';
 
 // ─── Marks ────────────────────────────────────────────────────────────────────
-export interface Mark {
-  id: number;
-  student_id: number;
-  exam_id: number;
-  subject_id?: number;
-  grade_id?: number;
-  section_id?: number;
-  academic_year_id?: number;
-  teacher_id?: number;
-  marks_obtained?: number;
-  max_marks?: number;
-  grade?: string;
-  remarks?: string;
-}
-
-export interface MarksEntryRow {
-  student_id: number;
-  marks_obtained: number;
-  remarks?: string;
-}
-
-export interface MarksEntryCreatePayload {
-  exam_id: number;
-  entries: MarksEntryRow[];
-}
-
-export interface MarksListResponse {
-  total: number;
-  items: Mark[];
-}
+/**
+ * `Mark` is canonically defined in ./marks (it mirrors the backend
+ * `MarkResponse` schema). It used to be duplicated here with a stale, narrower
+ * shape, which is why the monitor screens could not type-check the context
+ * fields the API already returns.
+ */
+export type { Mark, MarksListResponse } from './marks';
 
 // ─── Homework ─────────────────────────────────────────────────────────────────
-export interface Homework {
-  id: number;
-  title: string;
-  description?: string;
-  due_date?: string;
-  academic_year_id?: number;
-  grade_id?: number;
-  section_id?: number;
-  subject_id?: number;
-  teacher_id?: number;
-  status?: string;
-  created_at?: string;
-}
-
-export interface HomeworkCreatePayload {
-  title: string;
-  description?: string;
-  due_date?: string;
-  academic_year_id?: number;
-  grade_id?: number;
-  section_id?: number;
-  subject_id?: number;
-}
-
-export interface HomeworkUpdatePayload {
-  title?: string;
-  description?: string;
-  due_date?: string;
-  status?: string;
-}
-
-export interface HomeworkListResponse {
-  total: number;
-  items: Homework[];
-}
+/**
+ * `Homework` is canonically defined in ./homework (it mirrors the backend
+ * `HomeworkResponse` schema). It used to be duplicated here with a slightly
+ * different shape, so the same object had two incompatible types depending on
+ * which module imported it.
+ */
+export type {
+  Homework,
+  HomeworkListResponse,
+  HomeworkCreatePayload,
+  HomeworkUpdatePayload,
+} from './homework';
 
 // ─── Announcement ─────────────────────────────────────────────────────────────
 export interface Announcement {
@@ -631,19 +590,20 @@ export interface EnrollmentCreatePayload {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
-export interface UserProfileSettings {
-  id?: number;
-  display_name?: string;
-  email?: string;
-  mobile?: string;
-  profile_picture?: string | null;
-}
-
-export interface PasswordChangePayload {
-  current_password: string;
-  new_password: string;
-  confirm_password?: string;
-}
+/**
+ * Settings types are canonically defined in ./settings, which mirrors the
+ * backend schemas (app/schemas/settings.py). The copies that used to live here
+ * described a flat `display_name`/`email` profile shape that no endpoint ever
+ * returned - `PUT /settings/user` actually takes `profile_information` and
+ * `notification_preferences`.
+ */
+export type {
+  SuperAdminSettings,
+  PrincipalSettings,
+  UserProfileSettings,
+  UserProfileSettingsUpdate,
+  PasswordChangePayload,
+} from './settings';
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export interface SuperAdminDashboard {

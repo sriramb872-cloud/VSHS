@@ -15,7 +15,7 @@ export const SuperAdminSettingsPage: React.FC = () => {
   useEffect(() => {
     settingsService
       .getSuperAdminSettings()
-      .then(setSettings)
+      .then((data) => setSettings(data))
       .catch(() => setError('Failed to load settings'))
       .finally(() => setLoading(false));
   }, []);

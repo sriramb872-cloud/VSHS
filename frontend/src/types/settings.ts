@@ -10,6 +10,9 @@ export interface SuperAdminSettings {
   backup_settings?: Record<string, any>;
 }
 
+/** Mirrors the backend `SuperAdminSettingsUpdate` schema (all fields optional). */
+export type SuperAdminSettingsUpdate = Partial<Omit<SuperAdminSettings, 'id'>>;
+
 export interface PrincipalSettings {
   id: number;
   school_name: string;
@@ -24,11 +27,23 @@ export interface PrincipalSettings {
   section_settings?: Record<string, any>;
 }
 
+/** Mirrors the backend `PrincipalSettingsUpdate` schema (all fields optional). */
+export type PrincipalSettingsUpdate = Partial<Omit<PrincipalSettings, 'id'>>;
+
+/** Mirrors the backend `UserProfileSettingsResponse` schema. */
 export interface UserProfileSettings {
   id: number;
   profile_information: Record<string, any>;
   notification_preferences: Record<string, any>;
 }
+
+/**
+ * Mirrors the backend `UserProfileSettingsBase` schema, which `PUT
+ * /settings/user` accepts. Note it has no `id` - only the two payload blocks.
+ */
+export type UserProfileSettingsUpdate = Partial<
+  Pick<UserProfileSettings, 'profile_information' | 'notification_preferences'>
+>;
 
 export interface PasswordChangePayload {
   current_password: string;

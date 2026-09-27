@@ -283,12 +283,13 @@ export const PrincipalCalendarPage: React.FC = () => {
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!deleteEventId}
-        onClose={() => setDeleteEventId(null)}
+        onCancel={() => setDeleteEventId(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Calendar Event"
         message="Are you sure you want to delete this event? This will remove it from the school calendar for all teachers and students."
         confirmLabel={deleting ? 'Deleting...' : 'Delete Event'}
-        variant="danger"
+        isDanger
+        isLoading={deleting}
       />
     </div>
   );
