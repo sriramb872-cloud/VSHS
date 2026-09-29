@@ -27,6 +27,7 @@ def serialize_attendance_record(record: AttendanceRecord) -> Dict[str, Any]:
         "status": _status_value(record),
         "remarks": record.remarks,
         "recorded_by": record.recorded_by,
+        "academic_year_id": getattr(record, "academic_year_id", None),
     }
 
 

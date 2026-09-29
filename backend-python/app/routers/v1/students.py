@@ -1,9 +1,10 @@
 from datetime import date
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_roles, get_current_active_user
+from app.api.year_context import resolve_year_id
 from app.crud import student as student_crud, teacher as teacher_crud
 from app.models.student import Student
 from app.models.student_enrollment import StudentEnrollment
@@ -18,7 +19,7 @@ from app.validators.user import validate_password_strength, validate_email_forma
 router = APIRouter(prefix="/students", tags=["Students"])
 
 
-def serialize_student(s: Student) -> dict:
+def serialize_student(s: Student, academic_year_id: Optional[int] = None) -> dict:
     user = s.user
     age = None
     if s.date_of_birth:
@@ -29,25 +30,35 @@ def serialize_student(s: Student) -> dict:
     grade_name = None
     section_id = None
     section_name = None
-    academic_year_id = None
+    academic_year_id_out = None
     academic_year_name = None
     enrollment_date = None
     roll_no = s.roll_number
 
     if hasattr(s, "enrollments") and s.enrollments:
-        latest_enroll = sorted(s.enrollments, key=lambda e: e.id, reverse=True)[0]
-        section_id = latest_enroll.section_id
-        if latest_enroll.section:
-            section_name = getattr(latest_enroll.section, "name", None) or getattr(latest_enroll.section, "section_name", None)
-            grade_id = latest_enroll.section.grade_id
-            if latest_enroll.section.grade:
-                grade_name = getattr(latest_enroll.section.grade, "name", None) or getattr(latest_enroll.section.grade, "grade_name", None)
-        academic_year_id = latest_enroll.academic_year_id
-        if latest_enroll.academic_year:
-            academic_year_name = getattr(latest_enroll.academic_year, "name", None) or getattr(latest_enroll.academic_year, "year_name", None)
-        enrollment_date = latest_enroll.created_at.date() if latest_enroll.created_at else None
-        if not roll_no and latest_enroll.roll_number:
-            roll_no = latest_enroll.roll_number
+        enrollments = sorted(s.enrollments, key=lambda e: e.id, reverse=True)
+        # Prefer the placement in the academic year the caller is looking at
+        # so a student's class/section/roll columns follow the year selector;
+        # fall back to the most recent placement for callers that did not
+        # select a year.
+        chosen = enrollments[0]
+        if academic_year_id is not None:
+            for e in enrollments:
+                if e.academic_year_id == academic_year_id:
+                    chosen = e
+                    break
+        section_id = chosen.section_id
+        if chosen.section:
+            section_name = getattr(chosen.section, "name", None) or getattr(chosen.section, "section_name", None)
+            grade_id = chosen.section.grade_id
+            if chosen.section.grade:
+                grade_name = getattr(chosen.section.grade, "name", None) or getattr(chosen.section.grade, "grade_name", None)
+        academic_year_id_out = chosen.academic_year_id
+        if chosen.academic_year:
+            academic_year_name = getattr(chosen.academic_year, "name", None) or getattr(chosen.academic_year, "year_name", None)
+        enrollment_date = chosen.created_at.date() if chosen.created_at else None
+        if not roll_no and chosen.roll_number:
+            roll_no = chosen.roll_number
 
     attendance_pct = None
     if hasattr(s, "attendance_records") and s.attendance_records:
@@ -105,7 +116,7 @@ def serialize_student(s: Student) -> dict:
         "grade_name": grade_name,
         "section_id": section_id,
         "section_name": section_name,
-        "academic_year_id": academic_year_id,
+        "academic_year_id": academic_year_id_out,
         "academic_year_name": academic_year_name,
         "enrollment_date": enrollment_date,
         "attendance_percentage": attendance_pct,
@@ -167,6 +178,9 @@ def create_student_profile(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Selected section does not belong to your school.")
         if not academic_year_id:
             active_year = db.query(AcademicYear).filter(
+                AcademicYear.school_id == school_id,
+                AcademicYear.status == "ACTIVE",
+            ).first() or db.query(AcademicYear).filter(
                 AcademicYear.school_id == school_id,
                 AcademicYear.is_active == True,
             ).first()
@@ -319,10 +333,20 @@ def list_students(
     section_id: Optional[int] = Query(None),
     academic_year_id: Optional[int] = Query(None),
     school_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     user_role = str(current_user.role).upper()
+
+    # The master student list is deliberately NOT filtered by the selected
+    # year: students are global masters and must never disappear from
+    # pickers. The selected year only changes *which placement* is shown and,
+    # when a specific class roster is requested, which students belong to it.
+    if academic_year_id is None:
+        display_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+    else:
+        display_year_id = academic_year_id
 
     if user_role == "TEACHER":
         teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
@@ -342,8 +366,12 @@ def list_students(
             .join(Student.enrollments)
             .filter(StudentEnrollment.section_id == assigned_sec.id)
         )
+        if display_year_id is not None:
+            query = query.filter(
+                StudentEnrollment.academic_year_id == display_year_id
+            )
         students = query.offset(skip).limit(limit).all()
-        return [serialize_student(s) for s in students]
+        return [serialize_student(s, display_year_id) for s in students]
 
     target_school_id = current_user.school_id
     if user_role == "SUPER_ADMIN" and school_id:
@@ -356,17 +384,21 @@ def list_students(
     if target_school_id:
         query = query.filter(Student.school_id == target_school_id)
 
-    if section_id or grade_id or academic_year_id:
+    roster_view = bool(section_id or grade_id)
+    if roster_view or academic_year_id:
         query = query.join(Student.enrollments)
         if section_id:
             query = query.filter(StudentEnrollment.section_id == section_id)
         if academic_year_id:
             query = query.filter(StudentEnrollment.academic_year_id == academic_year_id)
+        elif roster_view and display_year_id is not None:
+            # A class roster is year-specific; the unpinned master list is not.
+            query = query.filter(StudentEnrollment.academic_year_id == display_year_id)
         if grade_id:
             query = query.join(StudentEnrollment.section).filter(Section.grade_id == grade_id)
 
     students = query.offset(skip).limit(limit).all()
-    return [serialize_student(s) for s in students]
+    return [serialize_student(s, display_year_id) for s in students]
 
 
 @router.get("/me", response_model=dict)

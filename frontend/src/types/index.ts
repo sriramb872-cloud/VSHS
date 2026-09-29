@@ -352,10 +352,23 @@ export interface AcademicYear {
   id: number;
   school_id: number;
   name: string;
+  /**
+   * Lifecycle status: UPCOMING -> ACTIVE -> CLOSED -> ARCHIVED.
+   * `is_active` is kept in sync with `status === 'ACTIVE'` by the API for
+   * older clients.
+   */
+  status: AcademicYearStatus;
   is_active: boolean;
   start_date?: string | null;
   end_date?: string | null;
+  created_at?: string | null;
 }
+
+/**
+ * Lifecycle statuses. Only one year per school may be ACTIVE; activating one
+ * closes the previous ACTIVE year. ARCHIVED years are read-only.
+ */
+export type AcademicYearStatus = 'UPCOMING' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
 
 export interface AcademicYearCreatePayload {
   name: string;

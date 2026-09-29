@@ -181,6 +181,15 @@ def apply_startup_schema_migrations() -> None:
 
 apply_startup_schema_migrations()
 
+# Academic Year lifecycle: backfills, index/constraint swaps and the
+# "one ACTIVE year per school" repair. Idempotent and fail-soft - see
+# app/core/academic_year_migrations.py.
+from app.core.academic_year_migrations import (  # noqa: E402
+    apply_academic_year_migrations,
+)
+
+apply_academic_year_migrations()
+
 app = FastAPI(
     title="SCHOLARIS School ERP API",
     description="Production-ready multi-school ERP backend for SCHOLARIS V1",

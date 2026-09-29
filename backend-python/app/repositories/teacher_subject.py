@@ -16,11 +16,26 @@ class TeacherSubjectRepository:
     def get_by_id(self, id_val: int) -> Optional[TeacherSubject]:
         return crud_teacher_subject.get(self.db, id_val)
 
-    def get_by_teacher(self, teacher_id: int, school_id: Optional[int] = None) -> List[TeacherSubject]:
-        return crud_teacher_subject.get_multi_by_teacher(self.db, teacher_id, school_id)
+    def get_by_teacher(
+        self,
+        teacher_id: int,
+        school_id: Optional[int] = None,
+        academic_year_id: Optional[int] = None,
+    ) -> List[TeacherSubject]:
+        return crud_teacher_subject.get_multi_by_teacher(
+            self.db, teacher_id, school_id, academic_year_id=academic_year_id
+        )
 
-    def get_by_school(self, school_id: int, skip: int = 0, limit: int = 100) -> List[TeacherSubject]:
-        return crud_teacher_subject.get_multi_by_school(self.db, school_id, skip, limit)
+    def get_by_school(
+        self,
+        school_id: int,
+        skip: int = 0,
+        limit: int = 100,
+        academic_year_id: Optional[int] = None,
+    ) -> List[TeacherSubject]:
+        return crud_teacher_subject.get_multi_by_school(
+            self.db, school_id, skip, limit, academic_year_id=academic_year_id
+        )
 
     def create(self, obj_in: TeacherSubjectCreate) -> TeacherSubject:
         return crud_teacher_subject.create(self.db, obj_in)

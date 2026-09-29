@@ -3,15 +3,17 @@ import React, { useEffect, useState } from 'react';
 import { reportCardService } from '../../services/reportcard';
 import { ReportCardResponse } from '../../types/reportcard';
 import { ReportCardView } from '../../components/reportcard';
-import { academicYearsService } from '../../services/academicYears';
+import { useAcademicYear } from '../../contexts/AcademicYearContext';
 
 export const TeacherReportCardsPage: React.FC = () => {
   const [reportCards, setReportCards] = useState<ReportCardResponse[]>([]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [currentRemarks, setCurrentRemarks] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [academicYearId, setAcademicYearId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // The header selector is the single source of truth for which year is on
+  // screen - no more "first active year we happen to receive" guessing.
+  const { selectedYear, selectedYearId, loading: yearsLoading, isHistorical } = useAcademicYear();
 
   // A student can have one report card per exam in a year, so the card must be
   // identified by student *and* exam - keying on student_id alone made the
@@ -19,32 +21,42 @@ export const TeacherReportCardsPage: React.FC = () => {
   const cardKey = (card: ReportCardResponse) => `${card.student_id}:${card.exam_id ?? 'year'}`;
 
   useEffect(() => {
+    if (yearsLoading || !selectedYear) return;
+    let cancelled = false;
     setLoading(true);
-    academicYearsService.listAcademicYears()
-      .then(years => {
-        const activeYear = years.find(year => year.is_active) || years[0];
-        setAcademicYearId(activeYear?.id ?? null);
-        return activeYear ? reportCardService.listReportCards({ academic_year_id: activeYear.id }) : null;
-      })
-      .then(data => {
-        if (!data) return;
-        setReportCards(data.items);        if (data.items.length > 0) {
+    setSelectedKey(null);
+    reportCardService
+      .listReportCards({ academic_year_id: selectedYear.id })
+      .then((data) => {
+        if (cancelled) return;
+        setReportCards(data.items);
+        if (data.items.length > 0) {
           setSelectedKey(cardKey(data.items[0]));
           setCurrentRemarks(data.items[0].teacher_remarks || '');
+        } else {
+          setCurrentRemarks('');
         }
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+      .catch((err) => {
+        if (!cancelled) setReportCards([]);
+        console.error(err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedYear?.id, yearsLoading]);
 
   const selectedReport = reportCards.find(r => cardKey(r) === selectedKey);
 
   const handleSaveRemarks = async () => {
-    if (!selectedReport || !academicYearId) return;
+    if (!selectedReport || !selectedYearId || isHistorical) return;
     try {
       const updated = await reportCardService.updateRemarks(
         selectedReport.student_id,
-        academicYearId,
+        selectedYearId,
         currentRemarks,
         selectedReport.exam_id ?? undefined
       );
@@ -65,8 +77,18 @@ export const TeacherReportCardsPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Manage Report Cards</h1>
-        <p className="text-sm text-gray-500 mt-1">Review system-generated report cards and update instructor remarks.</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Review system-generated report cards and update instructor remarks.
+          {selectedYear ? ` Showing ${selectedYear.name}.` : ''}
+        </p>
       </div>
+
+      {isHistorical && (
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+          You are viewing a {selectedYear?.status.toLowerCase()} academic year — report cards are
+          read-only.
+        </div>
+      )}
 
       {feedback && (
         <div
@@ -105,7 +127,7 @@ export const TeacherReportCardsPage: React.FC = () => {
       ) : selectedReport ? (
         <ReportCardView
           reportCard={{ ...selectedReport, teacher_remarks: currentRemarks }}
-          editableRemarks={true}
+          editableRemarks={!isHistorical}
           onRemarksChange={setCurrentRemarks}
           onSaveRemarks={handleSaveRemarks}
         />

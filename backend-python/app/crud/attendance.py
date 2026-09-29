@@ -14,28 +14,61 @@ _VALID_ATTENDANCE_FIELDS = {
     "status",
     "recorded_by",
     "remarks",
+    "academic_year_id",
 }
+
+
+def _year_filter(query, academic_year_id: Optional[int]):
+    """Filter by resolved academic year while keeping legacy NULL rows.
+
+    Rows written before ``attendance_records.academic_year_id`` existed have
+    NULL there. They are not wrong, just untagged, so they must remain
+    visible instead of vanishing when a year is selected.
+    """
+    if academic_year_id is None:
+        return query
+    return query.filter(
+        (Attendance.academic_year_id == academic_year_id)
+        | (Attendance.academic_year_id.is_(None))
+    )
 
 
 def get_attendance(db: Session, attendance_id: int) -> Optional[Attendance]:
     return db.query(Attendance).filter(Attendance.id == attendance_id).first()
 
 
-def get_student_attendance(db: Session, student_id: int) -> List[Attendance]:
-    return db.query(Attendance).filter(Attendance.student_id == student_id).all()
+def get_student_attendance(
+    db: Session, student_id: int, academic_year_id: Optional[int] = None
+) -> List[Attendance]:
+    query = db.query(Attendance).filter(Attendance.student_id == student_id)
+    query = _year_filter(query, academic_year_id)
+    return query.all()
 
 
-def get_attendance_by_date(db: Session, section_id: int, attendance_date: date) -> List[Attendance]:
-    return db.query(Attendance).filter(
+def get_attendance_by_date(
+    db: Session,
+    section_id: int,
+    attendance_date: date,
+    academic_year_id: Optional[int] = None,
+) -> List[Attendance]:
+    query = db.query(Attendance).filter(
         Attendance.section_id == section_id,
-        Attendance.date == attendance_date
-    ).all()
+        Attendance.date == attendance_date,
+    )
+    query = _year_filter(query, academic_year_id)
+    return query.all()
 
 
-def get_attendance_by_section(db: Session, section_id: int, skip: int = 0, limit: int = 100) -> List[Attendance]:
-    return db.query(Attendance).filter(
-        Attendance.section_id == section_id
-    ).offset(skip).limit(limit).all()
+def get_attendance_by_section(
+    db: Session,
+    section_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    academic_year_id: Optional[int] = None,
+) -> List[Attendance]:
+    query = db.query(Attendance).filter(Attendance.section_id == section_id)
+    query = _year_filter(query, academic_year_id)
+    return query.offset(skip).limit(limit).all()
 
 
 def create_attendance(db: Session, data: dict) -> Attendance:

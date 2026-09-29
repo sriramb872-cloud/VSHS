@@ -8,6 +8,20 @@ from app.models.teacher_subject import TeacherSubject
 from app.schemas.teacher_subject import TeacherSubjectCreate, TeacherSubjectUpdate
 
 
+def _year_filter(query, academic_year_id: Optional[int]):
+    """Scope an assignment query to a year, keeping untagged legacy rows.
+
+    ``academic_year_id IS NULL`` means the row predates the academic year
+    system; it applies to every year and must not disappear from lists.
+    """
+    if academic_year_id is None:
+        return query
+    return query.filter(
+        (TeacherSubject.academic_year_id == academic_year_id)
+        | (TeacherSubject.academic_year_id.is_(None))
+    )
+
+
 class CRUDTeacherSubject:
     def get(self, db: Session, id_val: int) -> Optional[TeacherSubject]:
         return db.query(TeacherSubject).filter(TeacherSubject.id == id_val).first()
@@ -24,19 +38,24 @@ class CRUDTeacherSubject:
         ).first()
 
     def get_multi_by_teacher(
-        self, db: Session, teacher_id: int, school_id: Optional[int] = None
+        self, db: Session, teacher_id: int, school_id: Optional[int] = None,
+        academic_year_id: Optional[int] = None,
     ) -> List[TeacherSubject]:
         query = db.query(TeacherSubject).filter(TeacherSubject.teacher_id == teacher_id)
         if school_id:
             query = query.filter(TeacherSubject.school_id == school_id)
+        query = _year_filter(query, academic_year_id)
         return query.all()
 
     def get_multi_by_school(
-        self, db: Session, school_id: int, skip: int = 0, limit: int = 100
+        self, db: Session, school_id: int, skip: int = 0, limit: int = 100,
+        academic_year_id: Optional[int] = None,
     ) -> List[TeacherSubject]:
-        return db.query(TeacherSubject).filter(
+        query = db.query(TeacherSubject).filter(
             TeacherSubject.school_id == school_id
-        ).offset(skip).limit(limit).all()
+        )
+        query = _year_filter(query, academic_year_id)
+        return query.offset(skip).limit(limit).all()
 
     def create(self, db: Session, obj_in: TeacherSubjectCreate) -> TeacherSubject:
         db_obj = TeacherSubject(
@@ -44,7 +63,8 @@ class CRUDTeacherSubject:
             subject_id=obj_in.subject_id,
             grade_id=obj_in.grade_id,
             section_id=obj_in.section_id,
-            school_id=obj_in.school_id
+            school_id=obj_in.school_id,
+            academic_year_id=getattr(obj_in, "academic_year_id", None),
         )
         db.add(db_obj)
         db.commit()

@@ -1,9 +1,10 @@
 # backend-python/app/routers/v1/teacher_subjects.py
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_roles, get_current_active_user
+from app.api.year_context import resolve_year_id
 from app.models.user import User
 from app.models.teacher import Teacher
 from app.models.subject import Subject
@@ -38,25 +39,35 @@ def _validate_assignment_relationships(db: Session, teacher_id: int, subject_id:
 @router.get("", response_model=List[TeacherSubjectResponse])
 def list_teacher_subjects(
     teacher_id: Optional[int] = Query(None, description="Filter by teacher"),
+    academic_year_id: Optional[int] = Query(None, description="Filter by academic year"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     service = TeacherSubjectService(db)
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
 
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+
     if teacher_id is not None:
-        return service.get_by_teacher(teacher_id, school_id=school_id)
+        return service.get_by_teacher(
+            teacher_id, school_id=school_id, academic_year_id=academic_year_id
+        )
 
     if not school_id:
         return []
-    return service.get_by_school(school_id, skip=skip, limit=limit)
+    return service.get_by_school(
+        school_id, skip=skip, limit=limit, academic_year_id=academic_year_id
+    )
 
 
 @router.post("", response_model=TeacherSubjectResponse, status_code=status.HTTP_201_CREATED)
 def assign_teacher_to_subject(
     payload: TeacherSubjectCreate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"])),
 ):
@@ -65,6 +76,23 @@ def assign_teacher_to_subject(
             **{**payload.model_dump(), "school_id": current_user.school_id}
         )
     _validate_assignment_relationships(db, payload.teacher_id, payload.subject_id, payload.school_id)
+
+    if payload.academic_year_id is None:
+        resolved = resolve_year_id(db, current_user, request, allow_all=False)
+        if resolved is not None:
+            payload = payload.model_copy(update={"academic_year_id": resolved})
+    if payload.academic_year_id is not None:
+        from app.models.academic_year import AcademicYear
+
+        year = db.query(AcademicYear).filter(
+            AcademicYear.id == payload.academic_year_id
+        ).first()
+        if year is None or year.school_id != payload.school_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Academic year does not belong to this school",
+            )
+
     service = TeacherSubjectService(db)
     return service.assign_teacher(payload)
 

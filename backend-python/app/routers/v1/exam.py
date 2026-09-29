@@ -1,9 +1,10 @@
 # app/routers/v1/exam.py
 from datetime import date
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from app.api import deps
+from app.api.year_context import resolve_year_id
 from app.schemas.exam import (
     ExamCreate,
     ExamListResponse,
@@ -34,11 +35,18 @@ def list_exams(
     teacher_id: Optional[int] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
     user_role = str(current_user.role).upper()
     school_id = current_user.school_id if user_role != "SUPER_ADMIN" else None
+
+    # Academic year selection: explicit query param -> X-Academic-Year-Id
+    # header -> the school's ACTIVE year. Only applied when the caller did not
+    # pin a year themselves.
+    if academic_year_id is None and user_role != "STUDENT":
+        academic_year_id = resolve_year_id(db, current_user, request)
 
     # If student, force published status only
     if user_role == "STUDENT":
@@ -47,16 +55,23 @@ def list_exams(
         from app.models.student_enrollment import StudentEnrollment
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
         if student:
-            enrollment = (
+            enrollment_query = (
                 db.query(StudentEnrollment)
                 .filter(StudentEnrollment.student_id == student.id)
-                .order_by(StudentEnrollment.id.desc())
-                .first()
             )
+            if academic_year_id is not None:
+                enrollment_query = enrollment_query.filter(
+                    StudentEnrollment.academic_year_id == academic_year_id
+                )
+            enrollment = enrollment_query.order_by(StudentEnrollment.id.desc()).first()
             if enrollment:
                 academic_year_id = enrollment.academic_year_id
                 section_id = enrollment.section_id
                 grade_id = enrollment.section.grade_id if enrollment.section else grade_id
+            elif academic_year_id is not None:
+                # Selected year has no placement for this student: nothing to
+                # show rather than silently leaking last year's exams.
+                return {"total": 0, "items": []}
 
     # If teacher and teacher_id not passed, can filter by teacher profile
     if user_role == "TEACHER" and teacher_id is None:
@@ -148,6 +163,7 @@ def publish_exam_marks(
 @router.post("/", response_model=ExamResponse, status_code=status.HTTP_201_CREATED)
 def create_exam(
     obj_in: ExamCreate,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
@@ -156,6 +172,15 @@ def create_exam(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="School context not found",
+        )
+    if getattr(obj_in, "academic_year_id", None) is None:
+        resolved = resolve_year_id(db, current_user, request, allow_all=False)
+        if resolved is not None:
+            obj_in = obj_in.model_copy(update={"academic_year_id": resolved})
+    if getattr(obj_in, "academic_year_id", None) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="academic_year_id is required: no academic year resolved",
         )
     result = ExamService.create_exam(
         db,

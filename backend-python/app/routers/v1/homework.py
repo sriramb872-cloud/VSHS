@@ -1,9 +1,10 @@
 # app/routers/v1/homework.py
 from datetime import date
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from app.api import deps
+from app.api.year_context import resolve_year_id
 from app.schemas.homework import (
     HomeworkCreate,
     HomeworkListResponse,
@@ -122,9 +123,12 @@ def list_homework(
     subject_id: Optional[int] = None,
     teacher_id: Optional[int] = None,
     due_date: Optional[date] = None,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request)
     items, total = HomeworkService.list_homework(
         db,
         skip=skip,
@@ -157,6 +161,7 @@ def get_homework_by_id(
 @router.post("/", response_model=HomeworkResponse, status_code=status.HTTP_201_CREATED)
 def create_homework(
     obj_in: HomeworkCreate,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_teacher),
 ):
@@ -187,6 +192,12 @@ def create_homework(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Teacher is not assigned to this subject/grade/section",
             )
+    if getattr(obj_in, "academic_year_id", None) is None:
+        # New homework must always belong to a year: explicit payload ->
+        # selected year (header) -> the school's ACTIVE year.
+        resolved = resolve_year_id(db, current_user, request, allow_all=False)
+        if resolved is not None:
+            obj_in = obj_in.model_copy(update={"academic_year_id": resolved})
     return HomeworkService.create_homework(
         db, obj_in=obj_in, teacher_id=teacher.id, school_id=school_id
     )

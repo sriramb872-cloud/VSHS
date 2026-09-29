@@ -24,12 +24,14 @@ import {
   Download,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAcademicYear } from '../contexts/AcademicYearContext';
 import { usePWA } from '../contexts/PWAContext';
 import BottomNav, { PrimaryNavItem } from '../components/shared/BottomNav';
 import { SecondaryNavItem } from '../components/shared/MoreSheet';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import GlobalSearch from '../components/shared/GlobalSearch';
 import UserAvatar from '../components/shared/UserAvatar';
+import AcademicYearSelector from '../components/shared/AcademicYearSelector';
 import { notificationService } from '../services/notification';
 
 export interface NavItem {
@@ -61,6 +63,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { logout, user } = useAuth();
+  const { selectedYearId, selectedYear, isHistorical } = useAcademicYear();
   // Reused PWA install plumbing (see src/contexts/PWAContext.tsx): it already
   // captures `beforeinstallprompt`, tracks standalone mode and owns the
   // single-use `prompt()`/`userChoice` cycle, so the dropdown only has to
@@ -232,7 +235,14 @@ export const AppShell: React.FC<AppShellProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {/*
+              Academic-year switcher. Selecting a year writes to localStorage
+              (which the axios interceptor reads), so every following API call
+              is scoped to it - and `<Outlet>` is re-keyed below, which unmounts
+              the current page so it refetches instead of showing stale rows.
+            */}
+            <AcademicYearSelector />
             <GlobalSearch role={role} />
             {notificationsPath && (
               <button
@@ -302,10 +312,25 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
         </header>
 
+        {/* Read-only banner when browsing a closed/archived year */}
+        {isHistorical && (
+          <div
+            role="status"
+            className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs font-semibold text-amber-800 flex items-center gap-2"
+          >
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+            Viewing historical year {selectedYear?.name} ({selectedYear?.status}) — data is read-only.
+          </div>
+        )}
+
         {/* Page Main Content Area */}
         <main className="flex-1 p-3.5 sm:p-5 md:p-6 max-w-7xl w-full mx-auto">
-          <ErrorBoundary resetKey={location.pathname}>
-            <Outlet />
+          {/* `key` forces a full remount when the year changes so no page can
+              keep showing rows fetched for the previous year. */}
+          <ErrorBoundary resetKey={`${location.pathname}:${selectedYearId ?? 'none'}`}>
+            <div key={selectedYearId ?? 'none'}>
+              <Outlet />
+            </div>
           </ErrorBoundary>
         </main>
       </div>

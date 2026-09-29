@@ -1,8 +1,9 @@
 # app/routers/v1/announcement.py
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session
 from app.api import deps
+from app.api.year_context import resolve_year_id
 from app.schemas.announcement import (
     AnnouncementResponse,
     AnnouncementListResponse,
@@ -26,9 +27,13 @@ def list_announcements(
     grade_id: Optional[int] = None,
     section_id: Optional[int] = None,
     status_filter: Optional[AnnouncementStatus] = Query(None, alias="status"),
+    academic_year_id: Optional[int] = None,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request)
     items, total = AnnouncementService.list_announcements(
         db,
         skip=skip,
@@ -37,6 +42,7 @@ def list_announcements(
         grade_id=grade_id,
         section_id=section_id,
         status=status_filter,
+        academic_year_id=academic_year_id,
         current_user=current_user,
     )
     return {"total": total, "items": items}
@@ -52,9 +58,14 @@ def get_announcement(
 @router.post("/", response_model=AnnouncementResponse, status_code=status.HTTP_201_CREATED)
 def create_announcement(
     obj_in: AnnouncementCreate,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_teacher),
 ):
+    if getattr(obj_in, "academic_year_id", None) is None:
+        resolved = resolve_year_id(db, current_user, request, allow_all=False)
+        if resolved is not None:
+            obj_in = obj_in.model_copy(update={"academic_year_id": resolved})
     result = AnnouncementService.create_announcement(db, obj_in=obj_in, current_user=current_user)
     write_audit_log(db, user_id=current_user.id, school_id=current_user.school_id, action="CREATE", resource_type="Announcement", resource_id=getattr(result, "id", None), details={"title": getattr(result, "title", "")})
     return result

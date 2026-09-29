@@ -1,5 +1,6 @@
 // frontend/src/services/api.ts
 import axios from 'axios';
+import { getStoredAcademicYearId } from './academicYearStorage';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -10,12 +11,39 @@ export const api = axios.create({
   },
 });
 
+/**
+ * Requests whose academic year must NOT follow the header selector.
+ *
+ * `/academic-years` itself (the school's year catalogue) would otherwise be
+ * asking the server for "the list of years in year X", which is meaningless.
+ * A call may also opt out explicitly by passing
+ * `headers: { 'X-Academic-Year-Id': '' }`.
+ */
+const YEAR_INDEPENDENT_URLS = [/\/academic-years(\/|\?|$)/];
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('scholaris_access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Attach the academic-year context so the backend can scope the request.
+    const url = config.url ?? '';
+    const optedOut =
+      YEAR_INDEPENDENT_URLS.some((pattern) => pattern.test(url)) ||
+      // An empty string is an explicit "do not send a year for this call".
+      config.headers['X-Academic-Year-Id'] === '';
+
+    if (optedOut) {
+      delete config.headers['X-Academic-Year-Id'];
+    } else if (!config.headers['X-Academic-Year-Id']) {
+      const yearId = getStoredAcademicYearId();
+      if (yearId) {
+        config.headers['X-Academic-Year-Id'] = String(yearId);
+      }
+    }
+
     return config;
   },
   (error) => {

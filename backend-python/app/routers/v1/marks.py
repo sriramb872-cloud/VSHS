@@ -1,8 +1,9 @@
 # app/routers/v1/marks.py
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from app.api import deps
+from app.api.year_context import resolve_year_id
 from app.crud import student as student_crud, teacher as teacher_crud
 from app.models.exam_subject import ExamSubject
 from app.models.section import Section
@@ -29,12 +30,17 @@ def list_marks(
     exam_id: Optional[int] = None,
     exam_subject_id: Optional[int] = None,
     student_id: Optional[int] = None,
+    academic_year_id: Optional[int] = None,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
     role = str(current_user.role).upper()
     exam_subject_ids: Optional[List[int]] = None
+
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request)
 
     if role == "STUDENT":
         student = student_crud.get_student_by_user_id(db, current_user.id)
@@ -116,16 +122,23 @@ def list_marks(
         student_id=student_id,
         school_id=school_id,
         exam_subject_ids=exam_subject_ids,
+        academic_year_id=academic_year_id,
     )
     return {"total": total, "items": items}
 
 
 @router.get("/my-marks", response_model=StudentMarksViewResponse)
 def get_my_marks(
+    academic_year_id: Optional[int] = None,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
-    return MarksService.get_student_marks_view(db, current_user=current_user)
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+    return MarksService.get_student_marks_view(
+        db, current_user=current_user, academic_year_id=academic_year_id
+    )
 
 
 @router.post("/submit", response_model=List[MarkResponse], status_code=status.HTTP_200_OK)

@@ -30,7 +30,13 @@ class CRUDHomework:
         if school_id is not None:
             query = query.filter(Homework.school_id == school_id)
         if academic_year_id is not None:
-            query = query.filter(Homework.academic_year_id == academic_year_id)
+            # NULL means a legacy row written before the academic year
+            # system existed; it belongs to "every year" and must stay
+            # visible instead of silently disappearing from the UI.
+            query = query.filter(
+                (Homework.academic_year_id == academic_year_id)
+                | (Homework.academic_year_id.is_(None))
+            )
         if grade_id is not None:
             query = query.filter(Homework.grade_id == grade_id)
         if section_id is not None:

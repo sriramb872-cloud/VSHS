@@ -22,12 +22,20 @@ class CRUDAnnouncement:
         grade_id: Optional[int] = None,
         section_id: Optional[int] = None,
         status: Optional[AnnouncementStatus] = None,
-        author_id: Optional[int] = None
+        author_id: Optional[int] = None,
+        academic_year_id: Optional[int] = None,
     ) -> Tuple[List[Announcement], int]:
         query = db.query(Announcement)
 
         if school_id is not None:
             query = query.filter(Announcement.school_id == school_id)
+        if academic_year_id is not None:
+            # NULL = legacy row written before the academic year system.
+            # It is not tied to a year, so it stays visible everywhere.
+            query = query.filter(
+                (Announcement.academic_year_id == academic_year_id)
+                | (Announcement.academic_year_id.is_(None))
+            )
         if audience is not None:
             query = query.filter(Announcement.target_role == str(audience))
         if status is not None:
@@ -49,6 +57,7 @@ class CRUDAnnouncement:
         school_id: Optional[int] = None,
         grade_id: Optional[int] = None,
         section_id: Optional[int] = None,
+        academic_year_id: Optional[int] = None,
     ) -> Tuple[List[Announcement], int]:
         from sqlalchemy import or_, and_
         query = db.query(Announcement).filter(
@@ -56,7 +65,11 @@ class CRUDAnnouncement:
         )
         if school_id is not None:
             query = query.filter(Announcement.school_id == school_id)
-
+        if academic_year_id is not None:
+            query = query.filter(
+                (Announcement.academic_year_id == academic_year_id)
+                | (Announcement.academic_year_id.is_(None))
+            )
         audience_conditions = [
             Announcement.target_role.in_(["School-Wide", "Students", "ALL"])
         ]

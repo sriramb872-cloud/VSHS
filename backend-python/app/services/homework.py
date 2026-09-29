@@ -1,6 +1,7 @@
 # app/services/homework.py
 from datetime import date
 from typing import List, Optional, Tuple
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.crud.homework import homework as crud_homework
 from app.schemas.homework import HomeworkCreate, HomeworkUpdate
@@ -97,10 +98,23 @@ class HomeworkService:
         if obj_in.academic_year_id is None:
             active_year = db.query(AcademicYear).filter(
                 AcademicYear.school_id == school_id,
-                AcademicYear.is_active == True,
+                AcademicYear.status == "ACTIVE",
+            ).first() or db.query(AcademicYear).filter(
+                AcademicYear.school_id == school_id,
+                AcademicYear.is_active == True,  # noqa: E712
             ).first()
             if active_year:
                 obj_in = obj_in.model_copy(update={"academic_year_id": active_year.id})
+        if obj_in.academic_year_id is None:
+            # Homework without a year can never be filtered or archived, so
+            # refuse instead of writing a row that leaks across all years.
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "academic_year_id is required: no academic year could be "
+                    "resolved for this school"
+                ),
+            )
         return crud_homework.create(db, obj_in=obj_in, teacher_id=teacher_id, school_id=school_id)
 
     @staticmethod

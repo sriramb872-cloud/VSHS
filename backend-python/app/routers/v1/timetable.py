@@ -1,8 +1,9 @@
 # app/routers/v1/timetable.py
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from app.api import deps
+from app.api.year_context import resolve_year_id
 from app.schemas.timetable import (
     TimetableResponse,
     TimetableListResponse,
@@ -26,6 +27,7 @@ def list_timetables(
     grade_id: Optional[int] = None,
     section_id: Optional[int] = None,
     teacher_id: Optional[int] = None,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
@@ -43,15 +45,22 @@ def list_timetables(
         from app.models.student_enrollment import StudentEnrollment
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
         if student:
-            enrollment = (
-                db.query(StudentEnrollment)
-                .filter(StudentEnrollment.student_id == student.id)
-                .order_by(StudentEnrollment.id.desc())
-                .first()
+            enrollment_query = db.query(StudentEnrollment).filter(
+                StudentEnrollment.student_id == student.id
             )
+            if academic_year_id is None:
+                resolved = resolve_year_id(db, current_user, request)
+                if resolved is not None:
+                    enrollment_query = enrollment_query.filter(
+                        StudentEnrollment.academic_year_id == resolved
+                    )
+            enrollment = enrollment_query.order_by(StudentEnrollment.id.desc()).first()
             if enrollment:
                 section_id = enrollment.section_id
                 academic_year_id = enrollment.academic_year_id
+
+    if academic_year_id is None and role != "STUDENT":
+        academic_year_id = resolve_year_id(db, current_user, request)
 
     items, total = TimetableService.list_timetables(
         db,
@@ -80,12 +89,17 @@ def get_timetable(
 @router.post("/", response_model=TimetableResponse, status_code=status.HTTP_201_CREATED)
 def create_timetable(
     obj_in: TimetableCreate,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_principal),
 ):
     school_id = current_user.school_id
     if not school_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="School context missing")
+    if getattr(obj_in, "academic_year_id", None) is None:
+        resolved = resolve_year_id(db, current_user, request, allow_all=False)
+        if resolved is not None:
+            obj_in = obj_in.model_copy(update={"academic_year_id": resolved})
     res = TimetableService.create_timetable(db, obj_in=obj_in, school_id=school_id)
     write_audit_log(db, user_id=current_user.id, school_id=school_id, action="CREATE", resource_type="Timetable", resource_id=res["id"], details={})
     return res

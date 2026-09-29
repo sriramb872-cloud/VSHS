@@ -13,6 +13,7 @@ class TeacherSubjectBase(BaseModel):
     grade_id: int
     section_id: int
     school_id: int
+    academic_year_id: Optional[int] = None
 
 
 class TeacherSubjectCreate(TeacherSubjectBase):
@@ -24,6 +25,7 @@ class TeacherSubjectUpdate(BaseModel):
     subject_id: Optional[int] = None
     grade_id: Optional[int] = None
     section_id: Optional[int] = None
+    academic_year_id: Optional[int] = None
 
 
 class TeacherSubjectResponse(TeacherSubjectBase):

@@ -147,24 +147,6 @@ class TimetableService:
         if not teacher:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Teacher does not belong to this school")
 
-        # Prevent double-booking: same teacher, same day, overlapping time window,
-        # regardless of section Ã¢â‚¬â€ a teacher physically cannot teach two classes at once.
-        day = data.get("day_of_week")
-        conflict = db.query(Timetable).filter(
-            Timetable.teacher_id == data["teacher_id"],
-            Timetable.day_of_week == day,
-            Timetable.start_time < end_t,
-            Timetable.end_time > start_t,
-        ).first()
-        if conflict:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"This teacher is already scheduled on {day} from "
-                    f"{conflict.start_time} to {conflict.end_time} (section {conflict.section_id})."
-                ),
-            )
-
         # Resolve academic_year_id if missing, but never invent a foreign key.
         if not data.get("academic_year_id"):
             ay = db.query(AcademicYear).filter(
@@ -181,6 +163,44 @@ class TimetableService:
         ).first()
         if not academic_year:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Academic year does not belong to this school")
+
+        # Prevent double-booking *within the same academic year*. A teacher
+        # teaching the same slot last year must not block this year's grid.
+        day = data.get("day_of_week")
+        conflict = db.query(Timetable).filter(
+            Timetable.school_id == school_id,
+            Timetable.academic_year_id == data["academic_year_id"],
+            Timetable.teacher_id == data["teacher_id"],
+            Timetable.day_of_week == day,
+            Timetable.start_time < end_t,
+            Timetable.end_time > start_t,
+        ).first()
+        if conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"This teacher is already scheduled on {day} from "
+                    f"{conflict.start_time} to {conflict.end_time} (section {conflict.section_id})."
+                ),
+            )
+
+        # Two subjects cannot occupy the same section/period in the same year.
+        section_conflict = db.query(Timetable).filter(
+            Timetable.school_id == school_id,
+            Timetable.academic_year_id == data["academic_year_id"],
+            Timetable.section_id == data["section_id"],
+            Timetable.day_of_week == day,
+            Timetable.start_time < end_t,
+            Timetable.end_time > start_t,
+        ).first()
+        if section_conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"This section already has a class on {day} from "
+                    f"{section_conflict.start_time} to {section_conflict.end_time}."
+                ),
+            )
 
         created = crud_timetable.create(db, school_id=school_id, obj_in=data)
         return serialize_timetable(created)
@@ -241,8 +261,11 @@ class TimetableService:
 
         effective_teacher_id = data.get("teacher_id", timetable.teacher_id)
         effective_day = data.get("day_of_week", timetable.day_of_week)
+        effective_year_id = data.get("academic_year_id", timetable.academic_year_id)
         conflict = db.query(Timetable).filter(
             Timetable.id != timetable_id,
+            Timetable.school_id == timetable.school_id,
+            Timetable.academic_year_id == effective_year_id,
             Timetable.teacher_id == effective_teacher_id,
             Timetable.day_of_week == effective_day,
             Timetable.start_time < end_t,
@@ -254,6 +277,23 @@ class TimetableService:
                 detail=(
                     f"This teacher is already scheduled on {effective_day} from "
                     f"{conflict.start_time} to {conflict.end_time} (section {conflict.section_id})."
+                ),
+            )
+        section_conflict = db.query(Timetable).filter(
+            Timetable.id != timetable_id,
+            Timetable.school_id == timetable.school_id,
+            Timetable.academic_year_id == effective_year_id,
+            Timetable.section_id == effective_section_id,
+            Timetable.day_of_week == effective_day,
+            Timetable.start_time < end_t,
+            Timetable.end_time > start_t,
+        ).first()
+        if section_conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"This section already has a class on {effective_day} from "
+                    f"{section_conflict.start_time} to {section_conflict.end_time}."
                 ),
             )
         updated = crud_timetable.update(db, db_obj=timetable, obj_in=data)

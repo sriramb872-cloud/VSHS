@@ -29,11 +29,13 @@ CREATE TABLE `academic_years` (
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `is_current` tinyint(1) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'UPCOMING',
   `created_at` datetime NOT NULL,
   PRIMARY KEY (`academic_year_id`),
   UNIQUE KEY `uq_school_academic_year` (`school_id`,`year_name`),
   KEY `ix_academic_years_academic_year_id` (`academic_year_id`),
   KEY `ix_academic_years_school_id` (`school_id`),
+  KEY `ix_academic_years_status` (`status`),
   CONSTRAINT `academic_years_ibfk_1` FOREIGN KEY (`school_id`) REFERENCES `schools` (`school_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -83,16 +85,21 @@ CREATE TABLE `attendance_records` (
   `student_id` int NOT NULL,
   `section_id` int NOT NULL,
   `date` date NOT NULL,
-  `status` enum('PRESENT','ABSENT','LATE','LEAVE') NOT NULL,
+  `status` enum('PRESENT','ABSENT','LATE','LEAVE','VOID') NOT NULL,
   `recorded_by` int DEFAULT NULL,
+  `remarks` varchar(255) DEFAULT NULL,
+  `academic_year_id` int DEFAULT NULL,
   PRIMARY KEY (`attendance_id`),
   UNIQUE KEY `uq_student_attendance_date` (`student_id`,`date`),
   KEY `ix_attendance_records_attendance_id` (`attendance_id`),
   KEY `ix_attendance_records_section_id` (`section_id`),
   KEY `ix_attendance_records_student_id` (`student_id`),
   KEY `ix_attendance_records_date` (`date`),
+  KEY `ix_attendance_records_academic_year_id` (`academic_year_id`),
+  KEY `idx_attendance_year_section_date` (`academic_year_id`,`section_id`,`date`),
   CONSTRAINT `attendance_records_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE,
-  CONSTRAINT `attendance_records_ibfk_2` FOREIGN KEY (`section_id`) REFERENCES `sections` (`section_id`) ON DELETE CASCADE
+  CONSTRAINT `attendance_records_ibfk_2` FOREIGN KEY (`section_id`) REFERENCES `sections` (`section_id`) ON DELETE CASCADE,
+  CONSTRAINT `attendance_records_ibfk_3` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`academic_year_id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -572,6 +579,7 @@ CREATE TABLE `student_enrollments` (
   `created_at` datetime NOT NULL,
   PRIMARY KEY (`enrollment_id`),
   UNIQUE KEY `uq_academic_section_roll` (`academic_year_id`,`section_id`,`roll_number`),
+  UNIQUE KEY `uq_student_year_enrollment` (`student_id`,`academic_year_id`),
   KEY `ix_student_enrollments_student_id` (`student_id`),
   KEY `ix_student_enrollments_academic_year_id` (`academic_year_id`),
   KEY `ix_student_enrollments_section_id` (`section_id`),
@@ -675,10 +683,11 @@ CREATE TABLE `teacher_subjects` (
   `grade_id` int NOT NULL,
   `section_id` int NOT NULL,
   `school_id` int NOT NULL,
+  `academic_year_id` int DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT (now()),
   `updated_at` datetime NOT NULL DEFAULT (now()),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_teacher_subject_grade_section_school` (`teacher_id`,`subject_id`,`grade_id`,`section_id`,`school_id`),
+  UNIQUE KEY `uq_teacher_subject_year_class_subject` (`school_id`,`academic_year_id`,`grade_id`,`section_id`,`subject_id`),
   KEY `ix_teacher_subjects_section_id` (`section_id`),
   KEY `ix_teacher_subjects_grade_id` (`grade_id`),
   KEY `ix_teacher_subjects_subject_id` (`subject_id`),
@@ -687,11 +696,13 @@ CREATE TABLE `teacher_subjects` (
   KEY `idx_class_subject_assignment` (`grade_id`,`section_id`,`subject_id`),
   KEY `ix_teacher_subjects_school_id` (`school_id`),
   KEY `ix_teacher_subjects_id` (`id`),
+  KEY `ix_teacher_subjects_academic_year_id` (`academic_year_id`),
   CONSTRAINT `teacher_subjects_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`teacher_id`) ON DELETE CASCADE,
   CONSTRAINT `teacher_subjects_ibfk_2` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`subject_id`) ON DELETE CASCADE,
   CONSTRAINT `teacher_subjects_ibfk_3` FOREIGN KEY (`grade_id`) REFERENCES `grades` (`grade_id`) ON DELETE CASCADE,
   CONSTRAINT `teacher_subjects_ibfk_4` FOREIGN KEY (`section_id`) REFERENCES `sections` (`section_id`) ON DELETE CASCADE,
-  CONSTRAINT `teacher_subjects_ibfk_5` FOREIGN KEY (`school_id`) REFERENCES `schools` (`school_id`) ON DELETE CASCADE
+  CONSTRAINT `teacher_subjects_ibfk_5` FOREIGN KEY (`school_id`) REFERENCES `schools` (`school_id`) ON DELETE CASCADE,
+  CONSTRAINT `teacher_subjects_ibfk_6` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`academic_year_id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

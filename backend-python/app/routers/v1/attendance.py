@@ -1,12 +1,14 @@
 # backend-python/app/routers/v1/attendance.py
 from typing import List, Optional
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_roles, get_current_active_user
+from app.api.year_context import resolve_year_id, get_school_active_year
 from app.crud import attendance as att_crud, student as student_crud, teacher as teacher_crud
+from app.models.academic_year import AcademicYear
 from app.models.attendance import Attendance
 from app.models.section import Section
 from app.models.teacher_subject import TeacherSubject
@@ -17,6 +19,92 @@ from app.serializers.attendance import serialize_attendance_record
 from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
+
+
+def resolve_attendance_year_id(
+    db: Session,
+    current_user: User,
+    *,
+    student_id: Optional[int],
+    attendance_date: Optional[date],
+    explicit_year_id: Optional[int] = None,
+    request=None,
+) -> Optional[int]:
+    """Which academic year an attendance record belongs to.
+
+    Order: explicit id -> the year of an enrollment that contains the
+    attendance date -> the student's most recent enrollment -> the school's
+    ACTIVE year -> NULL (only if the school has no year at all).
+    """
+    if explicit_year_id is not None:
+        return explicit_year_id
+
+    if student_id:
+        from app.models.student_enrollment import StudentEnrollment
+
+        query = db.query(StudentEnrollment).filter(
+            StudentEnrollment.student_id == student_id
+        )
+        if attendance_date is not None:
+            dated = (
+                query.join(
+                    AcademicYear,
+                    AcademicYear.id == StudentEnrollment.academic_year_id,
+                )
+                .filter(
+                    AcademicYear.start_date <= attendance_date,
+                    AcademicYear.end_date >= attendance_date,
+                )
+                .order_by(AcademicYear.start_date.desc())
+                .first()
+            )
+            if dated is not None:
+                return dated.academic_year_id
+        latest = query.order_by(StudentEnrollment.id.desc()).first()
+        if latest is not None:
+            return latest.academic_year_id
+
+    resolved = resolve_year_id(db, current_user, request, allow_all=False)
+    if resolved is not None:
+        return resolved
+
+    active = get_school_active_year(db, current_user.school_id)
+    return active.id if active is not None else None
+
+
+def _assert_year_enrollment(
+    db: Session, student_id: int, section_id: int, academic_year_id: Optional[int]
+) -> None:
+    """A record can only exist for a student actually placed in that year.
+
+    Legacy rows (``academic_year_id`` NULL) skip this check - we never retro
+    -actively invalidate history we cannot verify.
+    """
+    if academic_year_id is None:
+        return
+    from app.models.student_enrollment import StudentEnrollment
+
+    enrolled = (
+        db.query(StudentEnrollment)
+        .filter(
+            StudentEnrollment.student_id == student_id,
+            StudentEnrollment.academic_year_id == academic_year_id,
+        )
+        .first()
+    )
+    if enrolled is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Student is not enrolled in the selected academic year",
+        )
+    if enrolled.section_id != section_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Student's section for the selected academic year does not "
+                "match the attendance section"
+            ),
+        )
 
 
 def _assert_teacher_owns_section(db: Session, current_user: User, section_id: Optional[int]):
@@ -94,7 +182,13 @@ def _assert_section_access(db: Session, current_user: User, section_id: int):
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
 
-def _assert_attendance_write_allowed(db: Session, current_user: User, section_id: Optional[int], student_id: Optional[int] = None):
+def _assert_attendance_write_allowed(
+    db: Session,
+    current_user: User,
+    section_id: Optional[int],
+    student_id: Optional[int] = None,
+    academic_year_id: Optional[int] = None,
+):
     role = str(current_user.role).upper()
     if not section_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Section ID is required")
@@ -116,14 +210,10 @@ def _assert_attendance_write_allowed(db: Session, current_user: User, section_id
         student = student_crud.get_student(db, student_id)
         if not student or student.school_id != section.school_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student does not belong to this section's school")
-        # also confirm active enrollment in this section
-        from app.models.student_enrollment import StudentEnrollment
-        enrolled = db.query(StudentEnrollment).filter(
-            StudentEnrollment.student_id == student_id,
-            StudentEnrollment.section_id == section_id,
-        ).first()
-        if not enrolled:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student is not enrolled in this section")
+        # The placement must exist in the academic year the record is being
+        # written for - "enrolled in this section at some point" is not enough
+        # once more than one year of data exists.
+        _assert_year_enrollment(db, student_id, section_id, academic_year_id)
 
 
 @router.get("", response_model=List[dict])
@@ -131,17 +221,21 @@ def get_attendance(
     section_id: Optional[int] = None,
     attendance_date: Optional[date] = None,
     student_id: Optional[int] = None,
+    academic_year_id: Optional[int] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     role = str(current_user.role).upper()
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
     if role == "STUDENT":
         student = student_crud.get_student_by_user_id(db, current_user.id)
         if not student:
             return []
-        items = att_crud.get_student_attendance(db, student.id)
+        items = att_crud.get_student_attendance(db, student.id, academic_year_id)
     elif student_id:
         student = student_crud.get_student(db, student_id)
         if not student:
@@ -150,13 +244,13 @@ def get_attendance(
             _assert_teacher_can_view_student(db, current_user, student)
         elif role != "SUPER_ADMIN" and student.school_id != current_user.school_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-        items = att_crud.get_student_attendance(db, student_id)
+        items = att_crud.get_student_attendance(db, student_id, academic_year_id)
     elif section_id and attendance_date:
         _assert_section_access(db, current_user, section_id)
-        items = att_crud.get_attendance_by_date(db, section_id, attendance_date)
+        items = att_crud.get_attendance_by_date(db, section_id, attendance_date, academic_year_id)
     elif section_id:
         _assert_section_access(db, current_user, section_id)
-        items = att_crud.get_attendance_by_section(db, section_id, skip, limit)
+        items = att_crud.get_attendance_by_section(db, section_id, skip, limit, academic_year_id)
     else:
         items = []
 
@@ -201,6 +295,8 @@ def attendance_report_summary(
     end_date: date = Query(..., description="Last day of the report window (inclusive)"),
     grade_id: Optional[int] = Query(None, ge=1),
     section_id: Optional[int] = Query(None, ge=1),
+    academic_year_id: Optional[int] = Query(None, ge=1),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"])),
 ):
@@ -209,6 +305,9 @@ def attendance_report_summary(
     Every number below is a COUNT over `attendance_records`; nothing is
     estimated. `attendance_rate` is present / marked where marked excludes VOID.
     """
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+
     if end_date < start_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -234,6 +333,7 @@ def attendance_report_summary(
                     "end_date": end_date.isoformat(),
                     "grade_id": grade_id,
                     "section_id": section_id,
+                    "academic_year_id": academic_year_id,
                 },
                 "totals": {s: 0 for s in _REPORT_STATUSES}
                 | {"marked": 0, "students": 0, "attendance_rate": 0.0},
@@ -281,6 +381,7 @@ def attendance_report_summary(
                 "end_date": end_date.isoformat(),
                 "grade_id": grade_id,
                 "section_id": section_id,
+                "academic_year_id": academic_year_id,
             },
             "totals": {s: 0 for s in _REPORT_STATUSES}
             | {"marked": 0, "students": 0, "attendance_rate": 0.0},
@@ -288,6 +389,13 @@ def attendance_report_summary(
             "sections": [],
             "students": [],
         }
+
+    year_filter = []
+    if academic_year_id is not None:
+        year_filter = [
+            (Attendance.academic_year_id == academic_year_id)
+            | (Attendance.academic_year_id.is_(None))
+        ]
 
     rows = (
         db.query(
@@ -300,6 +408,7 @@ def attendance_report_summary(
             Attendance.section_id.in_(section_ids),
             Attendance.date >= start_date,
             Attendance.date <= end_date,
+            *year_filter,
         )
         .group_by(Attendance.date, Attendance.section_id, Attendance.status)
         .all()
@@ -336,6 +445,7 @@ def attendance_report_summary(
             Attendance.section_id.in_(section_ids),
             Attendance.date >= start_date,
             Attendance.date <= end_date,
+            *year_filter,
         )
         .group_by(Attendance.student_id, Attendance.section_id, Attendance.status)
         .all()
@@ -367,12 +477,15 @@ def attendance_report_summary(
     from app.models.student import Student
     from app.models.student_enrollment import StudentEnrollment
 
-    enrolled_rows = (
+    enrolled_query = (
         db.query(StudentEnrollment.section_id, func.count(func.distinct(StudentEnrollment.student_id)))
         .filter(StudentEnrollment.section_id.in_(section_ids))
-        .group_by(StudentEnrollment.section_id)
-        .all()
     )
+    if academic_year_id is not None:
+        enrolled_query = enrolled_query.filter(
+            StudentEnrollment.academic_year_id == academic_year_id
+        )
+    enrolled_rows = enrolled_query.group_by(StudentEnrollment.section_id).all()
     enrolled_by_section = {sid: n for sid, n in enrolled_rows}
 
     # Distinct students that actually have at least one record in this section.
@@ -441,6 +554,7 @@ def attendance_report_summary(
             "end_date": end_date.isoformat(),
             "grade_id": grade_id,
             "section_id": section_id,
+            "academic_year_id": academic_year_id,
         },
         "totals": {
             **totals,
@@ -457,6 +571,8 @@ def attendance_report_summary(
 @router.get("/student/{student_id}", response_model=dict)
 def get_student_attendance_summary(
     student_id: int,
+    academic_year_id: Optional[int] = None,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -473,7 +589,9 @@ def get_student_attendance_summary(
     elif role != "SUPER_ADMIN" and student.school_id != current_user.school_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    records = att_crud.get_student_attendance(db, student_id)
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+    records = att_crud.get_student_attendance(db, student_id, academic_year_id)
     total_days = len(records)
     present_days = sum(1 for r in records if str(getattr(r, "status", "")).upper() == "PRESENT")
     absent_days = sum(1 for r in records if str(getattr(r, "status", "")).upper() == "ABSENT")
@@ -504,11 +622,23 @@ def get_student_attendance_summary(
 @router.post("/", response_model=dict, status_code=status.HTTP_201_CREATED)
 def mark_attendance(
     payload: AttendanceCreate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"]))
 ):
-    _assert_attendance_write_allowed(db, current_user, payload.section_id, payload.student_id)
     data = payload.model_dump()
+    year_id = resolve_attendance_year_id(
+        db,
+        current_user,
+        student_id=data.get("student_id"),
+        attendance_date=data.get("date"),
+        explicit_year_id=data.get("academic_year_id"),
+        request=request,
+    )
+    data["academic_year_id"] = year_id
+    _assert_attendance_write_allowed(
+        db, current_user, data.get("section_id"), data.get("student_id"), year_id
+    )
     if not data.get("recorded_by"):
         data["recorded_by"] = current_user.id
     item = att_crud.create_attendance(db, data)
@@ -518,13 +648,34 @@ def mark_attendance(
 @router.post("/bulk", response_model=List[dict], status_code=status.HTTP_201_CREATED)
 def mark_bulk_attendance(
     payload: List[dict],
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL", "TEACHER"]))
 ):
     for entry in payload:
         sid = entry.get("section_id") if isinstance(entry, dict) else getattr(entry, "section_id", None)
         stid = entry.get("student_id") if isinstance(entry, dict) else getattr(entry, "student_id", None)
-        _assert_attendance_write_allowed(db, current_user, sid, stid)
+        entry_date = entry.get("date") if isinstance(entry, dict) else getattr(entry, "date", None)
+        if isinstance(entry, dict):
+            explicit_year = entry.get("academic_year_id")
+        else:
+            explicit_year = getattr(entry, "academic_year_id", None)
+        year_id = resolve_attendance_year_id(
+            db,
+            current_user,
+            student_id=stid,
+            attendance_date=entry_date,
+            explicit_year_id=explicit_year,
+            request=request,
+        )
+        if isinstance(entry, dict):
+            entry["academic_year_id"] = year_id
+        else:
+            try:
+                entry.academic_year_id = year_id
+            except Exception:  # noqa: BLE001
+                pass
+        _assert_attendance_write_allowed(db, current_user, sid, stid, year_id)
         # Validate the status up front. This endpoint takes raw dicts, so an
         # unknown status used to reach MySQL and fail as a 500.
         raw_status = entry.get("status") if isinstance(entry, dict) else getattr(entry, "status", None)

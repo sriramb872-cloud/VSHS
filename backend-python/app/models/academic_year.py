@@ -14,6 +14,10 @@ class AcademicYear(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     is_active = Column("is_current", Boolean, default=False, nullable=False)
+    # Lifecycle status: UPCOMING / ACTIVE / CLOSED / ARCHIVED.
+    # `is_active` is kept in sync for backwards compatibility but `status` is
+    # the source of truth for lifecycle state (one ACTIVE per school).
+    status = Column(String(20), default="UPCOMING", nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     school = relationship("School", back_populates="academic_years")

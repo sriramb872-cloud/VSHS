@@ -67,4 +67,7 @@ class StudentEnrollment(Base):
 
     __table_args__ = (
         UniqueConstraint("academic_year_id", "section_id", "roll_number", name="uq_academic_section_roll"),
+        # A student can be placed in only one section per academic year
+        # (promotion 9-A -> 10-A is a *different* year, so it is allowed).
+        UniqueConstraint("student_id", "academic_year_id", name="uq_student_year_enrollment"),
     )

@@ -1,9 +1,10 @@
 # backend-python/app/routers/v1/student_enrollments.py
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_roles, get_current_active_user
+from app.api.year_context import resolve_year_id
 from app.crud import student_enrollment as se_crud, teacher as teacher_crud, student as student_crud
 from app.models.student_enrollment import StudentEnrollment
 from app.models.section import Section
@@ -59,10 +60,19 @@ def list_enrollments(
     school_id: Optional[int] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     user_role = str(current_user.role).upper()
+
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+        if academic_year_id is None and user_role != "SUPER_ADMIN":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="academic_year_id is required: no academic year resolved",
+            )
 
     if user_role == "TEACHER":
         teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)

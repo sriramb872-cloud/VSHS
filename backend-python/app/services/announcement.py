@@ -36,29 +36,35 @@ class AnnouncementService:
         section_id: Optional[int] = None,
         status: Optional[AnnouncementStatus] = None,
         author_id: Optional[int] = None,
+        academic_year_id: Optional[int] = None,
         current_user: Optional[User] = None,
     ) -> Tuple[List[Announcement], int]:
         school_id = current_user.school_id if (current_user and str(current_user.role).upper() != "SUPER_ADMIN") else None
         user_role = str(current_user.role).upper() if current_user else None
 
         if user_role == "STUDENT":
-            # Force published and resolve student's current grade/section
+            # Force published and resolve student's grade/section for the
+            # selected academic year (falling back to their latest placement).
             from app.models.student import Student
             from app.models.student_enrollment import StudentEnrollment
             student = db.query(Student).filter(Student.user_id == current_user.id).first()
             enrollment = None
             if student:
-                enrollment = (
+                enrollment_query = (
                     db.query(StudentEnrollment)
                     .filter(StudentEnrollment.student_id == student.id)
-                    .order_by(StudentEnrollment.id.desc())
-                    .first()
                 )
+                if academic_year_id is not None:
+                    enrollment_query = enrollment_query.filter(
+                        StudentEnrollment.academic_year_id == academic_year_id
+                    )
+                enrollment = enrollment_query.order_by(StudentEnrollment.id.desc()).first()
             student_grade_id = enrollment.section.grade_id if (enrollment and enrollment.section) else None
             student_section_id = enrollment.section_id if enrollment else None
             return crud_announcement.get_multi_for_student(
                 db, skip=skip, limit=limit, school_id=school_id,
                 grade_id=student_grade_id, section_id=student_section_id,
+                academic_year_id=academic_year_id,
             )
 
         return crud_announcement.get_multi(
@@ -71,6 +77,7 @@ class AnnouncementService:
             section_id=section_id,
             status=status,
             author_id=author_id,
+            academic_year_id=academic_year_id,
         )
 
     @staticmethod
@@ -135,6 +142,26 @@ class AnnouncementService:
                 ay = db.query(AcademicYear).filter(AcademicYear.id == obj_in.academic_year_id, AcademicYear.school_id == school_id).first()
                 if not ay:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Academic year does not belong to this school")
+            else:
+                # Never store a year-less announcement for a new record:
+                # fall back to the school's ACTIVE year.
+                active_year = (
+                    db.query(AcademicYear)
+                    .filter(
+                        AcademicYear.school_id == school_id,
+                        AcademicYear.status == "ACTIVE",
+                    )
+                    .first()
+                )
+                if active_year is None:
+                    active_year = (
+                        db.query(AcademicYear)
+                        .filter(AcademicYear.school_id == school_id)
+                        .order_by(AcademicYear.start_date.desc())
+                        .first()
+                    )
+                if active_year is not None:
+                    obj_in = obj_in.model_copy(update={"academic_year_id": active_year.id})
 
         created = crud_announcement.create(db, obj_in=obj_in, author_id=current_user.id, school_id=school_id)
 

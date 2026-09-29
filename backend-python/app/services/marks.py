@@ -381,6 +381,7 @@ class MarksService:
         student_id: Optional[int] = None,
         school_id: Optional[int] = None,
         exam_subject_ids: Optional[List[int]] = None,
+        academic_year_id: Optional[int] = None,
     ) -> Tuple[List[MarkResponse], int]:
         query = db.query(Marks)
 
@@ -393,6 +394,14 @@ class MarksService:
         if exam_id is not None:
             query = query.join(ExamSubject, Marks.exam_subject_id == ExamSubject.id).filter(
                 ExamSubject.exam_id == exam_id
+            )
+        if academic_year_id is not None:
+            # Marks inherit the year through Marks -> ExamSubject -> Exam.
+            # No denormalised year column on `marks` itself.
+            query = (
+                query.join(ExamSubject, Marks.exam_subject_id == ExamSubject.id)
+                .join(Exam, ExamSubject.exam_id == Exam.id)
+                .filter(Exam.academic_year_id == academic_year_id)
             )
         if student_id is not None:
             query = query.filter(Marks.student_id == student_id)
@@ -432,13 +441,34 @@ class MarksService:
         return responses, total
 
     @staticmethod
-    def get_student_marks_view(db: Session, current_user: User) -> StudentMarksViewResponse:
+    def get_student_marks_view(
+        db: Session,
+        current_user: User,
+        academic_year_id: Optional[int] = None,
+    ) -> StudentMarksViewResponse:
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
         if not student:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found")
 
-        # Query only published exams
-        published_exams = db.query(Exam).filter(Exam.status == "PUBLISHED").all()
+        # Always scope to the student's own school - the previous query was
+        # platform-wide and leaked every school's published exams.
+        exam_query = db.query(Exam).filter(
+            Exam.status == "PUBLISHED",
+            Exam.school_id == student.school_id,
+        )
+        if academic_year_id is None:
+            # Default to the year the student is placed in (latest placement)
+            # so a student never sees last year's marks by accident.
+            enrollment = (
+                db.query(StudentEnrollment)
+                .filter(StudentEnrollment.student_id == student.id)
+                .order_by(StudentEnrollment.id.desc())
+                .first()
+            )
+            academic_year_id = enrollment.academic_year_id if enrollment else None
+        if academic_year_id is not None:
+            exam_query = exam_query.filter(Exam.academic_year_id == academic_year_id)
+        published_exams = exam_query.all()
         results: List[StudentMarksViewItem] = []
 
         for ex in published_exams:

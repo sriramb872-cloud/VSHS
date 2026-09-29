@@ -18,6 +18,7 @@ const navItems: NavItem[] = [
   { label: 'Homework', path: '/principal/homework', icon: <BookOpen className="w-4 h-4" /> },
   { label: 'Announcements', path: '/principal/announcements', icon: <Bell className="w-4 h-4" /> },
   { label: 'Calendar', path: '/principal/calendar', icon: <CalendarDays className="w-4 h-4" /> },
+  { label: 'Academic Years', path: '/principal/academic-years', icon: <CalendarDays className="w-4 h-4" /> },
   { label: 'Settings', path: '/principal/settings', icon: <Settings className="w-4 h-4" /> },
   { label: 'Profile', path: '/principal/profile', icon: <User className="w-4 h-4" /> },
 ];

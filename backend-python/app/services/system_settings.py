@@ -36,6 +36,21 @@ class SettingsService:
         return settings_crud.update_super_admin_settings(db, payload.model_dump(exclude_none=True))
 
     @staticmethod
+    def _active_year_name(db: Session, school_id) -> str:
+        """The ACTIVE academic year's name, or "" when the school has none.
+
+        ``school_settings.academic_year`` is a display copy only - the
+        ``academic_years`` table is the source of truth.
+        """
+        from app.crud.academic_year import get_active_academic_year
+
+        try:
+            year = get_active_academic_year(db, school_id)
+        except Exception:  # noqa: BLE001
+            year = None
+        return getattr(year, "name", "") or ""
+
+    @staticmethod
     def get_principal(db: Session, current_user):
         if getattr(current_user, "role", None) not in ["SUPER_ADMIN", "PRINCIPAL"]:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
@@ -49,12 +64,15 @@ class SettingsService:
                 "school_address": "123 Education Lane",
                 "phone_number": "555-0199",
                 "email": "school@scholaris.com",
-                "academic_year": "2026-2027",
+                "academic_year": SettingsService._active_year_name(db, school_id),
                 "school_working_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
                 "school_timings": "08:00 - 15:00",
                 "grade_settings": {},
                 "section_settings": {}
             }
+        active_name = SettingsService._active_year_name(db, school_id)
+        if active_name:
+            settings = {**settings, "academic_year": active_name}
         return settings
 
     @staticmethod
@@ -62,7 +80,15 @@ class SettingsService:
         if getattr(current_user, "role", None) not in ["SUPER_ADMIN", "PRINCIPAL"]:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
         school_id = getattr(current_user, "school_id", 1)
-        return settings_crud.update_principal_settings(db, school_id, payload.model_dump(exclude_none=True))
+        data = payload.model_dump(exclude_none=True)
+        # The free-text academic year is no longer writable: the ACTIVE
+        # AcademicYear is authoritative and settings must never contradict it.
+        data.pop("academic_year", None)
+        result = settings_crud.update_principal_settings(db, school_id, data)
+        active_name = SettingsService._active_year_name(db, school_id)
+        if active_name and result is not None:
+            result = {**result, "academic_year": active_name}
+        return result
 
     @staticmethod
     def get_user_profile(db: Session, current_user):

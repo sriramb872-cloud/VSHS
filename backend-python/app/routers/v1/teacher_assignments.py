@@ -1,9 +1,10 @@
 # backend-python/app/routers/v1/teacher_assignments.py
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_roles, get_current_active_user
+from app.api.year_context import resolve_year_id
 from app.models.user import User
 from app.models import Timetable
 from app.crud.timetable import parse_time
@@ -15,6 +16,8 @@ router = APIRouter(prefix="/teacher-assignments", tags=["Teacher Assignments"])
 @router.get("", response_model=List[dict])
 def list_assignments(
     teacher_id: int,
+    academic_year_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -34,13 +37,22 @@ def list_assignments(
     elif role != "SUPER_ADMIN":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    timetables = db.query(Timetable).filter(Timetable.teacher_id == teacher_id).all()
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+
+    timetable_query = db.query(Timetable).filter(Timetable.teacher_id == teacher_id)
+    if academic_year_id is not None:
+        timetable_query = timetable_query.filter(
+            Timetable.academic_year_id == academic_year_id
+        )
+    timetables = timetable_query.all()
     return [
         {
             "id": t.id,
             "teacher_id": t.teacher_id,
             "section_id": getattr(t, "section_id", None),
-            "subject_id": getattr(t, "subject_id", None)
+            "subject_id": getattr(t, "subject_id", None),
+            "academic_year_id": getattr(t, "academic_year_id", None),
         }
         for t in timetables
     ]

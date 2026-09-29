@@ -73,6 +73,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const userResponse = await api.get<User>('/auth/me');
     setUser(userResponse.data);
     setMustChangePassword(!!response.must_change_password || !!userResponse.data.must_change_password);
+    // Let dependent providers (e.g. AcademicYearContext) know they can now
+    // fetch school-scoped data without a 401.
+    window.dispatchEvent(new Event('scholaris:auth-changed'));
     window.dispatchEvent(new Event('scholaris:pet-greeting'));
     return userResponse.data;
   };

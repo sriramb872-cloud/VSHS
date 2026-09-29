@@ -5,15 +5,14 @@ import { PrincipalSettings } from '../../types/settings';
 
 import { Save, Settings2 } from 'lucide-react';
 import { LoadingSkeleton } from '../../components/shared';
+import { AcademicYearSection } from '../../components/settings/AcademicYearSection';
 
-/** The free-text school fields this form edits. */
-type EditableField =
-  | 'school_name'
-  | 'school_address'
-  | 'phone_number'
-  | 'email'
-  | 'academic_year'
-  | 'school_timings';
+/** The free-text school fields this form edits.
+ * NOTE: `academic_year` is NOT one of them. It is derived server-side from the
+ * school's ACTIVE AcademicYear record and is displayed (and fully managed:
+ * create / list / activate / view) by the Academic Year section below, so the
+ * two can never contradict each other. */
+type EditableField = 'school_name' | 'school_address' | 'phone_number' | 'email' | 'school_timings';
 
 export const PrincipalSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<PrincipalSettings | null>(null);
@@ -37,7 +36,10 @@ export const PrincipalSettingsPage: React.FC = () => {
     setError('');
     setMessage('');
     try {
-      const { id: _id, ...payload } = settings;
+      const { id: _id, ...rest } = settings;
+      // academic_year is derived server-side from the active AcademicYear —
+      // never send it back as an editable value.
+      const { academic_year: _ay, ...payload } = rest;
       const updated = await settingsService.updatePrincipalSettings(payload);
       setSettings(updated);
       setMessage('School settings updated successfully!');
@@ -54,7 +56,6 @@ export const PrincipalSettingsPage: React.FC = () => {
     { key: 'school_address', label: 'School Address' },
     { key: 'phone_number', label: 'Phone Number', type: 'tel' },
     { key: 'email', label: 'Email Address', type: 'email' },
-    { key: 'academic_year', label: 'Academic Year' },
     { key: 'school_timings', label: 'School Timings' },
   ];
 
@@ -111,6 +112,10 @@ export const PrincipalSettingsPage: React.FC = () => {
           </button>
         </form>
       )}
+
+      {/* Academic Year: create, list every year, see which one is Active,
+          activate another, and pick which year's data to view. */}
+      <AcademicYearSection />
     </div>
   );
 };

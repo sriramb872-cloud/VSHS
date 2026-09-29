@@ -1,8 +1,9 @@
 # app/routers/v1/report_card.py
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from app.api import deps
+from app.api.year_context import resolve_year_id
 from app.schemas.report_card import (
     ReportCardResponse,
     ReportCardListResponse,
@@ -78,11 +79,15 @@ def list_report_cards(
     section_id: Optional[int] = None,
     student_id: Optional[int] = None,
     exam_id: Optional[int] = None,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
     role = str(current_user.role).upper()
     school_id = current_user.school_id if role != "SUPER_ADMIN" else None
+
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request)
 
     if role == "STUDENT":
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
@@ -106,13 +111,22 @@ def list_report_cards(
 @router.get("/{student_id}", response_model=ReportCardResponse)
 def get_report_card(
     student_id: int,
-    academic_year_id: int,
+    academic_year_id: Optional[int] = None,
     exam_id: Optional[int] = None,
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_user),
 ):
     role = str(current_user.role).upper()
     school_id = current_user.school_id if role != "SUPER_ADMIN" else None
+
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+    if academic_year_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="academic_year_id is required",
+        )
 
     if role == "STUDENT":
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
@@ -130,8 +144,8 @@ def get_report_card(
 @router.patch("/{student_id}/remarks", response_model=ReportCardResponse)
 def update_report_card_remarks(
     student_id: int,
-    academic_year_id: int,
     obj_in: ReportCardRemarksUpdate,
+    academic_year_id: Optional[int] = None,
     exam_id: Optional[int] = Query(
         None,
         description=(
@@ -140,10 +154,19 @@ def update_report_card_remarks(
             "wrong card as soon as a year has more than one exam."
         ),
     ),
+    request: Request = None,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_teacher),
 ):
     role = str(current_user.role).upper()
+
+    if academic_year_id is None:
+        academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
+    if academic_year_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="academic_year_id is required",
+        )
 
     if role != "SUPER_ADMIN":
         target_student = db.query(Student).filter(Student.id == student_id).first()
