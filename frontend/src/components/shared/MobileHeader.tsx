@@ -20,7 +20,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   showBack = false,
   onBack,
   roleLabel,
-  roleColorClass = 'text-indigo-600 bg-indigo-50',
+  roleColorClass = 'text-[var(--brand)] bg-[var(--brand-light)]',
   notificationsPath,
   onOpenSidebar,
 }) => {

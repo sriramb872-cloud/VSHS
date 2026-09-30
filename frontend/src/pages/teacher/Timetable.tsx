@@ -3,12 +3,16 @@ import { timetableService } from '../../services/timetable';
 import { TimetableSlot } from '../../types';
 import { Calendar, Clock, BookOpen, Layers, CheckCircle2, ArrowRight } from 'lucide-react';
 import { LoadingSkeleton, EmptyState } from '../../components/shared';
+import { useCurrentWeekday } from '../../hooks/useClock';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const TeacherTimetablePage: React.FC = () => {
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
-  const [dayFilter, setDayFilter] = useState<string>('Monday');
+  // Open on the real current day (and follow a day rollover) until the user picks a tab.
+  const todayWeekday = useCurrentWeekday();
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const dayFilter = pickedDay ?? todayWeekday;
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,7 +43,7 @@ export const TeacherTimetablePage: React.FC = () => {
           <p className="text-xs text-slate-500">Your personal class schedule assigned by the Principal</p>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {DAYS.map(day => <button key={day} onClick={() => setDayFilter(day)} className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap ${dayFilter === day ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{day}</button>)}
+          {DAYS.map(day => <button key={day} onClick={() => setPickedDay(day)} className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap ${dayFilter === day ? 'bg-[var(--brand)] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{day}</button>)}
         </div>
       </div>
 
@@ -51,7 +55,7 @@ export const TeacherTimetablePage: React.FC = () => {
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                <div className="w-8 h-8 rounded-lg bg-[var(--brand-light)] text-[var(--brand)] flex items-center justify-center font-bold text-xs">
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
@@ -70,9 +74,9 @@ export const TeacherTimetablePage: React.FC = () => {
                 {todaysSlots.map((slot, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl space-y-1.5"
+                    className="p-3 bg-[var(--brand-light)]/50 border border-[var(--brand-border)] rounded-xl space-y-1.5"
                   >
-                    <div className="flex items-center justify-between text-xs font-semibold text-blue-700">
+                    <div className="flex items-center justify-between text-xs font-semibold text-[var(--brand-strong)]">
                       <span>{slot.subject_name || `Subject #${slot.subject_id}`}</span>
                       <span className="flex items-center gap-1 text-[11px] text-slate-500">
                         <Clock className="w-3 h-3" /> {slot.start_time} - {slot.end_time}
@@ -93,7 +97,7 @@ export const TeacherTimetablePage: React.FC = () => {
           {nextClass && (
             <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-4 text-white shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[var(--brand)]/20 text-[var(--brand)] flex items-center justify-center flex-shrink-0">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
@@ -132,13 +136,13 @@ export const TeacherTimetablePage: React.FC = () => {
               return (
                 <div key={day} className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 space-y-3">
                   <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-blue-600" /> {day}
+                    <Calendar className="w-4 h-4 text-[var(--brand)]" /> {day}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {daySlots.map((s, i) => (
                       <div key={i} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                          <span className="text-xs font-bold text-[var(--brand)] bg-[var(--brand-light)] px-2 py-0.5 rounded-lg border border-[var(--brand-border)]">
                             {s.subject_name || `Subject #${s.subject_id}`}
                           </span>
                           <span className="text-xs text-slate-500 font-medium flex items-center gap-1">

@@ -157,13 +157,13 @@ export const TeacherNotifications: React.FC = () => {
         );
       case 'STAFF_ONLY':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]">
             <Users className="w-3 h-3" /> Staff Only
           </span>
         );
       case 'ONLY_FOR_CLASS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]">
             <School className="w-3 h-3" /> Only for Class
           </span>
         );
@@ -199,7 +199,7 @@ export const TeacherNotifications: React.FC = () => {
             <button
               onClick={handleMarkAllRead}
               disabled={markingAll}
-              className="self-start flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 disabled:opacity-60"
+              className="self-start flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--brand-light)] text-[var(--brand-strong)] text-xs font-semibold hover:bg-[var(--brand-light)] disabled:opacity-60"
             >
               <CheckCheck className="w-4 h-4" />
               {markingAll ? 'Marking...' : 'Mark All Read'}
@@ -207,7 +207,7 @@ export const TeacherNotifications: React.FC = () => {
           )}
           <button
             onClick={() => setShowModal(true)}
-            className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all flex-shrink-0"
+            className="h-10 px-4 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] active:scale-95 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
             Send Notification
@@ -239,7 +239,7 @@ export const TeacherNotifications: React.FC = () => {
             onClick={() => setActiveTab(tab.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === tab.key
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[var(--brand)] text-white'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -265,19 +265,19 @@ export const TeacherNotifications: React.FC = () => {
               onClick={() => !notif.is_read && handleMarkRead(notif.id)}
               className={`bg-white border rounded-2xl p-4 shadow-xs transition-all flex flex-col sm:flex-row items-start justify-between gap-3 ${
                 notif.is_read
-                  ? 'border-slate-200/80 hover:border-blue-200'
-                  : 'border-blue-200 bg-blue-50/30 cursor-pointer hover:border-blue-300'
+                  ? 'border-slate-200/80 hover:border-[var(--brand-border)]'
+                  : 'border-[var(--brand-border)] bg-[var(--brand-light)]/30 cursor-pointer hover:border-[var(--brand-border)]'
               }`}
             >
               <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Bell className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Bell className="w-5 h-5 text-[var(--brand)]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     {getTypeBadge(notif.notification_type)}
                     {notif.target_class_name && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]">
                         Class: {notif.target_class_name}
                       </span>
                     )}
@@ -360,7 +360,7 @@ export const TeacherNotifications: React.FC = () => {
                     }}
                     className={`py-2 px-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                       notificationType === 'ONLY_FOR_CLASS'
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-800 ring-2 ring-indigo-500/20'
+                        ? 'border-[var(--brand)] bg-[var(--brand-light)] text-[var(--brand-strong)] ring-2 ring-[var(--brand)]/20'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
@@ -430,7 +430,7 @@ export const TeacherNotifications: React.FC = () => {
                     value={targetStudentId}
                     onChange={(e) => setTargetStudentId(e.target.value)}
                     required
-                    className="w-full h-11 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+                    className="w-full h-11 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none bg-white"
                   >
                     <option value="">Select Student</option>
                     {classInfo.students.map((st) => (
@@ -452,7 +452,7 @@ export const TeacherNotifications: React.FC = () => {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Notification title..."
                   required
-                  className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                 />
               </div>
 
@@ -466,7 +466,7 @@ export const TeacherNotifications: React.FC = () => {
                   placeholder="Write message details..."
                   rows={4}
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none resize-none"
                 />
               </div>
 
@@ -481,7 +481,7 @@ export const TeacherNotifications: React.FC = () => {
                 <button
                   type="submit"
                   disabled={creating}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-bold transition-all disabled:opacity-50"
                 >
                   {creating ? 'Sending...' : 'Send Notification'}
                 </button>

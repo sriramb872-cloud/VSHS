@@ -67,7 +67,7 @@ export const NotificationDropdown: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-full"
+        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand)] rounded-full"
         aria-label="Toggle notifications"
       >
         <Bell className="w-6 h-6" />
@@ -85,7 +85,7 @@ export const NotificationDropdown: React.FC = () => {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                className="text-xs text-[var(--brand)] hover:text-[var(--brand-strong)] font-medium"
               >
                 Mark all as read
               </button>
@@ -102,7 +102,7 @@ export const NotificationDropdown: React.FC = () => {
                 <div
                   key={notification.id}
                   className={`p-4 transition-colors hover:bg-gray-50 flex items-start gap-3 ${
-                    !notification.is_read ? 'bg-indigo-50/40' : ''
+                    !notification.is_read ? 'bg-[color-mix(in_srgb,var(--brand-light)_40%,transparent)]' : ''
                   }`}
                 >
                   <div className="flex-1 min-w-0">
@@ -119,7 +119,7 @@ export const NotificationDropdown: React.FC = () => {
                     {!notification.is_read && (
                       <button
                         onClick={e => handleMarkAsRead(notification.id, e)}
-                        className="p-1 text-gray-400 hover:text-indigo-600 rounded"
+                        className="p-1 text-gray-400 hover:text-[var(--brand)] rounded"
                         title="Mark as read"
                       >
                         <Check className="w-4 h-4" />
@@ -141,7 +141,7 @@ export const NotificationDropdown: React.FC = () => {
           <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-center">
             <a
               href="/notifications"
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+              className="text-xs font-medium text-[var(--brand)] hover:text-[var(--brand-strong)]"
             >
               View all notifications
             </a>

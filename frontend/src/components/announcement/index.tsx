@@ -36,7 +36,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)]">
               {announcement.audience}
             </span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${getPriorityBadge(announcement.priority)}`}>
@@ -59,7 +59,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
           {onPublish && announcement.status === 'Draft' && (
             <button
               onClick={() => onPublish(announcement.id)}
-              className="px-3 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700"
+              className="px-3 py-1 bg-[var(--brand)] text-white rounded text-xs font-medium hover:bg-[var(--brand-hover)]"
             >
               Publish
             </button>

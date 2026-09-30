@@ -302,7 +302,7 @@ export const TeacherMarksEntryPage: React.FC = () => {
             </select>
           </label>
           {selectedExamData && <p className="text-xs text-slate-500">Class: {selectedExamData.grade_name || `Grade ${selectedExamData.grade_id}`} · {selectedExamData.section_name || `Section ${selectedExamData.section_id}`} · Status: {selectedExamData.status}</p>}
-          <button type="button" onClick={goToMarks} disabled={!selectedExam || !selectedSubject} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed">
+          <button type="button" onClick={goToMarks} disabled={!selectedExam || !selectedSubject} className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand)] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed">
             <ClipboardList className="w-4 h-4" /> Open Marks Grid
           </button>
         </div>
@@ -343,7 +343,7 @@ export const TeacherMarksEntryPage: React.FC = () => {
           </div>
           <div className="flex flex-col items-end gap-1">
             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-              isPublished ? 'bg-emerald-50 text-emerald-700' : alreadySubmitted.current ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'
+              isPublished ? 'bg-emerald-50 text-emerald-700' : alreadySubmitted.current ? 'bg-amber-50 text-amber-700' : 'bg-[var(--brand-light)] text-[var(--brand-strong)]'
             }`}>
               {isPublished ? '🔒 Published' : alreadySubmitted.current ? '✓ Submitted' : 'Pending Entry'}
             </span>
@@ -434,7 +434,7 @@ export const TeacherMarksEntryPage: React.FC = () => {
                               value={row[field]}
                               onChange={e => handleFormativeChange(row.student_id, field, e.target.value)}
                               disabled={isLocked}
-                              className="w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                              className="w-16 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent outline-none disabled:bg-slate-50 disabled:text-slate-400"
                               placeholder="0"
                             />
                           </td>
@@ -487,7 +487,7 @@ export const TeacherMarksEntryPage: React.FC = () => {
                           value={row.marks_obtained}
                           onChange={e => handleSummativeChange(row.student_id, 'marks_obtained', e.target.value)}
                           disabled={isLocked}
-                          className="w-20 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                          className="w-20 text-center border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent outline-none disabled:bg-slate-50 disabled:text-slate-400"
                           placeholder="0"
                         />
                       </td>
@@ -497,7 +497,7 @@ export const TeacherMarksEntryPage: React.FC = () => {
                           value={row.remarks}
                           onChange={e => handleSummativeChange(row.student_id, 'remarks', e.target.value)}
                           disabled={isLocked}
-                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-slate-50"
+                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-600 focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent outline-none disabled:bg-slate-50"
                           placeholder="Optional remarks"
                         />
                       </td>
@@ -530,7 +530,7 @@ export const TeacherMarksEntryPage: React.FC = () => {
             className={`px-8 py-3 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-all ${
               alreadySubmitted.current
                 ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                : 'bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {submitting ? (

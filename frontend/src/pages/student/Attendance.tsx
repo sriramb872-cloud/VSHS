@@ -2,12 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { attendanceService } from '../../services/attendance';
 import { studentsService } from '../../services/students';
 import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
+import { useCurrentWeekday } from '../../hooks/useClock';
 
 export const StudentAttendance: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState('Monday');
+  // Open on the real current day (and follow a day rollover) until the user picks a tab.
+  const todayWeekday = useCurrentWeekday();
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const selectedDay = pickedDay ?? todayWeekday;
 
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
@@ -66,13 +70,13 @@ export const StudentAttendance: React.FC = () => {
             </div>
             <div className="er-card">
               <h3 className="er-card-title">Attendance Percentage</h3>
-              <p className="text-2xl font-bold mt-2 text-indigo-600">{attendanceData.percentage ?? '-'}%</p>
+              <p className="text-2xl font-bold mt-2 text-[var(--brand)]">{attendanceData.percentage ?? '-'}%</p>
             </div>
           </div>
 
           <div className="er-card">
             <h3 className="er-card-title mb-4">Attendance History</h3>
-            <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+            <WeekdayTabs selectedDay={selectedDay} onChange={setPickedDay} />
             {dayRecords.length === 0 ? (
               <div className="er-empty-state">No detailed records available.</div>
             ) : (

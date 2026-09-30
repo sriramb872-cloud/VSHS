@@ -40,7 +40,7 @@ export const StudentMarksPage: React.FC = () => {
             onClick={() => setSelectedExamFilter('')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
               selectedExamFilter === ''
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[var(--brand)] text-white'
                 : 'bg-white border border-slate-200 text-slate-600'
             }`}
           >
@@ -52,7 +52,7 @@ export const StudentMarksPage: React.FC = () => {
               onClick={() => setSelectedExamFilter(exName)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedExamFilter === exName
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[var(--brand)] text-white'
                   : 'bg-white border border-slate-200 text-slate-600'
               }`}
             >

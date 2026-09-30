@@ -32,7 +32,7 @@ export const TeacherHomeworkDetailsPage: React.FC = () => {
       <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
         <div className="flex items-start justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{homework.title}</h1>
-          <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium">
+          <span className="px-3 py-1 bg-[var(--brand-light)] text-[var(--brand-strong)] rounded-full text-sm font-medium">
             Due: {homework.due_date}
           </span>
         </div>

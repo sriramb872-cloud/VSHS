@@ -35,7 +35,7 @@ export const ReportCardView: React.FC<ReportCardViewProps> = ({
 
       <div className="space-y-4">
         <h3 className="text-md font-semibold text-gray-800 flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-indigo-600" /> Subject-wise Performance
+          <BookOpen className="w-4 h-4 text-[var(--brand)]" /> Subject-wise Performance
         </h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -63,7 +63,7 @@ export const ReportCardView: React.FC<ReportCardViewProps> = ({
                     {subject.subject_total_obtained} / {subject.subject_total_maximum}
                   </td>
                   <td className="px-4 py-3 text-center text-gray-600">{subject.percentage}%</td>
-                  <td className="px-4 py-3 text-center font-bold text-indigo-600">{subject.grade}</td>
+                  <td className="px-4 py-3 text-center font-bold text-[var(--brand)]">{subject.grade}</td>
                 </tr>
               ))}
             </tbody>
@@ -80,11 +80,11 @@ export const ReportCardView: React.FC<ReportCardViewProps> = ({
               value={reportCard.teacher_remarks || ''}
               onChange={e => onRemarksChange && onRemarksChange(e.target.value)}
               placeholder="Enter constructive remarks for the student..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-[var(--brand)] focus:border-[var(--brand)]"
             />
             <button
               onClick={onSaveRemarks}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
+              className="px-4 py-2 bg-[var(--brand)] text-white rounded-md text-sm font-medium hover:bg-[var(--brand-hover)]"
             >
               Save Remarks
             </button>

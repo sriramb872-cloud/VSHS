@@ -38,7 +38,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       {/* Modal */}
       <div className="relative z-50 w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-5">
         <div className="flex items-start justify-between mb-3">
-          <div className={`p-2.5 rounded-full ${isDanger ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'}`}>
+          <div className={`p-2.5 rounded-full ${isDanger ? 'bg-rose-100 text-rose-600' : 'bg-[var(--brand-light)] text-[var(--brand)]'}`}>
             <AlertCircle className="w-5 h-5" />
           </div>
           <button
@@ -64,7 +64,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             onClick={onConfirm}
             disabled={isLoading}
             className={`flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold text-white rounded-xl active:scale-98 transition-all ${
-              isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'
+              isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand)] hover:bg-[var(--brand-hover)]'
             }`}
           >
             {isLoading ? 'Processing...' : confirmLabel}

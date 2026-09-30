@@ -294,14 +294,14 @@ export const AcademicYearSection: React.FC<AcademicYearSectionProps> = ({
 
         {/* ── VIEWING year: what THIS user reads (never the Active year) ── */}
         {viewingAnother && selectedYear && activeYear && (
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 flex items-start gap-2.5">
-            <Eye className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+          <div className="rounded-xl border border-[var(--brand-border)] bg-[var(--brand-light)] p-3 flex items-start gap-2.5">
+            <Eye className="w-4 h-4 text-[var(--brand)] mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand)]">
                 Viewing Academic Year
               </p>
-              <p className="text-sm font-bold text-indigo-900 truncate">{selectedYear.name}</p>
-              <p className="text-[11px] text-indigo-700/90 mt-0.5 leading-relaxed">
+              <p className="text-sm font-bold text-[var(--brand-strong)] truncate">{selectedYear.name}</p>
+              <p className="text-[11px] text-[color-mix(in_srgb,var(--brand-strong)_90%,transparent)] mt-0.5 leading-relaxed">
                 You are reading {selectedYear.name} data. The school's Active year stays{' '}
                 <strong className="font-bold">{activeYear.name}</strong> — viewing another year
                 never changes it.
@@ -310,7 +310,7 @@ export const AcademicYearSection: React.FC<AcademicYearSectionProps> = ({
             <button
               type="button"
               onClick={() => doView(activeYear)}
-              className="flex-shrink-0 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 underline underline-offset-2"
+              className="flex-shrink-0 text-[11px] font-bold text-[var(--brand-strong)] hover:text-[var(--brand-strong)] underline underline-offset-2"
             >
               Back to Active
             </button>
@@ -410,7 +410,7 @@ export const AcademicYearSection: React.FC<AcademicYearSectionProps> = ({
                       <span className="text-[11px] font-semibold text-emerald-700">● Active</span>
                     )}
                     {isSelected && !isActive && (
-                      <span className="text-[11px] font-semibold text-indigo-600">Viewing</span>
+                      <span className="text-[11px] font-semibold text-[var(--brand)]">Viewing</span>
                     )}
                   </span>
                 }
@@ -422,7 +422,7 @@ export const AcademicYearSection: React.FC<AcademicYearSectionProps> = ({
                     {!isSelected && (
                       <button
                         type="button"
-                        className="text-xs font-medium text-indigo-700 flex items-center gap-1"
+                        className="text-xs font-medium text-[var(--brand-strong)] flex items-center gap-1"
                         onClick={() => doView(ay)}
                         title="View this year's data without changing the Active year"
                       >
@@ -443,7 +443,7 @@ export const AcademicYearSection: React.FC<AcademicYearSectionProps> = ({
                     {!isArchived && (
                       <button
                         type="button"
-                        className="text-xs font-medium text-indigo-700"
+                        className="text-xs font-medium text-[var(--brand-strong)]"
                         onClick={() => setEditingYear(ay)}
                       >
                         <Pencil className="w-3 h-3 inline -mt-0.5 mr-1" />

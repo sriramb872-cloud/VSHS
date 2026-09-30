@@ -90,7 +90,7 @@ export const EditHomeworkPage: React.FC = () => {
               required
               value={formData.title}
               onChange={e => setFormData({ ...formData, title: e.target.value })}
-              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
             />
           </div>
 
@@ -101,7 +101,7 @@ export const EditHomeworkPage: React.FC = () => {
               required
               value={formData.due_date}
               onChange={e => setFormData({ ...formData, due_date: e.target.value })}
-              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
             />
           </div>
 
@@ -112,7 +112,7 @@ export const EditHomeworkPage: React.FC = () => {
               required
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full p-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
             />
           </div>
 
@@ -127,7 +127,7 @@ export const EditHomeworkPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+              className="h-11 px-6 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>

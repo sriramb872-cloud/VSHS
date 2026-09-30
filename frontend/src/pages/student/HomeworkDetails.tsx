@@ -49,7 +49,7 @@ export const StudentHomeworkDetailsPage: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
             <h1 className="text-lg font-bold text-slate-900">{homework.title}</h1>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-semibold w-fit">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--brand-light)] text-[var(--brand-strong)] rounded-full text-xs font-semibold w-fit">
               <Calendar className="w-3.5 h-3.5" /> Due: {homework.due_date}
             </span>
           </div>

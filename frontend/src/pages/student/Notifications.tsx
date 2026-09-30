@@ -58,9 +58,9 @@ export const StudentNotifications: React.FC = () => {
       case 'PUBLIC':
         return <Globe className="w-4 h-4 text-emerald-600" />;
       case 'CLASS':
-        return <School className="w-4 h-4 text-purple-600" />;
+        return <School className="w-4 h-4 text-[var(--brand)]" />;
       case 'CLASS_TEACHER':
-        return <UserCheck className="w-4 h-4 text-orange-600" />;
+        return <UserCheck className="w-4 h-4 text-[var(--brand)]" />;
       default:
         return <Bell className="w-4 h-4 text-slate-500" />;
     }
@@ -76,14 +76,14 @@ export const StudentNotifications: React.FC = () => {
     }
     if (category === 'CLASS' || type === 'CLASS_ONLY') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]">
           <School className="w-3 h-3" /> Class
         </span>
       );
     }
     if (category === 'CLASS_TEACHER' || type === 'ONLY_FOR_CLASS' || type === 'ONLY_FOR_STUDENT') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]">
           <UserCheck className="w-3 h-3" /> Class Teacher
         </span>
       );
@@ -103,7 +103,7 @@ export const StudentNotifications: React.FC = () => {
           <button
             onClick={handleMarkAllRead}
             disabled={markingAll}
-            className="self-start flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-50 text-orange-700 text-xs font-semibold hover:bg-orange-100 disabled:opacity-60"
+            className="self-start flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--brand-light)] text-[var(--brand-strong)] text-xs font-semibold hover:bg-[var(--brand-light)] disabled:opacity-60"
           >
             <CheckCheck className="w-4 h-4" />
             {markingAll ? 'Marking...' : 'Mark All Read'}
@@ -121,7 +121,7 @@ export const StudentNotifications: React.FC = () => {
           onClick={() => setActiveCategory('PUBLIC')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeCategory === 'PUBLIC'
-              ? 'bg-orange-600 text-white shadow-xs'
+              ? 'bg-[var(--brand)] text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -133,7 +133,7 @@ export const StudentNotifications: React.FC = () => {
           onClick={() => setActiveCategory('CLASS')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeCategory === 'CLASS'
-              ? 'bg-orange-600 text-white shadow-xs'
+              ? 'bg-[var(--brand)] text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -145,7 +145,7 @@ export const StudentNotifications: React.FC = () => {
           onClick={() => setActiveCategory('CLASS_TEACHER')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeCategory === 'CLASS_TEACHER'
-              ? 'bg-orange-600 text-white shadow-xs'
+              ? 'bg-[var(--brand)] text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -177,18 +177,18 @@ export const StudentNotifications: React.FC = () => {
               onClick={() => !notif.is_read && handleMarkRead(notif.id)}
               className={`bg-white border rounded-2xl p-4 shadow-xs transition-all flex items-start gap-3.5 ${
                 notif.is_read
-                  ? 'border-slate-200/80 hover:border-orange-200'
-                  : 'border-orange-200 bg-orange-50/30 cursor-pointer hover:border-orange-300'
+                  ? 'border-slate-200/80 hover:border-[var(--brand-border)]'
+                  : 'border-[var(--brand-border)] bg-[var(--brand-light)]/30 cursor-pointer hover:border-[var(--brand-border)]'
               }`}
             >
-              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0 mt-0.5">
                 {getCategoryIcon(notif.category || notif.notification_type)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   {getCategoryBadge(notif.category || '', notif.notification_type)}
                   {notif.target_class_name && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]">
                       Class: {notif.target_class_name}
                     </span>
                   )}

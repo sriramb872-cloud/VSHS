@@ -19,7 +19,7 @@ export const MobileListItem: React.FC<MobileListItemProps> = ({
   subtitle,
   icon,
   avatarText,
-  avatarBg = 'bg-indigo-100 text-indigo-700',
+  avatarBg = 'bg-[var(--brand-light)] text-[var(--brand-strong)]',
   badge,
   metaText,
   onClick,

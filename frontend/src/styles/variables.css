@@ -5,6 +5,34 @@
   --color-primary-hover: #1d4ed8;
   --color-primary-light: #eff6ff;
   --color-primary-dark: #1e40af;
+  --color-primary-border: #bfdbfe;
+
+  /* ── Portal accent ("brand") tokens ───────────────────────────────────────
+     One small coherent set used by the shared components (weekday tabs,
+     primary buttons, empty-state actions, dialogs, focus rings, sidebar) and
+     by the portal pages.  Every value resolves through CSS variables, so a
+     portal only ever declares its colour once - in its `[data-role=...]`
+     scope below - instead of hard-coding hex values in each component.
+     The defaults are the indigo the shared components have always rendered,
+     so portals that do not override them (Principal / Super Admin / Parent)
+     keep exactly the look they have today. */
+  --brand: #4f46e5;          /* solid accent (indigo-600) */
+  --brand-hover: #4338ca;    /* hover for solid accent (indigo-700) */
+  --brand-strong: #3730a3;   /* accent text on hover (indigo-800) */
+  --brand-light: #eef2ff;    /* soft accent surface (indigo-50) */
+  --brand-border: #c7d2fe;   /* soft accent border (indigo-200) */
+
+  /* Dark surface behind the sidebar/nav (portal specific). */
+  --sidebar-bg: #111827;
+
+  /* Legacy `er-*` accent + text-selection colours.
+     The default keeps the exact blue the shared stylesheets always used, so
+     Principal / Super Admin / Parent are untouched; the Student and Teacher
+     scopes below swap in their portal brand instead. */
+  --er-accent: #2563eb;
+  --er-accent-hover: #1d4ed8;
+  --selection-bg: #dbeafe;
+  --selection-fg: #1e40af;
 
   /* Role Theme: SUPER_ADMIN */
   --role-admin-primary: #4f46e5;
@@ -22,21 +50,21 @@
   --role-principal-surface: #ffffff;
   --role-principal-subtle: #ecfdf5;
 
-  /* Role Theme: TEACHER */
-  --role-teacher-primary: #2563eb;
-  --role-teacher-secondary: #0284c7;
-  --role-teacher-accent: #06b6d4;
-  --role-teacher-bg: #f3f8ff;
-  --role-teacher-surface: #ffffff;
-  --role-teacher-subtle: #eff6ff;
+  /* Role Theme: TEACHER — primary #640000 + Silk White neutral surface */
+  --role-teacher-primary: #640000;
+  --role-teacher-secondary: #7a0000;
+  --role-teacher-accent: #7a0000;
+  --role-teacher-bg: #FAF9F6;
+  --role-teacher-surface: #FAF9F6;
+  --role-teacher-subtle: #f7eded;
 
-  /* Role Theme: STUDENT */
-  --role-student-primary: #ea580c;
-  --role-student-secondary: #d97706;
-  --role-student-accent: #f59e0b;
-  --role-student-bg: #fff9f0;
+  /* Role Theme: STUDENT — primary #310534 + white */
+  --role-student-primary: #310534;
+  --role-student-secondary: #4a0b4f;
+  --role-student-accent: #310534;
+  --role-student-bg: #ffffff;
   --role-student-surface: #ffffff;
-  --role-student-subtle: #fff7ed;
+  --role-student-subtle: #f7f1f4;
 
   /* Background & Surface Colors */
   --color-background: #f8fafc;
@@ -128,16 +156,46 @@
 
 [data-role="TEACHER"] {
   --color-primary: var(--role-teacher-primary);
-  --color-primary-hover: #1d4ed8;
+  --color-primary-hover: var(--role-teacher-secondary);
   --color-primary-light: var(--role-teacher-subtle);
+  --color-primary-dark: #4d0000;
+  --color-primary-border: #e8cccc;
   --color-background: var(--role-teacher-bg);
+  --color-surface: var(--role-teacher-surface);
   --color-accent: var(--role-teacher-accent);
+
+  /* Teacher portal brand: #640000 on Silk White #FAF9F6. */
+  --brand: var(--role-teacher-primary);
+  --brand-hover: var(--role-teacher-secondary);
+  --brand-strong: #4d0000;
+  --brand-light: var(--role-teacher-subtle);
+  --brand-border: #e8cccc;
+  --sidebar-bg: var(--role-teacher-primary);
+  --er-accent: var(--brand);
+  --er-accent-hover: var(--brand-hover);
+  --selection-bg: var(--brand-light);
+  --selection-fg: var(--brand-strong);
 }
 
 [data-role="STUDENT"] {
   --color-primary: var(--role-student-primary);
-  --color-primary-hover: #c2410c;
+  --color-primary-hover: var(--role-student-secondary);
   --color-primary-light: var(--role-student-subtle);
+  --color-primary-dark: #1e0221;
+  --color-primary-border: #e6d8df;
   --color-background: var(--role-student-bg);
+  --color-surface: var(--role-student-surface);
   --color-accent: var(--role-student-accent);
+
+  /* Student portal brand: #310534 on white. */
+  --brand: var(--role-student-primary);
+  --brand-hover: var(--role-student-secondary);
+  --brand-strong: #1e0221;
+  --brand-light: var(--role-student-subtle);
+  --brand-border: #e6d8df;
+  --sidebar-bg: var(--role-student-primary);
+  --er-accent: var(--brand);
+  --er-accent-hover: var(--brand-hover);
+  --selection-bg: var(--brand-light);
+  --selection-fg: var(--brand-strong);
 }

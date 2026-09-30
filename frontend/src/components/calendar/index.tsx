@@ -23,7 +23,7 @@ export const getEventTypeBadgeClass = (type: string) => {
   if (t.includes('cultural')) return 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200';
   if (t.includes('school') || t.includes('event')) return 'bg-amber-50 text-amber-700 border-amber-200';
   if (t.includes('meeting')) return 'bg-blue-50 text-blue-700 border-blue-200';
-  if (t.includes('academic')) return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+  if (t.includes('academic')) return 'bg-[var(--brand-light)] text-[var(--brand-strong)] border-[var(--brand-border)]';
   return 'bg-slate-100 text-slate-700 border-slate-200';
 };
 

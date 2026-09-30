@@ -7,13 +7,17 @@ import { Homework } from '../../types/homework';
 import { HomeworkCard } from '../../components/homework';
 import { LoadingSkeleton, EmptyState, ErrorState } from '../../components/shared';
 import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
+import { useCurrentWeekday } from '../../hooks/useClock';
 import { timetableService } from '../../services/timetable';
 
 export const StudentHomeworkPage: React.FC = () => {
   const [homeworkList, setHomeworkList] = useState<Homework[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState('Monday');
+  // Open on the real current day (and follow a day rollover) until the user picks a tab.
+  const todayWeekday = useCurrentWeekday();
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const selectedDay = pickedDay ?? todayWeekday;
   const [timetable, setTimetable] = useState<any[]>([]);
   const navigate = useNavigate();
 
@@ -45,7 +49,7 @@ export const StudentHomeworkPage: React.FC = () => {
         <p className="text-xs text-slate-500">View assigned tasks and homework</p>
       </div>
 
-      <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+      <WeekdayTabs selectedDay={selectedDay} onChange={setPickedDay} />
       <p className="text-xs text-slate-500">{daySlots.length} scheduled period{daySlots.length === 1 ? '' : 's'} on {selectedDay}; homework is matched to the class timetable.</p>
 
       {loading ? (

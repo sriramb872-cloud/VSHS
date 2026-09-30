@@ -94,7 +94,7 @@ export const TeacherReportCardsPage: React.FC = () => {
         <div
           className={`p-3 rounded-xl text-xs font-medium ${
             feedback.type === 'success'
-              ? 'bg-blue-50 border border-blue-200 text-blue-800'
+              ? 'bg-[var(--brand-light)] border border-[var(--brand-border)] text-[var(--brand-strong)]'
               : 'bg-rose-50 border border-rose-200 text-rose-700'
           }`}
         >
@@ -112,7 +112,7 @@ export const TeacherReportCardsPage: React.FC = () => {
             }}
             className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
               selectedKey === cardKey(rc)
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[var(--brand)] text-white'
                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >

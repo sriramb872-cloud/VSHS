@@ -25,8 +25,8 @@ export const AdminLayout: React.FC = () => (
     accentColor="bg-indigo-950"
     navItems={navItems}
     notificationsPath="/superadmin/notifications"
-    activeColorClass="text-indigo-600"
-    indicatorColor="bg-indigo-600"
+    activeColorClass="text-[var(--brand)]"
+    indicatorColor="bg-[var(--brand)]"
   />
 );
 

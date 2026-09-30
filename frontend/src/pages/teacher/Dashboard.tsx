@@ -25,7 +25,7 @@ export const TeacherDashboardPage: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-24 bg-gradient-to-r from-blue-500 to-sky-600 rounded-2xl animate-pulse" />
+        <div className="h-24 bg-gradient-to-r from-[var(--brand)] to-[var(--brand-hover)] rounded-2xl animate-pulse" />
         <LoadingSkeleton type="metrics" count={4} />
       </div>
     );
@@ -39,7 +39,7 @@ export const TeacherDashboardPage: React.FC = () => {
           <p className="text-xs text-slate-400 mt-1">Check your connection and try again.</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-3 h-9 px-4 rounded-xl bg-blue-600 text-white text-xs font-bold"
+            className="mt-3 h-9 px-4 rounded-xl bg-[var(--brand)] text-white text-xs font-bold"
           >
             Retry
           </button>
@@ -63,8 +63,8 @@ export const TeacherDashboardPage: React.FC = () => {
       icon: <Calendar className="w-5 h-5" />,
       label: "Today's Classes",
       value: data.todays_timetable.length,
-      bg: 'bg-blue-50',
-      color: 'text-blue-600',
+      bg: 'bg-[var(--brand-light)]',
+      color: 'text-[var(--brand)]',
       onClick: () => navigate('/teacher/timetable'),
     },
     {
@@ -79,8 +79,8 @@ export const TeacherDashboardPage: React.FC = () => {
         icon: <BookOpen className="w-5 h-5" />,
         label: 'Homework',
         value: data.homework_summary.length,
-      bg: 'bg-sky-50',
-      color: 'text-sky-600',
+      bg: 'bg-[var(--brand-light)]',
+      color: 'text-[var(--brand)]',
         onClick: () => navigate('/teacher/homework'),
       },
       {
@@ -95,8 +95,8 @@ export const TeacherDashboardPage: React.FC = () => {
       icon: <Bell className="w-5 h-5" />,
       label: 'Announcements',
       value: data.announcements.length,
-      bg: 'bg-blue-50',
-      color: 'text-blue-600',
+      bg: 'bg-[var(--brand-light)]',
+      color: 'text-[var(--brand)]',
       onClick: () => navigate('/teacher/announcements'),   // was: undefined
     },
   ];
@@ -104,12 +104,12 @@ export const TeacherDashboardPage: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-sky-500 rounded-2xl p-5 text-white shadow-md">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[var(--brand)] to-[var(--brand-hover)] rounded-2xl p-5 text-white shadow-md">
         <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
         <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-6 -translate-x-6" />
-        <p className="text-xs font-semibold text-blue-100 mb-0.5">Good Morning 👋</p>
+        <p className="text-xs font-semibold text-white/80 mb-0.5">Good Morning 👋</p>
         <h1 className="text-lg font-bold">Teacher Dashboard</h1>
-        <p className="text-xs text-blue-100 mt-1">
+        <p className="text-xs text-white/80 mt-1">
           {data.todays_timetable.length} classes scheduled today
         </p>
       </div>
@@ -145,8 +145,8 @@ export const TeacherDashboardPage: React.FC = () => {
           <div className="divide-y divide-slate-100">
             {data.todays_timetable.slice(0, 5).map((slot: any, i: number) => (
               <div key={i} className="flex items-center gap-3 px-4 py-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-4 h-4 text-blue-600" />
+                <div className="w-9 h-9 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-4 h-4 text-[var(--brand)]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-900 truncate">{slot.subject_name || 'Class'}</p>
@@ -167,8 +167,8 @@ export const TeacherDashboardPage: React.FC = () => {
           <div className="divide-y divide-slate-100">
             {data.announcements.slice(0, 3).map((ann: any, i: number) => (
               <div key={i} className="flex items-start gap-3 px-4 py-3">
-                <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Bell className="w-4 h-4 text-sky-600" />
+                <div className="w-9 h-9 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Bell className="w-4 h-4 text-[var(--brand)]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-900 truncate">{ann.title}</p>

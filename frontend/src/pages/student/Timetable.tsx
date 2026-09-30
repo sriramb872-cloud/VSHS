@@ -3,11 +3,15 @@ import React, { useEffect, useState } from 'react';
 import { timetableService } from '../../services/timetable';
 import { Timetable } from '../../types/timetable';
 import { TimetableGrid } from '../../components/timetable';
+import { useCurrentWeekday } from '../../hooks/useClock';
 
 export const StudentTimetablePage: React.FC = () => {
   const [timetable, setTimetable] = useState<Timetable | null>(null);
   const [loading, setLoading] = useState(false);
-  const [selectedDay, setSelectedDay] = useState('Monday');
+  // Open on the real current day (and follow a day rollover) until the user picks a tab.
+  const todayWeekday = useCurrentWeekday();
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const selectedDay = pickedDay ?? todayWeekday;
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   useEffect(() => {
@@ -38,7 +42,7 @@ export const StudentTimetablePage: React.FC = () => {
         <p className="text-sm text-gray-500 mt-1">View your weekly class schedule and period breakdown.</p>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {DAYS.map(day => <button key={day} onClick={() => setSelectedDay(day)} className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap ${selectedDay === day ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{day}</button>)}
+        {DAYS.map(day => <button key={day} onClick={() => setPickedDay(day)} className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap ${selectedDay === day ? 'bg-[var(--brand)] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{day}</button>)}
       </div>
 
       {loading ? (

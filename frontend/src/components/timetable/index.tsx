@@ -45,14 +45,14 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({ timetable, selecte
         return (
           <div key={day} className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
             <h3 className="text-md font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-indigo-600" /> {day}
+              <Calendar className="w-4 h-4 text-[var(--brand)]" /> {day}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {dayEntries.map(entry => (
                 <div key={entry.id} className="bg-gray-50 rounded-md border border-gray-100 p-4 space-y-2">
                   <div className="flex justify-between items-start">
                     {entry.period_number != null && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)]">
                         Period {entry.period_number}
                       </span>
                     )}

@@ -165,12 +165,12 @@ export const CreateHomeworkPage: React.FC = () => {
           {/* Step 1: Select Class */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-blue-600" /> Select Class & Section
+              <Layers className="w-3.5 h-3.5 text-[var(--brand)]" /> Select Class & Section
             </label>
             <select
               value={selectedClassKey}
               onChange={e => setSelectedClassKey(e.target.value)}
-              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
               required
             >
               {uniqueClasses.map(c => (
@@ -184,12 +184,12 @@ export const CreateHomeworkPage: React.FC = () => {
           {/* Step 2: Select Subject */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-blue-600" /> Select Subject
+              <BookOpen className="w-3.5 h-3.5 text-[var(--brand)]" /> Select Subject
             </label>
             <select
               value={selectedSubjectId}
               onChange={e => setSelectedSubjectId(e.target.value)}
-              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
               required
             >
               {availableSubjects.map(s => (
@@ -209,7 +209,7 @@ export const CreateHomeworkPage: React.FC = () => {
               placeholder="e.g. Chapter 4 Exercise Problems"
               value={formData.title}
               onChange={e => setFormData({ ...formData, title: e.target.value })}
-              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
             />
           </div>
 
@@ -222,7 +222,7 @@ export const CreateHomeworkPage: React.FC = () => {
               value={formData.due_date}
               onChange={e => setFormData({ ...formData, due_date: e.target.value })}
               onInput={e => setFormData({ ...formData, due_date: e.currentTarget.value })}
-              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
             />
           </div>
 
@@ -235,7 +235,7 @@ export const CreateHomeworkPage: React.FC = () => {
               placeholder="Write assignment instructions here..."
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full p-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
             />
           </div>
 
@@ -250,7 +250,7 @@ export const CreateHomeworkPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+              className="h-11 px-6 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create Homework'}
             </button>

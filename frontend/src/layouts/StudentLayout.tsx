@@ -20,11 +20,11 @@ export const StudentLayout: React.FC = () => (
   <AppShell
     role="STUDENT"
     roleLabel="Student Portal"
-    accentColor="bg-orange-950"
+    accentColor="bg-[var(--sidebar-bg)]"
     navItems={navItems}
     notificationsPath="/student/notifications"
-    activeColorClass="text-orange-600"
-    indicatorColor="bg-orange-600"
+    activeColorClass="text-[var(--brand)]"
+    indicatorColor="bg-[var(--brand)]"
   />
 );
 

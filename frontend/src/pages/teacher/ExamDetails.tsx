@@ -117,7 +117,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-slate-900">{exam.name}</h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)]">
                 {exam.assessment_mode}
               </span>
             </div>
@@ -131,7 +131,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   : exam.status === 'MARKS_IN_PROGRESS'
                   ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                  : 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]'
               }`}
             >
               Status: {exam.status}
@@ -214,7 +214,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
                         ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         : sub.is_marks_submitted
                         ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                        : 'bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white shadow-sm'
                     }`}
                   >
                     {isPublished ? 'View Marks (Locked)' : sub.is_marks_submitted ? 'Edit Marks' : 'Enter Marks'}
@@ -296,7 +296,7 @@ export const TeacherExamDetailsPage: React.FC = () => {
                     <td className="py-3 px-3 text-right">
                       <button
                         onClick={() => navigate(`/teacher/exams/${exam.id}/subjects/${item.exam_subject_id}/marks`)}
-                        className="text-blue-600 hover:text-blue-800 font-semibold"
+                        className="text-[var(--brand)] hover:text-[var(--brand-strong)] font-semibold"
                       >
                         {isPublished ? 'View' : 'Review / Enter'}
                       </button>

@@ -290,7 +290,7 @@ export const TeacherStudents: React.FC = () => {
               setShowAddModal(true);
               setStudentModalFeedback(null);
             }}
-            className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all self-start sm:self-auto"
+            className="h-10 px-4 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
             Add Student
@@ -305,12 +305,12 @@ export const TeacherStudents: React.FC = () => {
         <div
           className={`p-3.5 rounded-xl border text-xs font-medium flex items-center gap-2.5 ${
             assignmentFeedback.type === 'success'
-              ? 'bg-blue-50 border-blue-200 text-blue-800'
+              ? 'bg-[var(--brand-light)] border-[var(--brand-border)] text-[var(--brand-strong)]'
               : 'bg-rose-50 border-rose-200 text-rose-800'
           }`}
         >
           {assignmentFeedback.type === 'success' ? (
-            <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <CheckCircle className="w-4 h-4 text-[var(--brand)] flex-shrink-0" />
           ) : (
             <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
           )}
@@ -323,9 +323,9 @@ export const TeacherStudents: React.FC = () => {
       ) : !assignedSection ? (
         /* Unassigned State: Class Teacher Self-Assignment Card */
         <div className="space-y-4">
-          <div className="bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-50 border border-blue-200/80 rounded-3xl p-6 sm:p-8 space-y-5 shadow-xs">
+          <div className="bg-gradient-to-br from-[var(--brand-light)] via-white to-[var(--brand-light)] border border-[var(--brand-border)] rounded-3xl p-6 sm:p-8 space-y-5 shadow-xs">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+              <div className="w-12 h-12 rounded-2xl bg-[var(--brand)] text-white flex items-center justify-center flex-shrink-0 shadow-md">
                 <GraduationCap className="w-6 h-6" />
               </div>
               <div className="flex-1">
@@ -346,7 +346,7 @@ export const TeacherStudents: React.FC = () => {
                 <select
                   value={selectedSectionId}
                   onChange={(e) => setSelectedSectionId(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                 >
                   <option value="">-- Choose a Class / Section --</option>
                   {sections.map((sec) => {
@@ -374,7 +374,7 @@ export const TeacherStudents: React.FC = () => {
                 <button
                   type="submit"
                   disabled={assigning || !selectedSectionId}
-                  className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="h-11 px-6 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   {assigning ? 'Assigning...' : 'Assign Me as Class Teacher'}
@@ -393,13 +393,13 @@ export const TeacherStudents: React.FC = () => {
         /* Assigned State: Show Assigned Banner + Student Roster */
         <div className="space-y-4">
           {/* Class Teacher Banner */}
-          <div className="bg-white rounded-2xl border border-blue-200/80 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-white rounded-2xl border border-[var(--brand-border)]/80 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 font-bold">
+              <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] text-[var(--brand-strong)] flex items-center justify-center flex-shrink-0 font-bold">
                 <GraduationCap className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs text-blue-600 font-semibold uppercase tracking-wider">
+                <p className="text-xs text-[var(--brand)] font-semibold uppercase tracking-wider">
                   Class Teacher Assignment
                 </p>
                 <h2 className="text-sm font-bold text-slate-900">
@@ -423,7 +423,7 @@ export const TeacherStudents: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by student name, roll number, admission number or mobile..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all"
             />
           </div>
 
@@ -444,10 +444,10 @@ export const TeacherStudents: React.FC = () => {
                 <Link
                   key={st.id}
                   to={`/teacher/students/${st.id}`}
-                  className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs hover:border-blue-300 hover:shadow-xs transition-all cursor-pointer active:scale-[0.99] flex items-center justify-between gap-3"
+                  className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs hover:border-[var(--brand-border)] hover:shadow-xs transition-all cursor-pointer active:scale-[0.99] flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] text-[var(--brand-strong)] flex items-center justify-center font-bold text-sm flex-shrink-0">
                       {(st.display_name || st.full_name || 'ST').slice(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0">
@@ -506,7 +506,7 @@ export const TeacherStudents: React.FC = () => {
               <div
                 className={`p-3.5 rounded-xl border text-xs font-medium flex items-center gap-2 ${
                   studentModalFeedback.type === 'success'
-                    ? 'bg-blue-50 border-blue-200 text-blue-800'
+                    ? 'bg-[var(--brand-light)] border-[var(--brand-border)] text-[var(--brand-strong)]'
                     : 'bg-rose-50 border-rose-200 text-rose-800'
                 }`}
               >
@@ -517,16 +517,16 @@ export const TeacherStudents: React.FC = () => {
 
             <form onSubmit={handleCreateStudent} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
               {/* Assigned Class Banner (Locked) */}
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+              <div className="p-3 bg-[var(--brand-light)] border border-[var(--brand-border)] rounded-xl flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">
+                  <span className="text-[10px] font-bold text-[var(--brand)] uppercase tracking-wider block">
                     Target Class (Automatically Bound)
                   </span>
-                  <span className="text-xs font-bold text-blue-900">
+                  <span className="text-xs font-bold text-[var(--brand-strong)]">
                     {assignedClassDisplayName}
                   </span>
                 </div>
-                <span className="text-[10px] font-semibold bg-blue-200/70 text-blue-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                <span className="text-[10px] font-semibold bg-[var(--brand-border)]/70 text-[var(--brand-strong)] px-2 py-0.5 rounded-md flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" /> Enforced by Server
                 </span>
               </div>
@@ -565,21 +565,21 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.full_name}
                       onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                       placeholder="e.g. Rahul Sharma"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center justify-between">
                       <span>Admission Number</span>
-                      <span className="text-[10px] text-blue-600 font-normal">Auto-generated if empty</span>
+                      <span className="text-[10px] text-[var(--brand)] font-normal">Auto-generated if empty</span>
                     </label>
                     <input
                       type="text"
                       value={formData.admission_number}
                       onChange={(e) => setFormData({ ...formData, admission_number: e.target.value })}
                       placeholder="e.g. SCH2026001"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -592,7 +592,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.roll_number}
                       onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
                       placeholder="e.g. 15"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -603,7 +603,7 @@ export const TeacherStudents: React.FC = () => {
                     <select
                       value={formData.gender}
                       onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none bg-white"
                     >
                       <option value="MALE">Male</option>
                       <option value="FEMALE">Female</option>
@@ -619,7 +619,7 @@ export const TeacherStudents: React.FC = () => {
                       type="date"
                       value={formData.date_of_birth}
                       onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -632,7 +632,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.blood_group}
                       onChange={(e) => setFormData({ ...formData, blood_group: e.target.value })}
                       placeholder="e.g. O+, A+, B+"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -644,7 +644,7 @@ export const TeacherStudents: React.FC = () => {
                       type="date"
                       value={formData.admission_date}
                       onChange={(e) => setFormData({ ...formData, admission_date: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -657,7 +657,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="student@example.com"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -678,7 +678,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.father_name}
                       onChange={(e) => setFormData({ ...formData, father_name: e.target.value })}
                       placeholder="Father's Full Name"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -691,7 +691,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.father_mobile}
                       onChange={(e) => setFormData({ ...formData, father_mobile: e.target.value })}
                       placeholder="e.g. 9876543210"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -704,7 +704,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.mother_name}
                       onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
                       placeholder="Mother's Full Name"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -717,7 +717,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.mother_mobile}
                       onChange={(e) => setFormData({ ...formData, mother_mobile: e.target.value })}
                       placeholder="e.g. 9876543211"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -730,7 +730,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.guardian_mobile}
                       onChange={(e) => setFormData({ ...formData, guardian_mobile: e.target.value })}
                       placeholder="e.g. 9876543212"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -743,7 +743,7 @@ export const TeacherStudents: React.FC = () => {
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       placeholder="Complete residential address"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -753,7 +753,7 @@ export const TeacherStudents: React.FC = () => {
                 <button
                   type="submit"
                   disabled={submittingStudent}
-                  className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="flex-1 h-11 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   <Save className="w-4 h-4" />
                   {submittingStudent ? 'Saving Student...' : 'Add Student to Class'}

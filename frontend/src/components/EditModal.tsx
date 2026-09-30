@@ -78,7 +78,7 @@ export const EditModal: React.FC<EditModalProps> = ({ title, fields, initialValu
         {error && <p className="text-xs text-rose-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="text-xs px-3 py-2 rounded-lg border border-slate-200">Cancel</button>
-          <button type="submit" disabled={saving} className="text-xs px-3 py-2 rounded-lg bg-indigo-600 text-white font-bold disabled:opacity-50">
+          <button type="submit" disabled={saving} className="text-xs px-3 py-2 rounded-lg bg-[var(--brand)] text-white font-bold disabled:opacity-50">
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
@@ -142,7 +142,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             disabled={submitting}
             onClick={handleConfirm}
             className={`text-xs px-3 py-2 rounded-lg font-bold text-white disabled:opacity-50 ${
-              confirmVariant === 'danger' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'
+              confirmVariant === 'danger' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[var(--brand)] hover:bg-[var(--brand-hover)]'
             }`}
           >
             {submitting ? 'Processing…' : confirmLabel}

@@ -152,7 +152,7 @@ export const TeacherProfile: React.FC = () => {
               setIsEditing(true);
               setFeedback(null);
             }}
-            className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            className="h-10 px-4 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
           >
             <Edit3 className="w-4 h-4" />
             Edit Profile
@@ -165,12 +165,12 @@ export const TeacherProfile: React.FC = () => {
         <div
           className={`p-4 rounded-2xl border text-xs font-medium flex items-center gap-2.5 ${
             feedback.type === 'success'
-              ? 'bg-blue-50 border-blue-200 text-blue-800'
+              ? 'bg-[var(--brand-light)] border-[var(--brand-border)] text-[var(--brand-strong)]'
               : 'bg-rose-50 border-rose-200 text-rose-800'
           }`}
         >
           {feedback.type === 'success' ? (
-            <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <CheckCircle className="w-4 h-4 text-[var(--brand)] flex-shrink-0" />
           ) : (
             <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
           )}
@@ -188,12 +188,12 @@ export const TeacherProfile: React.FC = () => {
         <div className="space-y-4">
           {/* Hero Profile Header */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div className="h-28 bg-gradient-to-r from-blue-600 via-sky-600 to-indigo-700" />
+            <div className="h-28 bg-gradient-to-r from-[var(--brand)] via-[var(--brand-hover)] to-[var(--brand-strong)]" />
             <div className="px-6 pb-6">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-10 mb-2">
                 <div className="flex items-end gap-3.5">
                   <div className="w-20 h-20 rounded-2xl bg-white border-4 border-white shadow-md flex items-center justify-center flex-shrink-0">
-                    <UserCircle className="w-12 h-12 text-blue-600" />
+                    <UserCircle className="w-12 h-12 text-[var(--brand)]" />
                   </div>
                   <div className="mb-1">
                     <h2 className="text-lg font-bold text-slate-900">
@@ -213,11 +213,11 @@ export const TeacherProfile: React.FC = () => {
                     </span>
                   )}
                   {profileData.role_type && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]">
                       {profileData.role_type}
                     </span>
                   )}
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)]">
                     TEACHER
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
@@ -230,7 +230,7 @@ export const TeacherProfile: React.FC = () => {
 
           {/* Edit Form or View Information */}
           {isEditing ? (
-            <div className="bg-white rounded-3xl border border-blue-200 shadow-xs p-6 space-y-5">
+            <div className="bg-white rounded-3xl border border-[var(--brand-border)] shadow-xs p-6 space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
                   Edit Teacher Profile Information
@@ -258,7 +258,7 @@ export const TeacherProfile: React.FC = () => {
                       value={formData.display_name}
                       onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
                       placeholder="e.g. John Doe"
-                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -273,7 +273,7 @@ export const TeacherProfile: React.FC = () => {
                       value={formData.mobile}
                       onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                       placeholder="Mobile Phone"
-                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -287,7 +287,7 @@ export const TeacherProfile: React.FC = () => {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="teacher@school.edu"
-                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -301,7 +301,7 @@ export const TeacherProfile: React.FC = () => {
                       value={formData.qualification}
                       onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
                       placeholder="e.g. M.Sc. Mathematics, B.Ed."
-                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
 
@@ -315,7 +315,7 @@ export const TeacherProfile: React.FC = () => {
                       value={formData.department}
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                       placeholder="e.g. Science, Mathematics, English"
-                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -324,7 +324,7 @@ export const TeacherProfile: React.FC = () => {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                    className="flex-1 h-11 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                   >
                     <Save className="w-4 h-4" />
                     {saving ? 'Saving Changes...' : 'Save Profile'}
@@ -346,8 +346,8 @@ export const TeacherProfile: React.FC = () => {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Personal & Contact Info</h3>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <UserIcon className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <UserIcon className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Full Name</p>
@@ -358,8 +358,8 @@ export const TeacherProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Mobile Phone</p>
@@ -368,8 +368,8 @@ export const TeacherProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Email Address</p>
@@ -380,8 +380,8 @@ export const TeacherProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <School className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <School className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Institution</p>
@@ -397,8 +397,8 @@ export const TeacherProfile: React.FC = () => {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Faculty Details</h3>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <Briefcase className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Briefcase className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Employee ID</p>
@@ -409,8 +409,8 @@ export const TeacherProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <GraduationCap className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <GraduationCap className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Qualification</p>
@@ -421,8 +421,8 @@ export const TeacherProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <Layers className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Layers className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Department</p>
@@ -434,8 +434,8 @@ export const TeacherProfile: React.FC = () => {
 
                 {profileData.joining_date && (
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-5 h-5 text-[var(--brand)]" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-slate-500">Joining Date</p>
@@ -455,7 +455,7 @@ export const TeacherProfile: React.FC = () => {
                     {profileData.assigned_subjects?.map((sub, i) => (
                       <span
                         key={`sub-${i}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]"
                       >
                         <BookOpen className="w-3.5 h-3.5" />
                         {sub}

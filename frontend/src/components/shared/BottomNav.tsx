@@ -21,8 +21,8 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({
   primaryItems,
   moreItems = [],
-  activeColorClass = 'text-indigo-600',
-  indicatorColor = 'bg-indigo-600',
+  activeColorClass = 'text-[var(--brand)]',
+  indicatorColor = 'bg-[var(--brand)]',
   roleTitle = 'All Features',
 }) => {
   const [moreOpen, setMoreOpen] = useState(false);

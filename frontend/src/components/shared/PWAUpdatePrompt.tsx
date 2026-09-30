@@ -38,10 +38,10 @@ export const PWAUpdatePrompt: React.FC = () => {
       role="status"
       aria-live="polite"
       data-testid="pwa-update-prompt"
-      className="w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-indigo-200 bg-white p-4 shadow-xl"
+      className="w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-[var(--brand-border)] bg-white p-4 shadow-xl"
     >
       <div className="flex items-start gap-2.5">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--brand-light)] text-[var(--brand)]">
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
@@ -53,7 +53,7 @@ export const PWAUpdatePrompt: React.FC = () => {
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="-mr-1 -mt-1 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          className="-mr-1 -mt-1 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
         >
           <X className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">Dismiss update notification</span>
@@ -65,7 +65,7 @@ export const PWAUpdatePrompt: React.FC = () => {
           type="button"
           onClick={onUpdate}
           disabled={applying}
-          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 text-xs font-bold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-60"
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand)] text-xs font-bold text-white transition-colors hover:bg-[var(--brand-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 disabled:opacity-60"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${applying ? 'animate-spin' : ''}`} aria-hidden="true" />
           {applying ? 'Updating\u2026' : 'Update'}

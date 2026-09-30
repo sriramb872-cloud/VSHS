@@ -8,6 +8,7 @@ import { HomeworkCard } from '../../components/homework';
 import { BookOpen } from 'lucide-react';
 import { LoadingSkeleton, EmptyState, ConfirmDialog, ErrorState } from '../../components/shared';
 import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
+import { useCurrentWeekday } from '../../hooks/useClock';
 import { timetableService } from '../../services/timetable';
 
 export const TeacherHomeworkPage: React.FC = () => {
@@ -15,7 +16,10 @@ export const TeacherHomeworkPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [selectedDay, setSelectedDay] = useState('Monday');
+  // Open on the real current day (and follow a day rollover) until the user picks a tab.
+  const todayWeekday = useCurrentWeekday();
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const selectedDay = pickedDay ?? todayWeekday;
   const [timetable, setTimetable] = useState<any[]>([]);
   const navigate = useNavigate();
 
@@ -70,14 +74,14 @@ export const TeacherHomeworkPage: React.FC = () => {
         </div>
         <button
           onClick={() => navigate('/teacher/homework/create')}
-          className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all flex-shrink-0"
+          className="h-10 px-4 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           Create
         </button>
       </div>
 
-      <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+      <WeekdayTabs selectedDay={selectedDay} onChange={setPickedDay} />
       <p className="text-xs text-slate-500">{daySlots.length} scheduled period{daySlots.length === 1 ? '' : 's'} on {selectedDay}; homework is matched to the existing timetable.</p>
 
       {/* Homework Cards */}
@@ -103,7 +107,7 @@ export const TeacherHomeworkPage: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); navigate(`/teacher/homework/edit/${hw.id}`); }}
-                      className="p-2 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                      className="p-2 text-slate-400 hover:text-[var(--brand)] rounded-lg hover:bg-[var(--brand-light)] transition-colors"
                       title="Edit"
                     >
                       <Edit className="w-4 h-4" />

@@ -21,7 +21,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   trendUp,
   subtitle,
   badgeText,
-  iconBgClass = 'bg-indigo-50 text-indigo-600',
+  iconBgClass = 'bg-[var(--brand-light)] text-[var(--brand)]',
   onClick,
 }) => {
   return (

@@ -179,7 +179,7 @@ export const StudentProfile: React.FC = () => {
               setIsEditing(true);
               setFeedback(null);
             }}
-            className="h-10 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            className="h-10 px-4 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
           >
             <Edit3 className="w-4 h-4" />
             Edit Profile
@@ -215,12 +215,12 @@ export const StudentProfile: React.FC = () => {
         <div className="space-y-4">
           {/* Profile Hero Header Card */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div className="h-28 bg-gradient-to-r from-orange-500 via-amber-500 to-red-500" />
+            <div className="h-28 bg-gradient-to-r from-[var(--brand)] via-[var(--brand-hover)] to-[var(--brand-strong)]" />
             <div className="px-6 pb-6">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-10 mb-2">
                 <div className="flex items-end gap-3.5">
                   <div className="w-20 h-20 rounded-2xl bg-white border-4 border-white shadow-md flex items-center justify-center flex-shrink-0">
-                    <UserCircle className="w-12 h-12 text-orange-600" />
+                    <UserCircle className="w-12 h-12 text-[var(--brand)]" />
                   </div>
                   <div className="mb-1">
                     <h2 className="text-lg font-bold text-slate-900">
@@ -236,7 +236,7 @@ export const StudentProfile: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-2">
                   {profileData.admission_number && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-800 border border-orange-200">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)] border border-[var(--brand-border)]">
                       ID: {profileData.admission_number}
                     </span>
                   )}
@@ -245,7 +245,7 @@ export const StudentProfile: React.FC = () => {
                       Roll: {profileData.roll_number}
                     </span>
                   )}
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[var(--brand-light)] text-[var(--brand-strong)]">
                     STUDENT
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -260,7 +260,7 @@ export const StudentProfile: React.FC = () => {
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div className="flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-orange-600" />
+                <GraduationCap className="w-4 h-4 text-[var(--brand)]" />
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                   Academic & Enrollment Information
                 </h3>
@@ -315,7 +315,7 @@ export const StudentProfile: React.FC = () => {
 
           {/* Edit Form or View Information */}
           {isEditing ? (
-            <div className="bg-white rounded-3xl border border-orange-200 shadow-xs p-6 space-y-5">
+            <div className="bg-white rounded-3xl border border-[var(--brand-border)] shadow-xs p-6 space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
                   Edit Personal & Contact Information
@@ -348,7 +348,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.display_name}
                         onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
                         placeholder="Student Full Name"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
 
@@ -362,7 +362,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="student@school.edu"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
 
@@ -375,7 +375,7 @@ export const StudentProfile: React.FC = () => {
                         type="date"
                         value={formData.date_of_birth}
                         onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                        className="w-full h-11 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
 
@@ -387,7 +387,7 @@ export const StudentProfile: React.FC = () => {
                       <select
                         value={formData.gender}
                         onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                        className="w-full h-11 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white"
+                        className="w-full h-11 px-3 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none bg-white"
                       >
                         <option value="">Select Gender</option>
                         <option value="Male">Male</option>
@@ -406,7 +406,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.blood_group}
                         onChange={(e) => setFormData({ ...formData, blood_group: e.target.value })}
                         placeholder="e.g. O+, A+, B+, AB-"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
 
@@ -420,7 +420,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.address}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         placeholder="Complete residential address"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
                   </div>
@@ -442,7 +442,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.father_name}
                         onChange={(e) => setFormData({ ...formData, father_name: e.target.value })}
                         placeholder="Father's Full Name"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
 
@@ -456,7 +456,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.father_mobile}
                         onChange={(e) => setFormData({ ...formData, father_mobile: e.target.value })}
                         placeholder="Father's Phone"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
 
@@ -470,7 +470,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.mother_name}
                         onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
                         placeholder="Mother's Full Name"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
 
@@ -484,7 +484,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.mother_mobile}
                         onChange={(e) => setFormData({ ...formData, mother_mobile: e.target.value })}
                         placeholder="Mother's Phone"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
 
@@ -498,7 +498,7 @@ export const StudentProfile: React.FC = () => {
                         value={formData.guardian_mobile}
                         onChange={(e) => setFormData({ ...formData, guardian_mobile: e.target.value })}
                         placeholder="Emergency / Guardian Phone"
-                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                        className="w-full h-11 px-4 rounded-xl border border-slate-300 text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                       />
                     </div>
                   </div>
@@ -508,7 +508,7 @@ export const StudentProfile: React.FC = () => {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-1 h-11 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                    className="flex-1 h-11 rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                   >
                     <Save className="w-4 h-4" />
                     {saving ? 'Saving Changes...' : 'Save Profile'}
@@ -532,8 +532,8 @@ export const StudentProfile: React.FC = () => {
                 </h3>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                    <UserIcon className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <UserIcon className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Student Full Name</p>
@@ -544,8 +544,8 @@ export const StudentProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Date of Birth / Age</p>
@@ -557,8 +557,8 @@ export const StudentProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                    <Heart className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Heart className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Gender & Blood Group</p>
@@ -569,8 +569,8 @@ export const StudentProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Email Address</p>
@@ -582,8 +582,8 @@ export const StudentProfile: React.FC = () => {
 
                 {profileData.address && (
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                      <Home className="w-5 h-5 text-orange-600" />
+                    <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                      <Home className="w-5 h-5 text-[var(--brand)]" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-slate-500">Residential Address</p>
@@ -602,8 +602,8 @@ export const StudentProfile: React.FC = () => {
                 </h3>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                    <Users className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Father's Name & Phone</p>
@@ -617,8 +617,8 @@ export const StudentProfile: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                    <Users className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Mother's Name & Phone</p>
@@ -633,8 +633,8 @@ export const StudentProfile: React.FC = () => {
 
                 {profileData.guardian_mobile && (
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-5 h-5 text-orange-600" />
+                    <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                      <Phone className="w-5 h-5 text-[var(--brand)]" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-slate-500">Guardian / Emergency Mobile</p>
@@ -644,8 +644,8 @@ export const StudentProfile: React.FC = () => {
                 )}
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                    <School className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <School className="w-5 h-5 text-[var(--brand)]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Enrolled Institution</p>

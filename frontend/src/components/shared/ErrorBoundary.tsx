@@ -44,7 +44,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             Something went wrong loading this screen. You can try again, or head back to your dashboard — the rest of the app is unaffected.
           </p>
           <div className="flex items-center gap-3">
-            <button onClick={this.handleRetry} className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 rounded-xl shadow-sm transition-all">
+            <button onClick={this.handleRetry} className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-white bg-[var(--brand)] hover:bg-[var(--brand-hover)] active:scale-95 rounded-xl shadow-sm transition-all">
               <RefreshCw className="w-3.5 h-3.5" /><span>Try again</span>
             </button>
             <button onClick={() => { window.location.href = '/'; }} className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 rounded-xl transition-all">

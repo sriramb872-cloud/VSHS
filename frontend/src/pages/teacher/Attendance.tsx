@@ -8,6 +8,8 @@ import { Teacher, Student, AttendanceRecord, AttendanceStatus } from '../../type
 import { timetableService } from '../../services/timetable';
 import errorMessage from '../../helpers/errorMessage';
 import { WeekdayTabs } from '../../components/shared/WeekdayTabs';
+import { useCurrentWeekday } from '../../hooks/useClock';
+import { getLocalDateString } from '../../utils/date';
 import { ConfirmDialog } from '../../components/EditModal';
 
 export const TeacherAttendance: React.FC = () => {
@@ -20,14 +22,18 @@ export const TeacherAttendance: React.FC = () => {
   const [remarksMap, setRemarksMap] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  // Local calendar date (never UTC - `toISOString()` can be a day behind/ahead).
+  const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString());
   const [saving, setSaving] = useState<boolean>(false);
   const [saved, setSaved] = useState<boolean>(false);
-  const [selectedDay, setSelectedDay] = useState('Monday');
+  // Open on the real current day (and follow a day rollover) until the user picks a tab.
+  const todayWeekday = useCurrentWeekday();
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const selectedDay = pickedDay ?? todayWeekday;
   const [timetable, setTimetable] = useState<any[]>([]);
 
   // History & Correction state
-  const [historyDate, setHistoryDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [historyDate, setHistoryDate] = useState<string>(getLocalDateString());
   const [historyRecords, setHistoryRecords] = useState<AttendanceRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -263,7 +269,7 @@ export const TeacherAttendance: React.FC = () => {
 
       {activeTab === 'mark' ? (
         <>
-          <WeekdayTabs selectedDay={selectedDay} onChange={setSelectedDay} />
+          <WeekdayTabs selectedDay={selectedDay} onChange={setPickedDay} />
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 space-y-2">
             <p className="text-xs font-semibold text-slate-700">{selectedDay} attendance sessions</p>
             {daySlots.length === 0 ? (
@@ -284,11 +290,11 @@ export const TeacherAttendance: React.FC = () => {
           {/* Date Picker */}
           <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-blue-600" /> Select Attendance Date
+              <Calendar className="w-3.5 h-3.5 text-[var(--brand)]" /> Select Attendance Date
             </label>
             <input
               type="date"
-              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full h-11 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
               value={selectedDate}
               onChange={e => setSelectedDate(e.target.value)}
             />
@@ -311,8 +317,8 @@ export const TeacherAttendance: React.FC = () => {
                       key={st.id}
                       className="flex items-center gap-3 bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-xs"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-bold text-blue-700">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-bold text-[var(--brand-strong)]">
                           {(st.display_name || st.full_name || '?').charAt(0)}
                         </span>
                       </div>
@@ -332,7 +338,7 @@ export const TeacherAttendance: React.FC = () => {
                           placeholder="Remarks (optional)"
                           maxLength={255}
                           aria-label={`Remarks for ${st.display_name || st.full_name || st.id}`}
-                          className="mt-1.5 w-full h-8 px-2 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          className="mt-1.5 w-full h-8 px-2 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-[var(--brand)] focus:outline-none"
                         />
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0">
@@ -374,7 +380,7 @@ export const TeacherAttendance: React.FC = () => {
                           onClick={() => handleStatusChange(st.id, 'LEAVE')}
                           className={`h-8 px-3 rounded-lg text-xs font-bold transition-all ${
                             currentStatus === 'LEAVE'
-                              ? 'bg-indigo-600 text-white shadow-sm'
+                              ? 'bg-[var(--brand)] text-white shadow-sm'
                               : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                           }`}
                         >
@@ -389,7 +395,7 @@ export const TeacherAttendance: React.FC = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-sm shadow-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full h-12 rounded-2xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] active:scale-[0.98] text-white font-bold text-sm shadow-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 <Save className="w-4 h-4" />
                 {saving ? 'Saving Attendance...' : 'Save Attendance'}
@@ -412,7 +418,7 @@ export const TeacherAttendance: React.FC = () => {
             <button
               onClick={fetchHistory}
               disabled={historyLoading}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 disabled:opacity-50"
+              className="px-4 py-2 bg-[var(--brand)] text-white rounded-lg text-xs font-bold hover:bg-[var(--brand-hover)] disabled:opacity-50"
             >
               {historyLoading ? 'Loading…' : 'Load History'}
             </button>
@@ -449,8 +455,8 @@ export const TeacherAttendance: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-bold text-blue-700">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-bold text-[var(--brand-strong)]">
                           {studentName.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -504,7 +510,7 @@ export const TeacherAttendance: React.FC = () => {
                             <>
                               <button
                                 onClick={() => handleStartEdit(record)}
-                                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2.5 py-1.5 rounded-lg border border-indigo-200 hover:bg-indigo-50 flex items-center gap-1"
+                                className="text-xs text-[var(--brand)] hover:text-[var(--brand-strong)] font-medium px-2.5 py-1.5 rounded-lg border border-[var(--brand-border)] hover:bg-[var(--brand-light)] flex items-center gap-1"
                               >
                                 <Edit3 className="w-3.5 h-3.5" /> Edit
                               </button>

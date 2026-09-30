@@ -83,7 +83,7 @@ export const UserSettingsSection: React.FC<UserSettingsSectionProps> = ({ initia
                 type="checkbox"
                 checked={!!notifications[key]}
                 onChange={(e) => setNotifications({ ...notifications, [key]: e.target.checked })}
-                className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                className="h-4 w-4 text-[var(--brand)] border-gray-300 rounded"
               />
               <span className="text-sm font-medium text-gray-700 capitalize">{key} Notifications</span>
             </label>
@@ -93,7 +93,7 @@ export const UserSettingsSection: React.FC<UserSettingsSectionProps> = ({ initia
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+          className="px-4 py-2 bg-[var(--brand)] text-white rounded hover:bg-[var(--brand-hover)] disabled:opacity-50"
         >
           {loading ? 'Saving...' : 'Save Changes'}
         </button>

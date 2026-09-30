@@ -21,11 +21,11 @@ export const TeacherLayout: React.FC = () => (
   <AppShell
     role="TEACHER"
     roleLabel="Teacher Portal"
-    accentColor="bg-blue-950"
+    accentColor="bg-[var(--sidebar-bg)]"
     navItems={navItems}
     notificationsPath="/teacher/notifications"
-    activeColorClass="text-blue-600"
-    indicatorColor="bg-blue-600"
+    activeColorClass="text-[var(--brand)]"
+    indicatorColor="bg-[var(--brand)]"
   />
 );
 

@@ -23,7 +23,7 @@ export const MoreSheet: React.FC<MoreSheetProps> = ({
   onClose,
   items,
   roleTitle = 'More Options',
-  activeColorClass = 'text-indigo-600 bg-indigo-50 font-semibold',
+  activeColorClass = 'text-[var(--brand)] bg-[var(--brand-light)] font-semibold',
 }) => {
   const { logout } = useAuth();
 

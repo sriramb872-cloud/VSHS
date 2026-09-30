@@ -14,6 +14,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { LoadingSkeleton, EmptyState, ConfirmDialog } from '../../components/shared';
+import { useCurrentWeekday } from '../../hooks/useClock';
 import { timetableService } from '../../services/timetable';
 import { gradesService } from '../../services/grades';
 import { subjectsService } from '../../services/subjects';
@@ -78,7 +79,10 @@ export const PrincipalTimetablePage: React.FC = () => {
   const [classes, setClasses] = useState<Grade[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
-  const [selectedDay, setSelectedDay] = useState('Monday');
+  // Open on the real current day (and follow a day rollover) until the user picks a tab.
+  const todayWeekday = useCurrentWeekday();
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const selectedDay = pickedDay ?? todayWeekday;
 
   // State for subjects & teachers catalog
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -428,7 +432,7 @@ export const PrincipalTimetablePage: React.FC = () => {
             ))}
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {DAYS.map(day => <button key={day} onClick={() => setSelectedDay(day)} className={`px-3 py-2 rounded-lg text-xs font-semibold ${selectedDay === day ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{day}</button>)}
+            {DAYS.map(day => <button key={day} onClick={() => setPickedDay(day)} className={`px-3 py-2 rounded-lg text-xs font-semibold ${selectedDay === day ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{day}</button>)}
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

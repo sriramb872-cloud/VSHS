@@ -158,8 +158,8 @@ export const TeacherAttendanceHistory: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-blue-700">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-[var(--brand-strong)]">
                       {record.student_name?.charAt(0) ?? record.student_id}
                     </span>
                   </div>
@@ -216,7 +216,7 @@ export const TeacherAttendanceHistory: React.FC = () => {
                         <>
                           <button
                             onClick={() => handleStartEdit(record)}
-                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2.5 py-1.5 rounded-lg border border-indigo-200 hover:bg-indigo-50"
+                            className="text-xs text-[var(--brand)] hover:text-[var(--brand-strong)] font-medium px-2.5 py-1.5 rounded-lg border border-[var(--brand-border)] hover:bg-[var(--brand-light)]"
                           >
                             Correct
                           </button>

@@ -56,8 +56,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   accentColor,
   navItems,
   notificationsPath,
-  activeColorClass = 'text-indigo-600',
-  indicatorColor = 'bg-indigo-600',
+  activeColorClass = 'text-[var(--brand)]',
+  indicatorColor = 'bg-[var(--brand)]',
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);

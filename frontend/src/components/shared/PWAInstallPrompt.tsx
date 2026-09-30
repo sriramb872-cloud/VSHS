@@ -90,7 +90,7 @@ export const PWAInstallPrompt: React.FC = () => {
         <button
           type="button"
           onClick={onDismiss}
-          className="-mr-1 -mt-1 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          className="-mr-1 -mt-1 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
         >
           <X className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">Dismiss install prompt</span>
@@ -102,7 +102,7 @@ export const PWAInstallPrompt: React.FC = () => {
           type="button"
           onClick={onInstall}
           disabled={busy}
-          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 text-xs font-bold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-60"
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand)] text-xs font-bold text-white transition-colors hover:bg-[var(--brand-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 disabled:opacity-60"
         >
           <Download className="h-3.5 w-3.5" aria-hidden="true" />
           {busy ? 'Installing\u2026' : 'Install'}

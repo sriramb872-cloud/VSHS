@@ -18,7 +18,7 @@ export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onClick, a
       <div>
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{homework.title}</h3>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 shrink-0">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--brand-light)] text-[var(--brand-strong)] shrink-0">
             Due: {homework.due_date}
           </span>
         </div>

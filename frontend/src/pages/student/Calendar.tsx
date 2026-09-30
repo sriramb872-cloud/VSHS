@@ -119,7 +119,7 @@ export const StudentCalendarPage: React.FC = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search holidays, exams, school activities..."
-          className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200/80 bg-white text-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none placeholder:text-slate-400 shadow-xs"
+          className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200/80 bg-white text-slate-900 text-xs sm:text-sm focus:ring-2 focus:ring-[var(--brand)] focus:outline-none placeholder:text-slate-400 shadow-xs"
         />
         {searchQuery && (
           <button
@@ -139,7 +139,7 @@ export const StudentCalendarPage: React.FC = () => {
             onClick={() => setSelectedCategory(cat)}
             className={`h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
               selectedCategory === cat
-                ? 'bg-orange-600 text-white shadow-xs'
+                ? 'bg-[var(--brand)] text-white shadow-xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -150,16 +150,16 @@ export const StudentCalendarPage: React.FC = () => {
 
       {/* Selected Date Indicator */}
       {selectedDate && (
-        <div className="bg-orange-50 border border-orange-200/80 rounded-xl p-3 flex items-center justify-between text-xs text-orange-900">
+        <div className="bg-[var(--brand-light)] border border-[var(--brand-border)]/80 rounded-xl p-3 flex items-center justify-between text-xs text-[var(--brand-strong)]">
           <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-orange-600" />
+            <CalendarIcon className="w-4 h-4 text-[var(--brand)]" />
             <span>
               Showing events on <strong className="font-bold">{selectedDate}</strong>
             </span>
           </div>
           <button
             onClick={() => setSelectedDate(null)}
-            className="font-bold text-orange-700 hover:text-orange-800 underline ml-2"
+            className="font-bold text-[var(--brand-strong)] hover:text-[var(--brand-strong)] underline ml-2"
           >
             Clear Date Filter
           </button>

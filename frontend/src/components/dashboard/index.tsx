@@ -13,7 +13,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, icon, descript
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-gray-500">{title}</span>
-        {icon && <div className="text-indigo-600">{icon}</div>}
+        {icon && <div className="text-[var(--brand)]">{icon}</div>}
       </div>
       <div className="text-2xl font-bold text-gray-900">{value}</div>
       {description && <p className="text-xs text-gray-400">{description}</p>}
