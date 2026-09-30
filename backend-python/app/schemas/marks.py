@@ -41,6 +41,13 @@ class MarkResponse(BaseModel):
     marks_obtained: float
     max_marks: float = 100.0
     remarks: Optional[str] = None
+    # Formative (4-component) exams persist their rows in `exam_results`
+    # rather than `marks`. They are returned through the same read endpoint
+    # so the teacher's edit grid can be repopulated with the stored values.
+    written_test: Optional[float] = None
+    project: Optional[float] = None
+    read_reflection: Optional[float] = None
+    notebook: Optional[float] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     # Human-readable context used by Principal marks monitoring.

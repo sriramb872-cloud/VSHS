@@ -2,6 +2,7 @@
 from datetime import datetime
 from typing import List, Optional, Tuple
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models.exam import Exam
 from app.models.exam_subject import ExamSubject
@@ -382,7 +383,29 @@ class MarksService:
         school_id: Optional[int] = None,
         exam_subject_ids: Optional[List[int]] = None,
         academic_year_id: Optional[int] = None,
+        published_only: bool = False,
     ) -> Tuple[List[MarkResponse], int]:
+        # FORMATIVE exams store their rows in `exam_results`, not `marks`.
+        # Reading an exam subject therefore has to switch to that table so the
+        # teacher's grid can be repopulated when they hit Edit.
+        if exam_subject_id is not None:
+            exam_subject = (
+                db.query(ExamSubject).filter(ExamSubject.id == exam_subject_id).first()
+            )
+            if exam_subject is not None:
+                exam = exam_subject.exam
+                if exam is not None and (exam.assessment_mode or "FORMATIVE").upper() == "FORMATIVE":
+                    return MarksService._list_formative_results(
+                        db,
+                        exam=exam,
+                        exam_subject=exam_subject,
+                        student_id=student_id,
+                        school_id=school_id,
+                        skip=skip,
+                        limit=limit,
+                        published_only=published_only,
+                    )
+
         query = db.query(Marks)
 
         if school_id is not None:
@@ -391,20 +414,32 @@ class MarksService:
             query = query.filter(Marks.exam_subject_id.in_(exam_subject_ids))
         if exam_subject_id is not None:
             query = query.filter(Marks.exam_subject_id == exam_subject_id)
+        # Join each table at most once: joining ExamSubject once for `exam_id`
+        # and again for the academic-year filter produced
+        # "Not unique table/alias: 'exam_subjects'" (HTTP 500).
+        if exam_id is not None or academic_year_id is not None:
+            query = query.join(ExamSubject, Marks.exam_subject_id == ExamSubject.id)
         if exam_id is not None:
-            query = query.join(ExamSubject, Marks.exam_subject_id == ExamSubject.id).filter(
-                ExamSubject.exam_id == exam_id
-            )
+            query = query.filter(ExamSubject.exam_id == exam_id)
         if academic_year_id is not None:
             # Marks inherit the year through Marks -> ExamSubject -> Exam.
             # No denormalised year column on `marks` itself.
             query = (
-                query.join(ExamSubject, Marks.exam_subject_id == ExamSubject.id)
-                .join(Exam, ExamSubject.exam_id == Exam.id)
+                query.join(Exam, ExamSubject.exam_id == Exam.id)
                 .filter(Exam.academic_year_id == academic_year_id)
             )
         if student_id is not None:
             query = query.filter(Marks.student_id == student_id)
+        if published_only:
+            # Students (and their exam views) must never read marks for an
+            # exam the Principal has not published yet.
+            query = query.filter(
+                Marks.exam_subject_id.in_(
+                    select(ExamSubject.id)
+                    .join(Exam, ExamSubject.exam_id == Exam.id)
+                    .where(Exam.status == "PUBLISHED")
+                )
+            )
 
         total = query.count()
         items = query.order_by(Marks.id.desc()).offset(skip).limit(limit).all()
@@ -436,6 +471,77 @@ class MarksService:
                     section_id=exam.section_id if exam else None,
                     academic_year_id=exam.academic_year_id if exam else None,
                     teacher_id=exam_subject.teacher_id if exam_subject else None,
+                )
+            )
+        return responses, total
+
+    @staticmethod
+    def _list_formative_results(
+        db: Session,
+        exam: Exam,
+        exam_subject: ExamSubject,
+        student_id: Optional[int] = None,
+        school_id: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 50,
+        published_only: bool = False,
+    ) -> Tuple[List[MarkResponse], int]:
+        if school_id is not None and exam.school_id != school_id:
+            return [], 0
+        if published_only and (exam.status or "").upper() != "PUBLISHED":
+            return [], 0
+
+        query = db.query(ExamResult).filter(
+            ExamResult.exam_id == exam.id,
+            ExamResult.subject_id == exam_subject.subject_id,
+        )
+        if student_id is not None:
+            query = query.filter(ExamResult.student_id == student_id)
+
+        total = query.count()
+        items = query.order_by(ExamResult.id.desc()).offset(skip).limit(limit).all()
+
+        subject = exam_subject.subject
+        subject_name = (
+            getattr(subject, "name", None)
+            or getattr(subject, "subject_name", None)
+            or f"Subject #{exam_subject.subject_id}"
+        )
+
+        responses: List[MarkResponse] = []
+        for item in items:
+            student = db.query(Student).filter(Student.id == item.student_id).first()
+            st_name = (
+                student.user.display_name
+                if (student and student.user and hasattr(student.user, "display_name"))
+                else f"Student #{item.student_id}"
+            )
+            responses.append(
+                MarkResponse(
+                    id=item.id,
+                    exam_subject_id=exam_subject.id,
+                    student_id=item.student_id,
+                    student_name=st_name,
+                    roll_number=student.roll_number if student else None,
+                    marks_obtained=(
+                        item.written_test + item.project + item.read_reflection + item.notebook
+                    ),
+                    max_marks=float(exam_subject.maximum_marks or 35.0),
+                    remarks=None,
+                    written_test=item.written_test,
+                    project=item.project,
+                    read_reflection=item.read_reflection,
+                    notebook=item.notebook,
+                    created_at=item.created_at,
+                    updated_at=item.updated_at,
+                    exam_id=exam.id,
+                    exam_name=exam.name,
+                    subject_id=exam_subject.subject_id,
+                    subject_name=subject_name,
+                    grade_id=exam.grade_id,
+                    section_id=exam.section_id,
+                    academic_year_id=exam.academic_year_id,
+                    teacher_id=exam_subject.teacher_id,
                 )
             )
         return responses, total

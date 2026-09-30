@@ -38,6 +38,7 @@ def list_marks(
     school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
     role = str(current_user.role).upper()
     exam_subject_ids: Optional[List[int]] = None
+    published_only = False
 
     if academic_year_id is None:
         academic_year_id = resolve_year_id(db, current_user, request)
@@ -47,6 +48,10 @@ def list_marks(
         if not student:
             return {"total": 0, "items": []}
         student_id = student.id
+        # Schedule visibility and marks visibility are separate concerns:
+        # /exams returns the schedule as soon as it exists, while marks are
+        # only readable once the Principal has published the exam.
+        published_only = True
     elif role == "TEACHER":
         teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
         if not teacher:
@@ -123,6 +128,7 @@ def list_marks(
         school_id=school_id,
         exam_subject_ids=exam_subject_ids,
         academic_year_id=academic_year_id,
+        published_only=published_only,
     )
     return {"total": total, "items": items}
 

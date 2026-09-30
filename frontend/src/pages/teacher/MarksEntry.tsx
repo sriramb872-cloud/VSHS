@@ -123,16 +123,22 @@ export const TeacherMarksEntryPage: React.FC = () => {
       const isFormative = (examData.assessment_mode || '').toUpperCase() === 'FORMATIVE';
 
       if (isFormative) {
+        // Formative components live in `exam_results` and are returned by the
+        // same list endpoint, so an already-submitted grid has to be
+        // repopulated instead of resetting every input to blank.
         setFormativeRows(
-          enrollments.map((en: any) => ({
-            student_id: en.student_id,
-            student_name: en.student_name || en.full_name || `Student #${en.student_id}`,
-            roll_number: en.roll_number || '-',
-            written_test: '',
-            project: '',
-            read_reflection: '',
-            notebook: '',
-          }))
+          enrollments.map((en: any) => {
+            const saved = savedByStudent.get(en.student_id);
+            return {
+              student_id: en.student_id,
+              student_name: en.student_name || en.full_name || `Student #${en.student_id}`,
+              roll_number: en.roll_number || '-',
+              written_test: saved?.written_test ?? '',
+              project: saved?.project ?? '',
+              read_reflection: saved?.read_reflection ?? '',
+              notebook: saved?.notebook ?? '',
+            };
+          })
         );
       } else {
         setSummativeRows(
@@ -173,7 +179,11 @@ export const TeacherMarksEntryPage: React.FC = () => {
 
   const isFormative = (exam?.assessment_mode || '').toUpperCase() === 'FORMATIVE';
   const isPublished = (exam?.status || '').toUpperCase() === 'PUBLISHED';
-  const isLocked = isPublished || alreadySubmitted.current;
+  const isArchived = (exam?.status || '').toUpperCase() === 'ARCHIVED';
+  // Only publication (or an archived exam) locks the grid. A subject that has
+  // already been submitted stays fully editable until the Principal publishes
+  // — that is the whole point of the Edit action on the exam details page.
+  const isLocked = isPublished || isArchived;
 
   const handleSummativeChange = (studentId: number, field: 'marks_obtained' | 'remarks', value: string) => {
     setSummativeRows(prev =>
@@ -201,8 +211,7 @@ export const TeacherMarksEntryPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hasValidParams) return;
-    if (isLocked && !window.confirm('Marks already submitted. Re-submitting will overwrite existing marks. Continue?')) return;
+    if (!hasValidParams || isLocked) return;
 
     setFeedback(null);
     setSubmitting(true);
@@ -252,8 +261,14 @@ export const TeacherMarksEntryPage: React.FC = () => {
             })),
         });
       }
+      const wasSubmitted = alreadySubmitted.current;
       alreadySubmitted.current = true;
-      setFeedback({ type: 'success', text: 'Marks submitted successfully! Class teacher has been notified.' });
+      setFeedback({
+        type: 'success',
+        text: wasSubmitted
+          ? 'Marks updated successfully. The saved values will persist after a refresh.'
+          : 'Marks submitted successfully! Class teacher has been notified.',
+      });
     } catch (err: any) {
       setFeedback({
         type: 'error',
@@ -384,7 +399,16 @@ export const TeacherMarksEntryPage: React.FC = () => {
           <Lock className="w-4 h-4 shrink-0" />
           {isPublished
             ? 'Exam results have been published. Marks are read-only.'
-            : 'Marks have already been submitted. You can re-submit to update them.'}
+            : 'This exam has been archived. Marks are read-only.'}
+        </div>
+      )}
+
+      {/* Submitted-but-editable notice */}
+      {!isLocked && alreadySubmitted.current && !feedback && (
+        <div className="flex items-center gap-2 p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-sm font-medium">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          Marks submitted. You can edit any value below and save again — students
+          will not see these marks until the Principal publishes the exam.
         </div>
       )}
 
@@ -522,7 +546,7 @@ export const TeacherMarksEntryPage: React.FC = () => {
       )}
 
       {/* Submit Button */}
-      {!isPublished && (
+      {!isLocked && (
         <div className="flex justify-end pb-6">
           <button
             type="submit"
@@ -534,10 +558,10 @@ export const TeacherMarksEntryPage: React.FC = () => {
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {submitting ? (
-              <span>Submitting…</span>
+              <span>Saving…</span>
             ) : alreadySubmitted.current ? (
               <>
-                <Save className="w-4 h-4" /> Re-submit Marks
+                <Save className="w-4 h-4" /> Save Changes
               </>
             ) : (
               <>

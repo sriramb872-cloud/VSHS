@@ -13,6 +13,15 @@ export interface Mark {
   marks_obtained: number;
   max_marks: number;
   remarks?: string | null;
+  /**
+   * Formative (4-component) exams persist their rows in `exam_results`.
+   * `GET /marks/?exam_subject_id=..` returns them through the same shape so
+   * the teacher's edit grid can be repopulated with the stored values.
+   */
+  written_test?: number | null;
+  project?: number | null;
+  read_reflection?: number | null;
+  notebook?: number | null;
   created_at: string;
   updated_at?: string | null;
   exam_id?: number | null;

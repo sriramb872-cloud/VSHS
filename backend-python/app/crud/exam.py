@@ -32,6 +32,7 @@ class CRUDExam:
         exam_type: Optional[str] = None,
         assessment_mode: Optional[str] = None,
         status: Optional[str] = None,
+        exclude_status: Optional[str] = None,
         grade_id: Optional[int] = None,
         section_id: Optional[int] = None,
         teacher_id: Optional[int] = None,
@@ -55,6 +56,11 @@ class CRUDExam:
             query = query.filter(ExamModel.assessment_mode == assessment_mode)
         if status is not None:
             query = query.filter(ExamModel.status == status)
+        if exclude_status is not None:
+            # Used by the student portal: ARCHIVED exams are withdrawn from
+            # view, everything else (SCHEDULED / MARKS_IN_PROGRESS /
+            # PUBLISHED) is still a valid schedule.
+            query = query.filter(ExamModel.status != exclude_status)
         if grade_id is not None:
             query = query.filter(ExamModel.grade_id == grade_id)
         if section_id is not None:

@@ -41,6 +41,7 @@ def list_exams(
 ):
     user_role = str(current_user.role).upper()
     school_id = current_user.school_id if user_role != "SUPER_ADMIN" else None
+    exclude_status: Optional[str] = None
 
     # Academic year selection: explicit query param -> X-Academic-Year-Id
     # header -> the school's ACTIVE year. Only applied when the caller did not
@@ -48,30 +49,37 @@ def list_exams(
     if academic_year_id is None and user_role != "STUDENT":
         academic_year_id = resolve_year_id(db, current_user, request)
 
-    # If student, force published status only
+    # Student schedule visibility.
+    #
+    # The schedule is NOT gated on publication. As soon as the Principal
+    # creates an exam the students of that class can see it; only the marks
+    # themselves stay hidden until the exam is published (enforced separately
+    # by the marks endpoints). The student is pinned to the class/section of
+    # their own enrollment so unrelated classes are never exposed, and
+    # ARCHIVED exams are withdrawn from the student view.
     if user_role == "STUDENT":
-        status_filter = "PUBLISHED"
         from app.models.student import Student
         from app.models.student_enrollment import StudentEnrollment
         student = db.query(Student).filter(Student.user_id == current_user.id).first()
-        if student:
-            enrollment_query = (
-                db.query(StudentEnrollment)
-                .filter(StudentEnrollment.student_id == student.id)
+        if not student:
+            return {"total": 0, "items": []}
+        enrollment_query = (
+            db.query(StudentEnrollment)
+            .filter(StudentEnrollment.student_id == student.id)
+        )
+        if academic_year_id is not None:
+            enrollment_query = enrollment_query.filter(
+                StudentEnrollment.academic_year_id == academic_year_id
             )
-            if academic_year_id is not None:
-                enrollment_query = enrollment_query.filter(
-                    StudentEnrollment.academic_year_id == academic_year_id
-                )
-            enrollment = enrollment_query.order_by(StudentEnrollment.id.desc()).first()
-            if enrollment:
-                academic_year_id = enrollment.academic_year_id
-                section_id = enrollment.section_id
-                grade_id = enrollment.section.grade_id if enrollment.section else grade_id
-            elif academic_year_id is not None:
-                # Selected year has no placement for this student: nothing to
-                # show rather than silently leaking last year's exams.
-                return {"total": 0, "items": []}
+        enrollment = enrollment_query.order_by(StudentEnrollment.id.desc()).first()
+        if not enrollment or not enrollment.section:
+            # No placement for this student: nothing to show rather than
+            # leaking every class's exams (or last year's exams).
+            return {"total": 0, "items": []}
+        academic_year_id = enrollment.academic_year_id
+        section_id = enrollment.section_id
+        grade_id = enrollment.section.grade_id
+        exclude_status = "ARCHIVED"
 
     # If teacher and teacher_id not passed, can filter by teacher profile
     if user_role == "TEACHER" and teacher_id is None:
@@ -88,6 +96,7 @@ def list_exams(
         exam_type=exam_type,
         assessment_mode=assessment_mode,
         status=status_filter,
+        exclude_status=exclude_status,
         grade_id=grade_id,
         section_id=section_id,
         teacher_id=teacher_id if user_role == "TEACHER" else None,
