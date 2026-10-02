@@ -19,7 +19,11 @@ from app.models.user import UserModel
 from app.models.teacher import Teacher
 from app.core.audit import write_audit_log
 
-router = APIRouter(prefix="/exams", tags=["Exams"])
+router = APIRouter(
+    prefix="/exams",
+    tags=["Exams"],
+    dependencies=[Depends(deps.require_subscription_access)],
+)
 
 
 @router.get("/", response_model=ExamListResponse)

@@ -1,5 +1,5 @@
 # backend-python/app/models/exam.py
-from datetime import datetime, date
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from app.core.database import Base

@@ -48,6 +48,17 @@ export function errorMessage(err: unknown, fallback: string): string {
     if (messages.length) return messages.join('; ');
   }
 
+  // Structured object detail. Only the subscription domain does this
+  // (`{ code: 'SUBSCRIPTION_REQUIRED', message: '...' }`, plus the bulk
+  // failure objects); every other router still sends a plain string. The
+  // `code` is deliberately NOT rendered - callers branch on it separately via
+  // `subscriptionsService.subscriptionErrorCode`.
+  if (detail !== null && typeof detail === 'object') {
+    const record = detail as { message?: unknown; msg?: unknown };
+    const message = typeof record.message === 'string' ? record.message : record.msg;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+
   return fallback;
 }
 

@@ -1,5 +1,4 @@
 # app/services/timetable.py
-from datetime import time, datetime
 from typing import List, Optional, Tuple, Dict, Any, Union
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
@@ -151,7 +150,7 @@ class TimetableService:
         if not data.get("academic_year_id"):
             ay = db.query(AcademicYear).filter(
                 AcademicYear.school_id == school_id,
-                AcademicYear.is_active == True
+                AcademicYear.is_active.is_(True)
             ).first() or db.query(AcademicYear).filter(
                 AcademicYear.school_id == school_id
             ).first()

@@ -2,7 +2,7 @@
 SCHOLARIS ERP - Audit Log Service
 """
 
-from typing import List, Optional
+from typing import List
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.repositories.audit_log import AuditLogRepository
@@ -21,11 +21,11 @@ class AuditLogService:
 
     def get_by_school(self, school_id: int, skip: int = 0, limit: int = 100) -> List[AuditLogResponse]:
         logs = self.repo.get_by_school(school_id, skip, limit)
-        return [AuditLogResponse.model_validate(l) for l in logs]
+        return [AuditLogResponse.model_validate(entry) for entry in logs]
 
     def get_by_user(self, user_id: int, skip: int = 0, limit: int = 100) -> List[AuditLogResponse]:
         logs = self.repo.get_by_user(user_id, skip, limit)
-        return [AuditLogResponse.model_validate(l) for l in logs]
+        return [AuditLogResponse.model_validate(entry) for entry in logs]
 
     def create_log(self, obj_in: AuditLogCreate) -> AuditLogResponse:
         log = self.repo.log(obj_in)

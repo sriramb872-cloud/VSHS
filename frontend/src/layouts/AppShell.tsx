@@ -22,6 +22,7 @@ import {
   Clock,
   Shield,
   Download,
+  CreditCard,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAcademicYear } from '../contexts/AcademicYearContext';
@@ -32,6 +33,7 @@ import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import GlobalSearch from '../components/shared/GlobalSearch';
 import UserAvatar from '../components/shared/UserAvatar';
 import AcademicYearSelector from '../components/shared/AcademicYearSelector';
+import SubscriptionGate from '../routes/SubscriptionGate';
 import { notificationService } from '../services/notification';
 
 export interface NavItem {
@@ -328,9 +330,17 @@ export const AppShell: React.FC<AppShellProps> = ({
           {/* `key` forces a full remount when the year changes so no page can
               keep showing rows fetched for the previous year. */}
           <ErrorBoundary resetKey={`${location.pathname}:${selectedYearId ?? 'none'}`}>
-            <div key={selectedYearId ?? 'none'}>
-              <Outlet />
-            </div>
+            {/*
+              SubscriptionGate replaces ONLY the routed content when the server
+              reports no entitlement, so the sidebar, header, notifications and
+              sign-out - including the Profile/Settings links an expired user
+              must still reach - stay mounted.
+            */}
+            <SubscriptionGate>
+              <div key={selectedYearId ?? 'none'}>
+                <Outlet />
+              </div>
+            </SubscriptionGate>
           </ErrorBoundary>
         </main>
       </div>
@@ -363,6 +373,7 @@ export {
   Shield,
   Bell,
   User,
+  CreditCard,
 };
 
 export default AppShell;

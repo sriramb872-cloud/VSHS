@@ -454,13 +454,21 @@ def _sync_school_settings(connection) -> None:
 # --------------------------------------------------------------------------
 
 
-def apply_academic_year_migrations() -> None:
-    """Apply the Academic Year schema/data reconciliation (idempotent)."""
-    from app.core.database import engine
+def apply_academic_year_migrations(bind=None) -> None:
+    """Apply the Academic Year schema/data reconciliation (idempotent).
+
+    ``bind`` is the engine to work on; defaults to the application engine.
+    Invoked from the Alembic legacy-repair migration - no longer at import
+    time of ``main.py``.
+    """
+    if bind is None:
+        from app.core.database import engine as app_engine
+
+        bind = app_engine
 
     def _guard(fn, label: str):
         def _run():
-            with engine.begin() as connection:
+            with bind.begin() as connection:
                 fn(connection)
 
         _step(_run, label)

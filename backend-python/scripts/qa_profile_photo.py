@@ -7,7 +7,6 @@ and cross-tenant metadata isolation.
 Read-mostly: it uploads a generated 1x1 PNG to the QA student account and
 leaves it there (that is the point - the flow must work end to end).
 """
-import io
 import json
 import sys
 import time

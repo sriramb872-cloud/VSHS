@@ -1,6 +1,5 @@
 # app/crud/settings.py
 from sqlalchemy.orm import Session
-from typing import Optional
 
 class CRUDSettings:
     def get_super_admin_settings(self, db: Session):

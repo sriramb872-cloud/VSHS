@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, require_roles, get_current_active_user
+from app.api.deps import get_db, require_roles, get_current_active_user, require_subscription_access
 from app.api.year_context import resolve_year_id, get_school_active_year
 from app.crud import attendance as att_crud, student as student_crud, teacher as teacher_crud
 from app.models.academic_year import AcademicYear
@@ -18,7 +18,11 @@ from app.schemas.attendance import AttendanceCreate
 from app.serializers.attendance import serialize_attendance_record
 from app.core.audit import write_audit_log
 
-router = APIRouter(prefix="/attendance", tags=["Attendance"])
+router = APIRouter(
+    prefix="/attendance",
+    tags=["Attendance"],
+    dependencies=[Depends(require_subscription_access)],
+)
 
 
 def resolve_attendance_year_id(
@@ -274,16 +278,28 @@ def _rate(present: int, marked: int) -> float:
 
 
 def _teacher_section_ids(db: Session, current_user: User) -> List[int]:
-    """Sections a teacher may see: class-teacher sections plus subject assignments."""
+    """Sections a teacher may see: class-teacher sections plus subject assignments.
+
+    Both queries are pinned to the teacher's school: a corrupted/foreign
+    ``class_teacher_id`` or ``teacher_subjects`` row must never widen a
+    teacher's visibility beyond their own tenant.
+    """
     teacher = teacher_crud.get_teacher_by_user_id(db, current_user.id)
-    if not teacher:
+    if not teacher or not teacher.school_id:
         return []
     class_teacher = [
-        s.id for s in db.query(Section).filter(Section.class_teacher_id == teacher.id).all()
+        s.id
+        for s in db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id,
+        ).all()
     ]
     subject_teacher = [
         ts.section_id
-        for ts in db.query(TeacherSubject).filter(TeacherSubject.teacher_id == teacher.id).all()
+        for ts in db.query(TeacherSubject).filter(
+            TeacherSubject.teacher_id == teacher.id,
+            TeacherSubject.school_id == teacher.school_id,
+        ).all()
         if ts.section_id
     ]
     return sorted(set(class_teacher) | set(subject_teacher))

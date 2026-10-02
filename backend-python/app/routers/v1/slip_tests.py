@@ -1,9 +1,9 @@
 # backend-python/app/routers/v1/slip_tests.py
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, require_roles, get_current_active_user
+from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 
 router = APIRouter(prefix="/slip-tests", tags=["Slip Tests"])

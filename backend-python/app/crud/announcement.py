@@ -61,7 +61,7 @@ class CRUDAnnouncement:
     ) -> Tuple[List[Announcement], int]:
         from sqlalchemy import or_, and_
         query = db.query(Announcement).filter(
-            or_(Announcement.status_value == "Published", Announcement.is_active == True)
+            or_(Announcement.status_value == "Published", Announcement.is_active.is_(True))
         )
         if school_id is not None:
             query = query.filter(Announcement.school_id == school_id)

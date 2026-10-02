@@ -1,6 +1,8 @@
 # Secret & Environment Variables
 .env
 .env.local
+.env.*
+!.env.example
 *.pem
 
 # Dependencies (Node / Python)
@@ -9,6 +11,12 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+
+# Test / lint caches and local scratch databases
+.pytest_cache/
+.ruff_cache/
+*.db
+*.sqlite3
 
 # Build outputs
 dist/

@@ -7,7 +7,6 @@ from app.api.deps import get_db, require_roles, get_current_active_user
 from app.api.year_context import resolve_year_id
 from app.models.user import User
 from app.models import Timetable
-from app.crud.timetable import parse_time
 from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/teacher-assignments", tags=["Teacher Assignments"])
@@ -41,6 +40,10 @@ def list_assignments(
         academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)
 
     timetable_query = db.query(Timetable).filter(Timetable.teacher_id == teacher_id)
+    if str(current_user.role).upper() != "SUPER_ADMIN":
+        # Non-super-admins only ever see timetables from their own school,
+        # even if a timetable row somehow references their teacher.
+        timetable_query = timetable_query.filter(Timetable.school_id == current_user.school_id)
     if academic_year_id is not None:
         timetable_query = timetable_query.filter(
             Timetable.academic_year_id == academic_year_id

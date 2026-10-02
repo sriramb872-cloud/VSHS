@@ -1,6 +1,6 @@
 // frontend/src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { api } from '../services/api';
+import { api, getAccessToken, getRefreshToken, setTokens, clearTokens } from '../services/api';
 import { authService } from '../services/auth';
 
 export interface User {
@@ -35,24 +35,37 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('scholaris_access_token'));
+  const [token, setToken] = useState<string | null>(getAccessToken());
   const [loading, setLoading] = useState<boolean>(true);
   const [mustChangePassword, setMustChangePassword] = useState<boolean>(false);
 
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('scholaris_access_token');
-      if (!storedToken) {
+      const storedToken = getAccessToken();
+      const storedRefresh = getRefreshToken();
+
+      // No access token but a refresh token (e.g. the tab was reopened after
+      // the access token expired): restore the session server-side first.
+      if (!storedToken && storedRefresh) {
+        try {
+          await authService.refresh(storedRefresh);
+        } catch {
+          clearTokens();
+          setLoading(false);
+          return;
+        }
+      } else if (!storedToken) {
         setLoading(false);
         return;
       }
+
       try {
         const response = await api.get<User>('/auth/me');
         setUser(response.data);
         setMustChangePassword(!!response.data.must_change_password);
-        setToken(storedToken);
+        setToken(getAccessToken());
       } catch (err) {
-        localStorage.removeItem('scholaris_access_token');
+        clearTokens();
         setToken(null);
         setUser(null);
       } finally {
@@ -67,7 +80,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const response = await authService.login({ mobile, password });
     const accessToken = response.access_token;
 
-    localStorage.setItem('scholaris_access_token', accessToken);
+    // Persist the full pair: the access token for API calls, the rotating
+    // refresh token to renew it transparently when it expires.
+    setTokens(accessToken, response.refresh_token);
     setToken(accessToken);
 
     const userResponse = await api.get<User>('/auth/me');
@@ -95,7 +110,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {    await authService.changePassword(currentPassword, newPassword);
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    // Changing the password revokes every other session server-side and
+    // returns a fresh token pair for THIS client - store it, otherwise the
+    // stored access token is already invalid and the user is bounced to login
+    // right after a successful change.
+    const result = await authService.changePassword(currentPassword, newPassword);
+    if (result?.access_token) {
+      setTokens(result.access_token, result.refresh_token);
+      setToken(result.access_token);
+    }
     setMustChangePassword(false);
     if (user) {
       const userResponse = await api.get<User>('/auth/me');
@@ -105,7 +129,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     window.dispatchEvent(new Event('scholaris:pet-farewell'));
-    authService.logout();
+    // Revoke server-side first (fire-and-forget with a timeout guard so a
+    // hung network can never block the local sign-out), then clear locally.
+    const refresh = getRefreshToken();
+    authService.logout(refresh).finally(() => {
+      clearTokens();
+    });
     window.setTimeout(() => {
       setToken(null);
       setUser(null);

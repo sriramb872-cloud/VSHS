@@ -55,7 +55,7 @@ class DashboardService:
         today = date.today()
         active_year = db.query(AcademicYear).filter(
             AcademicYear.school_id == school_id,
-            AcademicYear.is_active == True,
+            AcademicYear.is_active.is_(True),
         ).first() if school_id else None
         year_id = active_year.id if active_year else None
         stats = crud_dashboard.get_principal_stats(db, school_id=school_id, academic_year_id=year_id)
@@ -67,12 +67,12 @@ class DashboardService:
         if year_id:
             exam_query = exam_query.filter(Exam.academic_year_id == year_id)
         upcoming_exams = exam_query.order_by(Exam.start_date.asc()).limit(10).all()
-        homework_query = db.query(Homework).filter(Homework.school_id == school_id, Homework.is_published == True)
+        homework_query = db.query(Homework).filter(Homework.school_id == school_id, Homework.is_published.is_(True))
         if year_id:
             homework_query = homework_query.filter(or_(Homework.academic_year_id == year_id, Homework.academic_year_id.is_(None)))
         recent_homework = homework_query.order_by(Homework.created_at.desc()).limit(10).all()
         announcements = db.query(Announcement).filter(
-            Announcement.school_id == school_id, Announcement.is_active == True
+            Announcement.school_id == school_id, Announcement.is_active.is_(True)
         ).order_by(Announcement.created_at.desc()).limit(10).all()
         attendance_rows = db.query(Attendance).join(Section, Attendance.section_id == Section.id).filter(
             Section.school_id == school_id, Attendance.date == today
@@ -111,7 +111,7 @@ class DashboardService:
         today_day = today.strftime("%A")
         active_year = db.query(AcademicYear).filter(
             AcademicYear.school_id == school_id,
-            AcademicYear.is_active == True,
+            AcademicYear.is_active.is_(True),
         ).first()
 
         # Today's timetable for this teacher
@@ -232,7 +232,7 @@ class DashboardService:
                     Homework.school_id == school_id,
                     Homework.grade_id == section.grade_id,
                     Homework.section_id == section.id,
-                    Homework.is_published == True,
+                    Homework.is_published.is_(True),
                     Homework.due_date >= date.today(),
                     or_(Homework.academic_year_id == year_id, Homework.academic_year_id.is_(None)),
                 ).order_by(Homework.due_date.asc()).all()
@@ -253,7 +253,7 @@ class DashboardService:
                 ).order_by(Timetable.start_time.asc()).all()
                 announcements = db.query(Announcement).filter(
                     Announcement.school_id == school_id,
-                    Announcement.is_active == True,
+                    Announcement.is_active.is_(True),
                     or_(
                         Announcement.target_role.is_(None),
                         func.upper(Announcement.target_role).in_(["ALL", "SCHOOL_WIDE", "STUDENT"]),

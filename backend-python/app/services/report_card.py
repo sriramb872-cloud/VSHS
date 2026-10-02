@@ -4,6 +4,12 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.crud.report_card import report_card as crud_report_card
 from app.models.report_card import ReportCard
+from app.schemas.report_card import (
+    ReportCardResponse,
+    SubjectReportCardDetail,
+    SubjectAssessmentResult,
+    AssessmentComponentScore,
+)
 
 class ReportCardCalculationService:
     @staticmethod
@@ -29,13 +35,6 @@ class ReportCardCalculationService:
         else:
             return "F"
 
-from app.schemas.report_card import (
-    ReportCardResponse,
-    SubjectReportCardDetail,
-    SubjectAssessmentResult,
-    AssessmentComponentScore,
-)
-
 class ReportCardService:
     @staticmethod
     def build_response(db: Session, report: ReportCard) -> ReportCardResponse:
@@ -43,7 +42,6 @@ class ReportCardService:
         from app.models.student_enrollment import StudentEnrollment
         from app.models.exam_result import ExamResult
         from app.models.exam import Exam
-        from app.models.subject import Subject
 
         student = db.query(Student).filter(Student.id == report.student_id).first()
         student_name = (
@@ -348,6 +346,18 @@ class ReportCardService:
         db: Session, student_id: int, academic_year_id: int, exam_id: Optional[int] = None, school_id: Optional[int] = None
     ) -> ReportCardResponse:
         from app.models.student import Student
+        # Tenant check FIRST: the student must belong to the caller's school
+        # before we even look for a report card, so a cross-tenant caller can
+        # never distinguish "report exists" (403) from "report missing" (404)
+        # for a foreign student. A missing student and a foreign student both
+        # yield 403 - no existence oracle either way.
+        if school_id is not None:
+            student = db.query(Student).filter(Student.id == student_id).first()
+            if not student or student.school_id != school_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: student does not belong to your school",
+                )
         report = crud_report_card.get_by_student_and_year(
             db, student_id=student_id, academic_year_id=academic_year_id, exam_id=exam_id
         )
@@ -356,13 +366,6 @@ class ReportCardService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Report card not found for the given student and academic year"
             )
-        if school_id is not None:
-            student = db.query(Student).filter(Student.id == student_id).first()
-            if not student or student.school_id != school_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: student does not belong to your school"
-                )
         return ReportCardService.build_response(db, report)
 
     @staticmethod

@@ -2,7 +2,7 @@
 SCHOLARIS ERP - Attendance Schemas
 """
 
-from datetime import date, datetime
+from datetime import date
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.models.attendance_record import AttendanceStatus

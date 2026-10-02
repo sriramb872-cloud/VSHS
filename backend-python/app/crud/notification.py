@@ -1,6 +1,6 @@
 # app/crud/notification.py
 from datetime import datetime
-from typing import List, Optional, Tuple, Any
+from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from app.models.notification import Notification
@@ -8,9 +8,7 @@ from app.models.notification_read import NotificationRead
 from app.models.student import Student
 from app.models.student_enrollment import StudentEnrollment
 from app.models.user import User
-from app.models.section import Section
-from app.models.grade import Grade
-from app.schemas.notification import NotificationCreate, NotificationUpdate
+from app.schemas.notification import NotificationUpdate
 
 
 class CRUDNotification:
@@ -183,7 +181,7 @@ class CRUDNotification:
 
         read_ids_subq = db.query(NotificationRead.notification_id).filter(
             NotificationRead.user_id == current_user.id,
-            NotificationRead.is_read == True,
+            NotificationRead.is_read.is_(True),
         )
         read_ids = {row[0] for row in read_ids_subq.all()}
 
@@ -270,7 +268,7 @@ class CRUDNotification:
         visible_query = self._visible_query(db, current_user, category=None, notification_type=None)
         already_read_subq = db.query(NotificationRead.notification_id).filter(
             NotificationRead.user_id == current_user.id,
-            NotificationRead.is_read == True,
+            NotificationRead.is_read.is_(True),
         )
         unread_ids = [
             row[0] for row in

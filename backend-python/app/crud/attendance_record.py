@@ -5,7 +5,7 @@ SCHOLARIS ERP - Attendance Record CRUD
 from datetime import date
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from app.models.attendance_record import AttendanceRecord, AttendanceStatus
+from app.models.attendance_record import AttendanceRecord
 from app.schemas.attendance_record import AttendanceRecordCreate, AttendanceRecordUpdate
 
 

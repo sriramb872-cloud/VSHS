@@ -7,7 +7,7 @@ from app.api.deps import get_db, get_current_active_user, require_roles
 from app.models.user import User
 from app.core.security import get_password_hash
 from app.core.audit import write_audit_log
-from app.core.audit import write_audit_log
+from app.core.token_service import revoke_all_sessions
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -105,11 +105,15 @@ def get_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
+
     role = str(current_user.role).upper()
-    if role != "SUPER_ADMIN":
-        if user.school_id != current_user.school_id and current_user.id != user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    # Only admins (and the account itself) may read a user record - it carries
+    # mobile/email. A teacher or student must not be able to enumerate the
+    # whole school's contact details through this endpoint.
+    if role not in ("SUPER_ADMIN", "PRINCIPAL") and current_user.id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if role != "SUPER_ADMIN" and user.school_id != current_user.school_id and current_user.id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return serialize_user(user)
 
@@ -132,9 +136,42 @@ def reset_user_password(
     user.password_hash = get_password_hash(password)
     user.must_change_password = True
     db.commit()
+    # An admin-initiated password reset means the account's credentials may
+    # have been compromised: kill every live session for this user.
+    revoke_all_sessions(db, user)
     write_audit_log(db, user_id=current_user.id, school_id=user.school_id, action="RESET_PASSWORD",
                     resource_type="User", resource_id=user.id, details={})
     return {"message": "Password reset successfully"}
+
+
+@router.post("/{user_id}/revoke-sessions", response_model=dict)
+def revoke_user_sessions(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["SUPER_ADMIN", "PRINCIPAL"])),
+):
+    """Force-logout a user everywhere: revokes all their refresh tokens and
+    bumps their token version, instantly invalidating every access token.
+
+    SUPER_ADMIN may revoke any user; PRINCIPAL only users of their own school.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if str(current_user.role).upper() != "SUPER_ADMIN" and user.school_id != current_user.school_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use POST /auth/logout-all to end your own sessions",
+        )
+    revoked = revoke_all_sessions(db, user)
+    write_audit_log(
+        db, user_id=current_user.id, school_id=user.school_id,
+        action="REVOKE_SESSIONS", resource_type="User", resource_id=user.id,
+        details={"sessions_revoked": revoked},
+    )
+    return {"message": "All sessions revoked", "sessions_revoked": revoked}
 
 
 @router.patch("/{user_id}", response_model=dict)
@@ -161,6 +198,20 @@ def update_user(
     allowed_fields = {"display_name", "full_name", "email", "mobile"}
     if is_admin:
         allowed_fields.add("is_active")
+    if role == "SUPER_ADMIN":
+        # Only SUPER_ADMIN may (re)assign a user's school. This is also the
+        # repair path for an account that lost its tenant context: such an
+        # account is denied everywhere (403 "School context missing for this
+        # account" from get_current_active_user) until an admin sets a school.
+        allowed_fields.add("school_id")
+        if payload.get("school_id") is not None:
+            from app.models.school import School
+
+            if not db.query(School).filter(School.id == payload["school_id"]).first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid school_id",
+                )
 
     if is_self and role == "SUPER_ADMIN" and "is_active" in payload:
         new_active = payload["is_active"]

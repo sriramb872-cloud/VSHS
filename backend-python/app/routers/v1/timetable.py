@@ -15,7 +15,11 @@ from app.services.timetable import TimetableService
 from app.models.user import UserModel
 from app.core.audit import write_audit_log
 
-router = APIRouter(prefix="/timetables", tags=["Timetables"])
+router = APIRouter(
+    prefix="/timetables",
+    tags=["Timetables"],
+    dependencies=[Depends(deps.require_subscription_access)],
+)
 
 
 @router.get("", response_model=TimetableListResponse)

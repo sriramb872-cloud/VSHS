@@ -1,6 +1,5 @@
 # app/schemas/timetable.py
-from datetime import time
-from typing import List, Optional, Any, Union
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 

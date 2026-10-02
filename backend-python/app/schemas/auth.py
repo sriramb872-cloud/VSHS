@@ -29,6 +29,24 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     must_change_password: bool = False
+    # Rotating refresh token for POST /auth/refresh; omitted when the flow
+    # only returns an access token.
+    refresh_token: Optional[str] = None
+    # Access-token lifetime in seconds.
+    expires_in: Optional[int] = None
+    refresh_token_expires_in: Optional[int] = None
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., description="Refresh token issued by /auth/login or /auth/refresh")
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = Field(None, description="Refresh token to revoke on logout")
+
+
+class PasswordChangeResponse(TokenResponse):
+    message: str
 
 
 class UserResponse(BaseModel):

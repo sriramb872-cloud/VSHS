@@ -1,5 +1,6 @@
 // src/services/settings.ts
-import api from './api';
+import api, { setTokens } from './api';
+import { PasswordChangeResponse } from '../types/auth';
 import {
   PasswordChangePayload,
   PrincipalSettings,
@@ -41,8 +42,8 @@ export const settingsService = {
     return response.data;
   },
 
-  async changePassword(payload: PasswordChangePayload): Promise<{ message: string }> {
-    const response = await api.post<{ message: string }>('/settings/user/change-password', payload);
+  async changePassword(payload: PasswordChangePayload): Promise<PasswordChangeResponse> {
+    const response = await api.post<PasswordChangeResponse>('/settings/user/change-password', payload);
     return response.data;
   },
 };

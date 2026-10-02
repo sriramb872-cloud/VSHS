@@ -1,6 +1,6 @@
 # backend-python/app/models/teacher.py
-from datetime import datetime, date
-from sqlalchemy import Column, Integer, String, BigInteger, Boolean, Date, DateTime, ForeignKey
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 

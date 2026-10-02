@@ -1,5 +1,5 @@
 // frontend/src/services/api.ts
-import axios from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { getStoredAcademicYearId } from './academicYearStorage';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -10,6 +10,41 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+/* -------------------------------------------------------------------------
+ * Token storage
+ * ---------------------------------------------------------------------- */
+
+const ACCESS_TOKEN_KEY = 'scholaris_access_token';
+const REFRESH_TOKEN_KEY = 'scholaris_refresh_token';
+
+export function getAccessToken(): string | null {
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+/** Persist a token pair returned by login / refresh / password change. */
+export function setTokens(access: string, refresh?: string | null): void {
+  localStorage.setItem(ACCESS_TOKEN_KEY, access);
+  if (refresh) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+}
+
+/**
+ * Drop both tokens locally. Does not call the server - the server-side
+ * revocation is `/auth/logout`, which callers should invoke first when they
+ * still hold a refresh token.
+ */
+export function clearTokens(): void {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
 
 /**
  * Requests whose academic year must NOT follow the header selector.
@@ -23,7 +58,7 @@ const YEAR_INDEPENDENT_URLS = [/\/academic-years(\/|\?|$)/];
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('scholaris_access_token');
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -128,13 +163,80 @@ export function isNetworkError(error: unknown): boolean {
   );
 }
 
+/* -------------------------------------------------------------------------
+ * 401 -> refresh -> retry
+ *
+ * Access tokens are short-lived (default 30 min), so a plain 401 handler that
+ * bounces the user to /login would log everyone out twice an hour. Instead:
+ *
+ *   - concurrent 401s share ONE in-flight refresh (single-flight), so a burst
+ *     of parallel requests cannot burn the rotating refresh token 10 times;
+ *   - refresh tokens are one-time-use (rotation), so a replayed/old token
+ *     fails server-side - we therefore only ever send the current one;
+ *   - if refresh fails the session is genuinely over: clear tokens and go to
+ *     /login exactly once.
+ * ---------------------------------------------------------------------- */
+
+/** Endpoints where a 401 must NOT trigger a refresh attempt. */
+const AUTH_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/logout-all'];
+
+/** Bare client for the refresh call itself - bypasses these interceptors. */
+const rawClient = axios.create({ baseURL: API_BASE_URL });
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return null;
+    try {
+      const response = await rawClient.post<{ access_token: string; refresh_token?: string | null }>(
+        '/auth/refresh',
+        { refresh_token: refreshToken }
+      );
+      const { access_token, refresh_token } = response.data;
+      if (!access_token) return null;
+      // Rotation: the server invalidated the old refresh token, so persist
+      // the replacement together with the new access token.
+      setTokens(access_token, refresh_token);
+      return access_token;
+    } catch {
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
+function redirectToLogin(): void {
+  clearTokens();
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
+/**
+ * Fired whenever the API answers `403` with
+ * `detail.code === 'SUBSCRIPTION_REQUIRED'`.
+ *
+ * The subscription gate listens for this so it can re-read the authoritative
+ * access status the moment a feature call is refused, instead of waiting for
+ * the next poll. Never used to *grant* access - the server is the only
+ * authority on that.
+ */
+export const SUBSCRIPTION_REQUIRED_EVENT = 'scholaris:subscription-required';
+
 api.interceptors.response.use(
   (response) => {
     // The request reached the server, so connectivity is demonstrably fine.
     emitNetworkSuccess();
     return response;
   },
-  (error) => {
+  async (error) => {
     if (isNetworkError(error)) {
       // Let the app-wide offline state know. The promise is still rejected, so
       // no caller can mistake this for a success.
@@ -147,12 +249,57 @@ api.interceptors.response.use(
       emitNetworkSuccess();
     }
 
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('scholaris_access_token');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+    const status = error.response?.status;
+    const originalConfig = error.config as
+      | (AxiosRequestConfig & { __authRetried?: boolean })
+      | undefined;
+    const url = originalConfig?.url ?? '';
+
+    if (status === 401 && originalConfig && !originalConfig.__authRetried) {
+      const isAuthCall = AUTH_PATHS.some((path) => url.includes(path));
+      if (!isAuthCall) {
+        originalConfig.__authRetried = true;
+        const freshToken = await refreshAccessToken();
+        if (freshToken) {
+          originalConfig.headers = {
+            ...originalConfig.headers,
+            Authorization: `Bearer ${freshToken}`,
+          };
+          return api(originalConfig);
+        }
+        // Refresh failed (expired/revoked/rotated-away): the session is over.
+        redirectToLogin();
+        return Promise.reject(error);
       }
     }
+
+    if (status === 401) {
+      // Refresh path itself was rejected, or an auth endpoint 401'd.
+      redirectToLogin();
+    }
+
+    // The subscription domain is the only place `detail` is an object, so the
+    // code is unambiguous. Emit an app-wide signal so the gate can refresh the
+    // entitlement state *without* every caller having to catch this shape.
+    // The rejection is still propagated - no caller may treat it as a success.
+    if (status === 403) {
+      const detail = error.response?.data?.detail;
+      if (
+        detail !== null &&
+        typeof detail === 'object' &&
+        (detail as { code?: unknown }).code === 'SUBSCRIPTION_REQUIRED'
+      ) {
+        window.dispatchEvent(
+          new CustomEvent(SUBSCRIPTION_REQUIRED_EVENT, {
+            detail: {
+              reason: (detail as { reason?: string }).reason ?? null,
+              expires_at: (detail as { expires_at?: string | null }).expires_at ?? null,
+            },
+          })
+        );
+      }
+    }
+
     return Promise.reject(error);
   }
 );

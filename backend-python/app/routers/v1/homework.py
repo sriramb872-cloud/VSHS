@@ -22,6 +22,48 @@ from app.models.section import Section
 from app.models.timetable import Timetable
 
 
+def _targets_in_school(
+    db: Session,
+    *,
+    school_id: int,
+    subject_id: int,
+    grade_id: int,
+    section_id: int,
+) -> bool:
+    """True when grade, section and subject all belong to ``school_id`` and
+    the section actually belongs to the grade.
+
+    Shared by the teacher-assignment check below and the principal/super-admin
+    paths, so *every* homework create/update validates its foreign references
+    against the caller's school (no cross-tenant grade/section/subject ids).
+    """
+    grade = db.query(Grade).filter(
+        Grade.id == grade_id,
+        Grade.school_id == school_id,
+    ).first()
+    section = db.query(Section).filter(
+        Section.id == section_id,
+        Section.school_id == school_id,
+        Section.grade_id == grade_id,
+    ).first()
+    subject = db.query(Subject).filter(
+        Subject.id == subject_id,
+        Subject.school_id == school_id,
+    ).first()
+    return bool(grade and section and subject)
+
+
+def _assert_year_in_school(db: Session, *, academic_year_id: int, school_id: int) -> None:
+    from app.models.academic_year import AcademicYear
+
+    year = db.query(AcademicYear).filter(AcademicYear.id == academic_year_id).first()
+    if not year or year.school_id != school_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Academic year must belong to the homework's school",
+        )
+
+
 def _teacher_has_assignment(
     db: Session,
     *,
@@ -41,20 +83,13 @@ def _teacher_has_assignment(
     if not teacher.school_id or teacher.school_id != school_id:
         return False
 
-    grade = db.query(Grade).filter(
-        Grade.id == grade_id,
-        Grade.school_id == school_id,
-    ).first()
-    section = db.query(Section).filter(
-        Section.id == section_id,
-        Section.school_id == school_id,
-        Section.grade_id == grade_id,
-    ).first()
-    subject = db.query(Subject).filter(
-        Subject.id == subject_id,
-        Subject.school_id == school_id,
-    ).first()
-    if not grade or not section or not subject:
+    if not _targets_in_school(
+        db,
+        school_id=school_id,
+        subject_id=subject_id,
+        grade_id=grade_id,
+        section_id=section_id,
+    ):
         return False
 
     explicit = db.query(TeacherSubject).filter(
@@ -110,7 +145,11 @@ def _enrich_with_names(db: Session, items):
 
     return homework_list[0] if single else homework_list
 
-router = APIRouter(prefix="/homework", tags=["Homework"])
+router = APIRouter(
+    prefix="/homework",
+    tags=["Homework"],
+    dependencies=[Depends(deps.require_subscription_access)],
+)
 
 
 @router.get("/", response_model=HomeworkListResponse)
@@ -192,6 +231,25 @@ def create_homework(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Teacher is not assigned to this subject/grade/section",
             )
+    else:
+        # PRINCIPAL / SUPER_ADMIN path: no personal assignment is required,
+        # but every referenced object must still live in the homework's school
+        # - a foreign grade/section/subject id must never be persisted.
+        if not _targets_in_school(
+            db,
+            school_id=school_id,
+            subject_id=obj_in.subject_id,
+            grade_id=obj_in.grade_id,
+            section_id=obj_in.section_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Grade, section and subject must belong to the homework's school",
+            )
+    if getattr(obj_in, "academic_year_id", None) is not None:
+        _assert_year_in_school(
+            db, academic_year_id=obj_in.academic_year_id, school_id=school_id
+        )
     if getattr(obj_in, "academic_year_id", None) is None:
         # New homework must always belong to a year: explicit payload ->
         # selected year (header) -> the school's ACTIVE year.
@@ -209,8 +267,9 @@ def update_homework(
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_active_teacher),
 ):
+    role = str(current_user.role).upper()
     teacher_id = None
-    if str(current_user.role).upper() == "TEACHER":
+    if role == "TEACHER":
         teacher = getattr(current_user, "teacher_profile", None) or (
             db.query(Teacher).filter(Teacher.user_id == current_user.id).first()
         )
@@ -222,6 +281,13 @@ def update_homework(
         teacher_id = teacher.id
         existing = db.query(Homework).filter(Homework.id == homework_id).first()
         if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Homework not found",
+            )
+        # Same tenant rule the service applies later - enforced up front so
+        # the reference validation below never runs against a foreign row.
+        if existing.school_id != (current_user.school_id or teacher.school_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Homework not found",
@@ -247,7 +313,52 @@ def update_homework(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Teacher is not assigned to this subject/grade/section",
                 )
-    school_id = current_user.school_id if str(current_user.role).upper() != "SUPER_ADMIN" else None
+    else:
+        # PRINCIPAL / SUPER_ADMIN path: verify the target homework belongs to
+        # the caller's school (SUPER_ADMIN may edit any), then validate any
+        # referenced grade/section/subject/year against the homework's OWN
+        # school so foreign object ids cannot be written.
+        existing = db.query(Homework).filter(Homework.id == homework_id).first()
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Homework not found",
+            )
+        deps.ensure_same_school(
+            current_user,
+            existing.school_id,
+            detail="Homework not found",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        if (
+            obj_in.subject_id is not None
+            or obj_in.grade_id is not None
+            or obj_in.section_id is not None
+        ):
+            new_subject_id = obj_in.subject_id if obj_in.subject_id is not None else existing.subject_id
+            new_grade_id = obj_in.grade_id if obj_in.grade_id is not None else existing.grade_id
+            new_section_id = obj_in.section_id if obj_in.section_id is not None else existing.section_id
+            if not _targets_in_school(
+                db,
+                school_id=existing.school_id,
+                subject_id=new_subject_id,
+                grade_id=new_grade_id,
+                section_id=new_section_id,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Grade, section and subject must belong to the homework's school",
+                )
+
+    if obj_in.academic_year_id is not None:
+        # Anchor the year check to the homework's own school (it is already
+        # tenant-verified above for every role path).
+        homework_school = existing.school_id
+        _assert_year_in_school(
+            db, academic_year_id=obj_in.academic_year_id, school_id=homework_school
+        )
+
+    school_id = deps.scoped_school_id(current_user)
     homework = HomeworkService.update_homework(
         db, homework_id=homework_id, obj_in=obj_in, teacher_id=teacher_id, school_id=school_id
     )

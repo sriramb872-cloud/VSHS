@@ -18,7 +18,6 @@ from app.models.exam import Exam
 from app.models.exam_subject import ExamSubject
 from app.models.exam_result import ExamResult
 from app.models.marks import Marks
-from app.models.grade_subject import GradeSubject
 from app.models.teacher_subject import TeacherSubject
 from app.models.timetable import Timetable
 from app.models.subject import Subject
@@ -285,7 +284,9 @@ class ExamService:
         if not db_obj:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
         if school_id is not None and db_obj.school_id != school_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+            # 404 (not 403): a cross-tenant id must be indistinguishable from
+            # a non-existent one, otherwise the API becomes an existence oracle.
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
         db_obj.status = "ARCHIVED"
         db.commit()
         db.refresh(db_obj)
@@ -298,7 +299,8 @@ class ExamService:
         if not db_obj:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
         if school_id is not None and db_obj.school_id != school_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+            # Same 404 rule as archive: no cross-tenant existence oracle.
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
         if db_obj.status != "PUBLISHED":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -316,7 +318,8 @@ class ExamService:
         if not db_obj:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
         if school_id is not None and db_obj.school_id != school_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+            # Same 404 rule as archive: no cross-tenant existence oracle.
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
         if db_obj.status != "MARKS_IN_PROGRESS":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -339,7 +342,8 @@ class ExamService:
         if not exam_obj:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
         if school_id is not None and exam_obj.school_id != school_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+            # Same 404 rule as archive: no cross-tenant existence oracle.
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
 
         query = db.query(ExamSubject).filter(ExamSubject.exam_id == exam_id)
         if teacher_id is not None:
@@ -380,13 +384,25 @@ class ExamService:
         if not exam_obj:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
 
+        # Tenant isolation: a non-SUPER_ADMIN may only reach exams of their
+        # own school. Without this check any PRINCIPAL could read another
+        # school's exam readiness status (and any TEACHER of another school
+        # could pass the class-teacher check below against a foreign section).
         user_role = str(current_user.role).upper()
+        if user_role != "SUPER_ADMIN" and exam_obj.school_id != current_user.school_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found"
+            )
+
         if user_role not in ("SUPER_ADMIN", "PRINCIPAL"):
             # Check if teacher is class teacher for this section
             teacher = db.query(Teacher).filter(Teacher.user_id == current_user.id).first()
             if not teacher:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Teacher profile not found")
-            section = db.query(Section).filter(Section.id == exam_obj.section_id).first()
+            section = db.query(Section).filter(
+                Section.id == exam_obj.section_id,
+                Section.school_id == exam_obj.school_id,
+            ).first()
             if not section or section.class_teacher_id != teacher.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -439,12 +455,24 @@ class ExamService:
         if not exam_obj:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
 
+        # Tenant isolation: publishing writes zero-filled Marks rows, creates
+        # ExamResults and fires a notification *into the exam's school*. A
+        # PRINCIPAL (or teacher) of another school must never be able to do
+        # this - verified by the cross-tenant marks QA history as well.
         user_role = str(current_user.role).upper()
+        if user_role != "SUPER_ADMIN" and exam_obj.school_id != current_user.school_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found"
+            )
+
         if user_role not in ("SUPER_ADMIN", "PRINCIPAL"):
             teacher = db.query(Teacher).filter(Teacher.user_id == current_user.id).first()
             if not teacher:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Teacher profile not found")
-            section = db.query(Section).filter(Section.id == exam_obj.section_id).first()
+            section = db.query(Section).filter(
+                Section.id == exam_obj.section_id,
+                Section.school_id == exam_obj.school_id,
+            ).first()
             if not section or section.class_teacher_id != teacher.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

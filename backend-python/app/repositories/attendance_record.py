@@ -2,7 +2,7 @@
 SCHOLARIS ERP - Attendance Record Repository
 """
 
-from typing import List, Optional
+from typing import Optional
 from sqlalchemy.orm import Session
 from app.models.attendance_record import AttendanceRecord
 from app.crud.attendance_record import crud_attendance_record

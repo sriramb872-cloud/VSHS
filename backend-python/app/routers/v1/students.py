@@ -182,7 +182,7 @@ def create_student_profile(
                 AcademicYear.status == "ACTIVE",
             ).first() or db.query(AcademicYear).filter(
                 AcademicYear.school_id == school_id,
-                AcademicYear.is_active == True,
+                AcademicYear.is_active.is_(True),
             ).first()
             academic_year = active_year or db.query(AcademicYear).filter(
                 AcademicYear.school_id == school_id

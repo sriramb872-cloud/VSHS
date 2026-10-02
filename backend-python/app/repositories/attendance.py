@@ -5,8 +5,8 @@ SCHOLARIS ERP - Attendance Repository
 from datetime import date
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from app.models.attendance_record import AttendanceRecord, AttendanceStatus
-from app.schemas.attendance import BulkAttendanceCreate, StudentAttendanceItem
+from app.models.attendance_record import AttendanceRecord
+from app.schemas.attendance import BulkAttendanceCreate
 
 
 class AttendanceRepository:

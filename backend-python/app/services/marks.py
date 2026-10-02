@@ -208,6 +208,11 @@ class MarksService:
         if not exam:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found")
 
+        # Authorization first: the mode hint below must never leak whether an
+        # exam exists/belongs to another school (cross-tenant callers get 403
+        # before any exam-specific detail is revealed).
+        MarksService._check_submission_permission(db, exam_subject, exam, current_user)
+
         if (exam.assessment_mode or "FORMATIVE").upper() == "FORMATIVE":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -219,7 +224,6 @@ class MarksService:
                 ),
             )
 
-        MarksService._check_submission_permission(db, exam_subject, exam, current_user)
         MarksService._validate_submission_students(db, exam, payload.marks)
 
         # Validate marks values

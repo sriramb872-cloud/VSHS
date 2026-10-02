@@ -1,5 +1,5 @@
 # backend-python/app/models/calendar_event.py
-from datetime import datetime, date
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.core.database import Base

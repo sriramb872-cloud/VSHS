@@ -21,9 +21,8 @@ import sys
 
 sys.path.insert(0, ".")
 
-from sqlalchemy import inspect, text
 
-from app.core.database import SessionLocal, engine
+from app.core.database import SessionLocal
 from app.models.academic_year import AcademicYear
 from app.models.announcement import Announcement
 from app.models.attendance import Attendance

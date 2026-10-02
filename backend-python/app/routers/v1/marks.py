@@ -1,5 +1,5 @@
 # app/routers/v1/marks.py
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from app.api import deps
@@ -20,7 +20,11 @@ from app.services.marks import MarksService
 from app.models.user import UserModel
 from app.core.audit import write_audit_log
 
-router = APIRouter(prefix="/marks", tags=["Marks"])
+router = APIRouter(
+    prefix="/marks",
+    tags=["Marks"],
+    dependencies=[Depends(deps.require_subscription_access)],
+)
 
 
 @router.get("/", response_model=MarksListResponse)

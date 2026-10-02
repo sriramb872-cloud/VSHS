@@ -31,6 +31,9 @@ const AdminPermissions = React.lazy(() => import("../pages/superadmin/Permission
 const AdminAnalytics = React.lazy(() => import("../pages/superadmin/Analytics"));
 const AdminReports = React.lazy(() => import("../pages/superadmin/Reports"));
 const AdminSubscriptions = React.lazy(() => import("../pages/superadmin/Subscriptions"));
+const AdminSubscriptionSchool = React.lazy(() => import("../pages/superadmin/SubscriptionSchool"));
+const AdminSubscriptionRole = React.lazy(() => import("../pages/superadmin/SubscriptionRole"));
+const AdminSubscriptionUser = React.lazy(() => import("../pages/superadmin/SubscriptionUser"));
 const AdminSystemSettings = React.lazy(() => import("../pages/superadmin/SystemSettings"));
 const AdminAuditLogs = React.lazy(() => import("../pages/superadmin/AuditLogs"));
 const AdminNotifications = React.lazy(() => import("../pages/superadmin/Notifications"));
@@ -62,6 +65,7 @@ const PrincipalProfile = React.lazy(() => import("../pages/principal/Profile"));
 const PrincipalAnalytics = React.lazy(() => import("../pages/principal/Analytics"));
 const PrincipalEnrollments = React.lazy(() => import("../pages/principal/Enrollments"));
 const PrincipalTeachingAssignments = React.lazy(() => import("../pages/principal/TeachingAssignments"));
+const PrincipalSubscription = React.lazy(() => import("../pages/principal/Subscription"));
 
 // Teacher Pages
 const TeacherDashboard = React.lazy(() => import("../pages/teacher/Dashboard"));
@@ -83,6 +87,7 @@ const TeacherReportCards = React.lazy(() => import("../pages/teacher/ReportCards
 const TeacherNotifications = React.lazy(() => import("../pages/teacher/Notifications"));
 const TeacherSettings = React.lazy(() => import("../pages/teacher/Settings"));
 const TeacherProfile = React.lazy(() => import("../pages/teacher/Profile"));
+const TeacherSubscription = React.lazy(() => import("../pages/teacher/Subscription"));
 
 // Student Pages
 const StudentDashboard = React.lazy(() => import("../pages/student/Dashboard"));
@@ -98,6 +103,7 @@ const StudentCalendar = React.lazy(() => import("../pages/student/Calendar"));
 const StudentNotifications = React.lazy(() => import("../pages/student/Notifications"));
 const StudentSettings = React.lazy(() => import("../pages/student/Settings"));
 const StudentProfile = React.lazy(() => import("../pages/student/Profile"));
+const StudentSubscription = React.lazy(() => import("../pages/student/Subscription"));
 
 const AppRoutes: React.FC = () => {
   return (
@@ -129,6 +135,9 @@ const AppRoutes: React.FC = () => {
             <Route path="/superadmin/analytics" element={<AdminAnalytics />} />
             <Route path="/superadmin/reports" element={<AdminReports />} />
             <Route path="/superadmin/subscriptions" element={<AdminSubscriptions />} />
+            <Route path="/superadmin/subscriptions/:schoolId" element={<AdminSubscriptionSchool />} />
+            <Route path="/superadmin/subscriptions/:schoolId/roles/:role" element={<AdminSubscriptionRole />} />
+            <Route path="/superadmin/subscriptions/:schoolId/users/:userId" element={<AdminSubscriptionUser />} />
             <Route path="/superadmin/settings" element={<AdminSystemSettings />} />
             <Route path="/superadmin/audit-logs" element={<AdminAuditLogs />} />
             <Route path="/superadmin/notifications" element={<AdminNotifications />} />
@@ -162,6 +171,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/principal/announcements" element={<PrincipalAnnouncements />} />
             <Route path="/principal/calendar" element={<PrincipalCalendar />} />
             <Route path="/principal/notifications" element={<PrincipalNotifications />} />
+            {/* Self-service: reachable even while the gated modules are locked. */}
+            <Route path="/principal/subscription" element={<PrincipalSubscription />} />
             <Route path="/principal/settings" element={<PrincipalSettings />} />
             <Route path="/principal/profile" element={<PrincipalProfile />} />
             <Route path="/principal/analytics" element={<PrincipalAnalytics />} />
@@ -196,6 +207,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/teacher/calendar" element={<TeacherCalendar />} />
             <Route path="/teacher/report-cards" element={<TeacherReportCards />} />
             <Route path="/teacher/notifications" element={<TeacherNotifications />} />
+            {/* Self-service: reachable even while the gated modules are locked. */}
+            <Route path="/teacher/subscription" element={<TeacherSubscription />} />
             <Route path="/teacher/settings" element={<TeacherSettings />} />
             <Route path="/teacher/profile" element={<TeacherProfile />} />
           </Route>
@@ -218,6 +231,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/student/announcements" element={<StudentAnnouncements />} />
             <Route path="/student/calendar" element={<StudentCalendar />} />
             <Route path="/student/notifications" element={<StudentNotifications />} />
+            {/* Self-service: reachable even while the gated modules are locked. */}
+            <Route path="/student/subscription" element={<StudentSubscription />} />
             <Route path="/student/settings" element={<StudentSettings />} />
             <Route path="/student/profile" element={<StudentProfile />} />
           </Route>

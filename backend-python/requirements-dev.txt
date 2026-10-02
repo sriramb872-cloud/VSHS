@@ -1,0 +1,6 @@
+# Development / CI tools (installed separately from requirements.txt).
+# Security-sensitive runtime deps are pinned in requirements.txt; these are
+# pinned to the versions the test suite and lint gate were verified against.
+pytest==8.4.2
+httpx==0.28.1
+ruff==0.16.9

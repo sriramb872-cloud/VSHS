@@ -1,6 +1,6 @@
 # backend-python/app/models/announcement.py
-from datetime import datetime, date
-from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Boolean
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from typing import Optional

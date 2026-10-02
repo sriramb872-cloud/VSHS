@@ -46,6 +46,26 @@ class User(Base):
     reset_token_expires_at = Column(DateTime, nullable=True)
     must_change_password = Column(Boolean, default=False, nullable=False)
 
+    # Server-side session invalidation: every access token carries this value
+    # as its ``tv`` claim. Incrementing it (password change/reset, forced
+    # logout-all, admin session revoke) instantly invalidates every access
+    # token and refresh token the user still holds.
+    token_version = Column(
+        Integer,
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
+
+    # Per-account brute-force protection (time-boxed, never school-wide).
+    failed_login_attempts = Column(
+        Integer,
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
+    locked_until = Column(DateTime, nullable=True)
+
     role = Column(
         Enum(
             "SUPER_ADMIN",

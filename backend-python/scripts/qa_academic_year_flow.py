@@ -17,10 +17,13 @@ Run the API first:
     python -m uvicorn main:app --host 127.0.0.1 --port 8000
 
 Usage:
+    # Super-admin credentials come from the environment (never hardcode them):
+    #   QA_SUPER_ADMIN_MOBILE / QA_SUPER_ADMIN_PASSWORD
     python scripts/qa_academic_year_flow.py
 """
 import json
 import os
+import secrets
 import sys
 import time
 from urllib.error import HTTPError
@@ -153,7 +156,14 @@ def main():
 
     # ------------------------------------------------------------------
     print("\nLogin: Super Admin")
-    sa = login("8019302351", "super")
+    sa_mobile = os.environ.get("QA_SUPER_ADMIN_MOBILE")
+    sa_password = os.environ.get("QA_SUPER_ADMIN_PASSWORD")
+    if not sa_mobile or not sa_password:
+        raise SystemExit(
+            "Set QA_SUPER_ADMIN_MOBILE and QA_SUPER_ADMIN_PASSWORD "
+            "(credentials are no longer hardcoded in this script)."
+        )
+    sa = login(sa_mobile, sa_password)
 
     # ------------------------------------------------------------------
     print("\nSCENARIO 1 - Super Admin creates a school with NO academic year")
@@ -187,7 +197,11 @@ def main():
     print("\n  Creating a Principal for each school (Super Admin only flow)")
     mobile_a = f"9111{suffix}"
     mobile_b = f"9222{suffix}"
-    password = "AyVerify#2026"
+    # Random per-run password for the throwaway QA principals (>= 8 chars,
+    # which is the API's only password policy).
+    password = os.environ.get("QA_PRINCIPAL_PASSWORD") or (
+        "Ay" + secrets.token_urlsafe(16)
+    )
     for sid, mob, nm in ((school_a, mobile_a, "AY Principal A"),
                          (school_b, mobile_b, "AY Principal B")):
         r = call("POST", "/principals", token=sa, json_body={

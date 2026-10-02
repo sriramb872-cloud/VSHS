@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { AcademicYearProvider } from './contexts/AcademicYearContext';
+import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { PWAProvider } from './contexts/PWAContext';
 import AppRoutes from "./routes/AppRoutes";
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
@@ -21,17 +22,26 @@ export const App: React.FC = () => (
             *outside* every layout so all four role shells share one selection.
           */}
           <AcademicYearProvider>
-            <PetProvider>
-              {/*
-                PWA chrome is mounted here rather than inside a layout so it is
-                present on the unauthenticated login screen too - that is exactly
-                where a first-time user decides to install the app.
-              */}
-              <OfflineIndicator />
-              <AppRoutes />
-              <PwaDock />
-              <PetWidget />
-            </PetProvider>
+            {/*
+              SubscriptionProvider also sits inside AuthProvider: it reads the
+              signed-in identity to know when to re-fetch `GET
+              /subscription/me`, and outside every layout so one copy of the
+              server-resolved access status is shared by the sidebar, the lock
+              screen and the subscription page.
+            */}
+            <SubscriptionProvider>
+              <PetProvider>
+                {/*
+                  PWA chrome is mounted here rather than inside a layout so it is
+                  present on the unauthenticated login screen too - that is exactly
+                  where a first-time user decides to install the app.
+                */}
+                <OfflineIndicator />
+                <AppRoutes />
+                <PwaDock />
+                <PetWidget />
+              </PetProvider>
+            </SubscriptionProvider>
           </AcademicYearProvider>
         </AuthProvider>
       </PWAProvider>

@@ -1,0 +1,35 @@
+# Ruff configuration for SCHOLARIS backend.
+#
+# Scope is deliberately conservative: the CI gate must be meaningful (it fails
+# on real errors: syntax problems, undefined names, unused variables/imports)
+# without forcing a repo-wide style rewrite of pre-existing code.
+# Tighten `select` incrementally as the codebase is cleaned up.
+
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    "alembic/versions",   # generated/frozen migration scripts
+    "__pycache__",
+]
+
+[lint]
+select = [
+    "E4",   # imports, indentation of top-level code
+    "E7",   # statements (comparison, lambda, etc.)
+    "E9",   # runtime errors (syntax, IOError)
+    "F",    # pyflakes: undefined names, unused imports/vars, f-string issues
+    "I",    # import sorting
+]
+ignore = [
+    "E501",   # line length - formatter's job, not a correctness issue
+    "I001",   # import block sorting: enforced on new files, not enforced repo-wide yet
+]
+
+[lint.per-file-ignores]
+# Scripts predate the lint gate and start by inserting sys.path.
+"scripts/*" = ["E402"]
+# Test modules legitimately use star imports for fixtures where helpful.
+"tests/*" = ["F401"]
+
+[lint.flake8-unused-arguments]
+ignore-variadic-names = true

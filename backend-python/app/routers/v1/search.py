@@ -38,16 +38,27 @@ _MAX_PER_ENTITY = 25
 
 
 def _teacher_section_ids(db: Session, user: User) -> List[int]:
-    """Sections a teacher may see: class-teacher sections plus subject assignments."""
+    """Sections a teacher may see: class-teacher sections plus subject assignments.
+
+    Scoped to the teacher's school so a stray cross-tenant assignment row can
+    never surface another school's sections in search results.
+    """
     teacher = db.query(Teacher).filter(Teacher.user_id == user.id).first()
-    if not teacher:
+    if not teacher or not teacher.school_id:
         return []
     class_teacher = [
-        s.id for s in db.query(Section).filter(Section.class_teacher_id == teacher.id).all()
+        s.id
+        for s in db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id,
+        ).all()
     ]
     subject_teacher = [
         ts.section_id
-        for ts in db.query(TeacherSubject).filter(TeacherSubject.teacher_id == teacher.id).all()
+        for ts in db.query(TeacherSubject).filter(
+            TeacherSubject.teacher_id == teacher.id,
+            TeacherSubject.school_id == teacher.school_id,
+        ).all()
         if ts.section_id
     ]
     return sorted(set(class_teacher) | set(subject_teacher))
@@ -198,11 +209,15 @@ def global_search(
         # Students and teachers only see subjects they are actually taught.
         if role == "TEACHER":
             own_teacher = db.query(Teacher).filter(Teacher.user_id == current_user.id).first()
+            # Scope the assignment rows to the teacher's school, exactly like
+            # _teacher_section_ids does, so a stray cross-tenant assignment can
+            # never surface another school's subjects in search results.
             sub_ids = (
                 [ts.subject_id for ts in db.query(TeacherSubject).filter(
-                    TeacherSubject.teacher_id == own_teacher.id
+                    TeacherSubject.teacher_id == own_teacher.id,
+                    TeacherSubject.school_id == own_teacher.school_id,
                 ).all() if ts.subject_id]
-                if own_teacher
+                if own_teacher and own_teacher.school_id
                 else []
             )
         else:
@@ -231,14 +246,13 @@ def global_search(
                     if gs.subject_id
                 ]
         if sub_ids:
-            subject_rows = (
-                db.query(Subject)
-                .filter(Subject.id.in_(set(sub_ids)))
-                .filter(or_(Subject.name.ilike(term), Subject.code.ilike(term)))
-                .order_by(Subject.name)
-                .limit(limit)
-                .all()
-            )
+            subject_query = db.query(Subject).filter(
+                Subject.id.in_(set(sub_ids))
+            ).filter(or_(Subject.name.ilike(term), Subject.code.ilike(term)))
+            # Second layer of defence: even if a foreign subject id slipped
+            # through, it is still filtered against the caller's school.
+            subject_query = apply_school(subject_query, Subject.school_id)
+            subject_rows = subject_query.order_by(Subject.name).limit(limit).all()
     subjects = [
         {
             "id": s.id,

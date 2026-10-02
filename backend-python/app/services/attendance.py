@@ -4,7 +4,6 @@ SCHOLARIS ERP - Attendance Service
 
 from datetime import date
 from typing import List, Optional
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.repositories.attendance import AttendanceRepository
 from app.schemas.attendance import BulkAttendanceCreate, AttendanceSummary

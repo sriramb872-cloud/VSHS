@@ -28,6 +28,13 @@ from app.models.audit_log import AuditLog
 from app.models.role import Role
 from app.models.upload import Upload
 from app.models.app_settings import SystemSettings, SchoolSettings, UserAppSettings
+from app.models.refresh_token import RefreshToken
+from app.models.subscription_plan import SubscriptionPlan
+from app.models.subscription import Subscription
+from app.models.school_subscription_settings import SchoolSubscriptionSettings
+from app.models.user_subscription_override import UserSubscriptionOverride
+from app.models.subscription_payment import SubscriptionPayment
+from app.models.subscription_audit_log import SubscriptionAuditLog
 
 __all__ = [
     "School",
@@ -61,4 +68,11 @@ __all__ = [
     "SystemSettings",
     "SchoolSettings",
     "UserAppSettings",
+    "RefreshToken",
+    "SubscriptionPlan",
+    "Subscription",
+    "SchoolSubscriptionSettings",
+    "UserSubscriptionOverride",
+    "SubscriptionPayment",
+    "SubscriptionAuditLog",
 ]

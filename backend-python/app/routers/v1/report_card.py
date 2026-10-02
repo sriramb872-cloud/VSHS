@@ -14,14 +14,18 @@ from app.models.user import UserModel
 from app.models.student import Student
 from app.core.audit import write_audit_log
 
-router = APIRouter(prefix="/report-cards", tags=["Report Cards"])
+router = APIRouter(
+    prefix="/report-cards",
+    tags=["Report Cards"],
+    dependencies=[Depends(deps.require_subscription_access)],
+)
 
 
-def _assert_section_in_school(db: Session, current_user: UserModel, section_id: int) -> None:
+def _assert_section_in_school(db: Session, current_user: UserModel, section_id: int):
     """Reject a section that does not belong to the caller's school.
 
     SUPER_ADMIN is platform-wide and may target any school. Everyone else is
-    scoped to their own ``school_id``.
+    scoped to their own ``school_id``. Returns the validated Section row.
     """
     from app.models.section import Section
 
@@ -31,12 +35,36 @@ def _assert_section_in_school(db: Session, current_user: UserModel, section_id: 
             status_code=status.HTTP_404_NOT_FOUND, detail="Section not found"
         )
     if str(current_user.role).upper() == "SUPER_ADMIN":
-        return
+        return section
     if not current_user.school_id or section.school_id != current_user.school_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Section does not belong to your school",
         )
+    return section
+
+
+def _assert_references_in_section_school(
+    db: Session, section, academic_year_id: int, exam_id: Optional[int]
+) -> None:
+    """The academic year (and exam, when given) must live in the SAME school
+    as the section, otherwise report cards would join rows across tenants."""
+    from app.models.academic_year import AcademicYear
+    from app.models.exam import Exam
+
+    year = db.query(AcademicYear).filter(AcademicYear.id == academic_year_id).first()
+    if not year or year.school_id != section.school_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Academic year must belong to the section's school",
+        )
+    if exam_id is not None:
+        exam = db.query(Exam).filter(Exam.id == exam_id).first()
+        if not exam or exam.school_id != section.school_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Exam must belong to the section's school",
+            )
 
 
 @router.post("/generate", response_model=ReportCardListResponse)
@@ -57,7 +85,8 @@ def generate_report_cards(
     # against the caller's school. Without this a principal of one school could
     # regenerate (and thereby overwrite, including clearing `exam_id`) another
     # school's report cards.
-    _assert_section_in_school(db, current_user, section_id)
+    section = _assert_section_in_school(db, current_user, section_id)
+    _assert_references_in_section_school(db, section, academic_year_id, exam_id)
 
     items = ReportCardService.generate_report_cards(
         db, academic_year_id=academic_year_id, section_id=section_id, term_name=term_name, exam_id=exam_id
@@ -85,6 +114,10 @@ def list_report_cards(
 ):
     role = str(current_user.role).upper()
     school_id = current_user.school_id if role != "SUPER_ADMIN" else None
+    if role != "SUPER_ADMIN" and not school_id:
+        # Fail closed: a non-super-admin without a school context must never
+        # fall through to the unfiltered (all-schools) query below.
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     if academic_year_id is None:
         academic_year_id = resolve_year_id(db, current_user, request)
@@ -119,6 +152,11 @@ def get_report_card(
 ):
     role = str(current_user.role).upper()
     school_id = current_user.school_id if role != "SUPER_ADMIN" else None
+    if role != "SUPER_ADMIN" and not school_id:
+        # Fail closed: without a school context the service call below would
+        # skip the tenant check entirely (``school_id is None``) and hand over
+        # any student's report card.
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     if academic_year_id is None:
         academic_year_id = resolve_year_id(db, current_user, request, allow_all=False)

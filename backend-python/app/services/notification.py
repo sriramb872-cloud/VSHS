@@ -5,9 +5,6 @@ from sqlalchemy.orm import Session
 from app.crud.notification import notification as crud_notification
 from app.schemas.notification import (
     NotificationCreate,
-    NotificationUpdate,
-    NotificationType,
-    NotificationCategory,
     TeacherClassInfoResponse,
     StudentSummary,
 )
@@ -57,8 +54,13 @@ class NotificationService:
         if not teacher:
             return TeacherClassInfoResponse(is_class_teacher=False, students=[])
 
-        # Find section where teacher is assigned as class teacher
-        section = db.query(Section).filter(Section.class_teacher_id == teacher.id).first()
+        # Find section where teacher is assigned as class teacher.
+        # Scoped to the teacher's school so a stray cross-tenant
+        # class_teacher_id can never expose another school's roster.
+        section = db.query(Section).filter(
+            Section.class_teacher_id == teacher.id,
+            Section.school_id == teacher.school_id,
+        ).first()
         if not section:
             return TeacherClassInfoResponse(is_class_teacher=False, students=[])
 
@@ -170,8 +172,11 @@ class NotificationService:
                 )
 
             if notif_type in ("ONLY_FOR_CLASS", "ONLY_FOR_STUDENT"):
-                # Must be a class teacher
-                class_section = db.query(Section).filter(Section.class_teacher_id == teacher.id).first()
+                # Must be a class teacher (in the teacher's own school)
+                class_section = db.query(Section).filter(
+                    Section.class_teacher_id == teacher.id,
+                    Section.school_id == teacher.school_id,
+                ).first()
                 if not class_section:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,

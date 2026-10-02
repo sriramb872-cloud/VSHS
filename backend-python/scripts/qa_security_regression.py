@@ -68,7 +68,7 @@ def main():
     pr6 = login("9000000001", "QaTest#2026p")     # school 6
     pr7 = login("9000000009", "QaTestB#2026")     # school 7 (attacker)
     t1 = login("9000000002", "QaTeach#2027")      # teacher, school 6
-    t2 = login("9000000003", "QaTeach#2026")      # teacher 2, school 6
+    _t2 = login("9000000003", "QaTeach#2026")      # teacher 2, school 6 (credential check)
     st1 = login("9000001001", "QaStu#2026")       # student, school 6
 
     WINDOW = {"start_date": "2026-01-01", "end_date": "2026-12-31"}

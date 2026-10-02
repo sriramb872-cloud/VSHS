@@ -23,7 +23,6 @@ from app.crud.academic_year import (
     STATUS_ARCHIVED,
     STATUS_CLOSED,
     STATUS_UPCOMING,
-    VALID_STATUSES,
 )
 from app.models.user import User
 from app.models.academic_year import AcademicYear

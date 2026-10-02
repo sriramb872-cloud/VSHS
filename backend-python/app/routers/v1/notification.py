@@ -7,7 +7,6 @@ from app.schemas.notification import (
     NotificationCreate,
     NotificationListResponse,
     NotificationResponse,
-    NotificationUpdate,
     TeacherClassInfoResponse,
 )
 from app.services.notification import NotificationService

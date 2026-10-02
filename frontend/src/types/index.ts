@@ -680,3 +680,61 @@ export interface TeacherSubjectCreatePayload {
   section_id: number;
   school_id: number;
 }
+
+// ─── Subscription & Access Control ──────────────────────────────────────────
+/**
+ * Subscription types are canonically defined in ./subscription (they mirror
+ * the backend `app/schemas/subscription*.py` schemas). Kept out of this file
+ * so the access-resolution vocabulary has one home.
+ */
+export type {
+  BillableRole,
+  PlanRole,
+  DurationUnit,
+  BillingInterval,
+  AccessStatusValue,
+  SubscriptionRowStatus,
+  AccessReason,
+  UserSubscriptionStatus,
+  SchoolSubscriptionStatus,
+  PaymentStatus,
+  MockCheckoutOutcome,
+  SubscriptionSource,
+  BulkAction,
+  SubscriptionErrorDetail,
+  SubscriptionRequiredDetail,
+  PlanBrief,
+  AccessStatus,
+  SubscriptionPlan,
+  SubscriptionPlanListResponse,
+  SubscriptionPlanCreatePayload,
+  SubscriptionPlanUpdatePayload,
+  Subscription,
+  SubscriptionListResponse,
+  SchoolSettings,
+  SchoolSettingsUpdatePayload,
+  UserOverride,
+  UserOverrideCreatePayload,
+  UserOverrideUpdatePayload,
+  SchoolSubscriptionSummary,
+  SchoolSubscriptionListResponse,
+  RoleSummary,
+  SchoolRolesResponse,
+  SchoolRoleDetailResponse,
+  SchoolUserSubscriptionItem,
+  SchoolUsersListResponse,
+  SubscriptionAuditLog,
+  UserSubscriptionDetail,
+  GrantSubscriptionPayload,
+  ExtendSubscriptionPayload,
+  SubscriptionStatePayload,
+  BulkOperationPayload,
+  BulkOperationFailure,
+  BulkOperationResponse,
+  SubscriptionMetrics,
+  SubscriptionPayment,
+  SubscriptionPaymentListResponse,
+  MeSubscription,
+  MePlans,
+  SchoolUsersQuery,
+} from './subscription';

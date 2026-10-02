@@ -3,7 +3,6 @@ SCHOLARIS ERP - Attendance Validator
 """
 
 from datetime import date
-from typing import List
 from fastapi import HTTPException, status
 from app.models.attendance_record import AttendanceStatus
 

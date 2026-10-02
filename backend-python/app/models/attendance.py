@@ -1,6 +1,5 @@
 # backend-python/app/models/attendance.py
-from datetime import datetime, date
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Enum, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 

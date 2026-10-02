@@ -1,6 +1,6 @@
 // src/layouts/TeacherLayout.tsx
 import React from 'react';
-import AppShell, { NavItem, LayoutDashboard, Users, ClipboardList, BookOpen, CalendarDays, FileText, BarChart3, Settings, Bell, User } from './AppShell';
+import AppShell, { NavItem, LayoutDashboard, Users, ClipboardList, BookOpen, CalendarDays, FileText, BarChart3, Settings, Bell, User, CreditCard } from './AppShell';
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/teacher/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -13,6 +13,7 @@ const navItems: NavItem[] = [
   { label: 'Report Cards', path: '/teacher/report-cards', icon: <BarChart3 className="w-4 h-4" /> },
   { label: 'Announcements', path: '/teacher/announcements', icon: <Bell className="w-4 h-4" /> },
   { label: 'Calendar', path: '/teacher/calendar', icon: <CalendarDays className="w-4 h-4" /> },
+  { label: 'Subscription', path: '/teacher/subscription', icon: <CreditCard className="w-4 h-4" /> },
   { label: 'Settings', path: '/teacher/settings', icon: <Settings className="w-4 h-4" /> },
   { label: 'Profile', path: '/teacher/profile', icon: <User className="w-4 h-4" /> },
 ];

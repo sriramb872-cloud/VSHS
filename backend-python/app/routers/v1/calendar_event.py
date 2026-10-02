@@ -15,7 +15,11 @@ from app.services.calendar_event import CalendarEventService
 from app.models.user import UserModel
 from app.core.audit import write_audit_log
 
-router = APIRouter(prefix="/calendar-events", tags=["Calendar Events"])
+router = APIRouter(
+    prefix="/calendar-events",
+    tags=["Calendar Events"],
+    dependencies=[Depends(deps.require_subscription_access)],
+)
 
 
 def _as_date(value: Union[date, str]) -> date:

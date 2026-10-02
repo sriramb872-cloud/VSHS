@@ -8,7 +8,6 @@ from app.api.year_context import resolve_year_id
 from app.crud import student_enrollment as se_crud, teacher as teacher_crud, student as student_crud
 from app.models.student_enrollment import StudentEnrollment
 from app.models.section import Section
-from app.models.student import Student
 from app.models.user import User
 from app.core.audit import write_audit_log
 from app.models.academic_year import AcademicYear
@@ -235,7 +234,11 @@ def remove_enrollment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
 
     if str(current_user.role).upper() != "SUPER_ADMIN":
-        if item.student and item.student.school_id != current_user.school_id:
+        # Fail closed: an orphan enrollment row (student missing) has no
+        # tenant attribution, so only its own school may delete it when the
+        # student record exists -- otherwise deny (mirrors the PATCH check).
+        school_id = item.student.school_id if item.student else None
+        if school_id != current_user.school_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     write_audit_log(

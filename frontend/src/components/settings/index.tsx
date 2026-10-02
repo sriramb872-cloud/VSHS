@@ -1,6 +1,7 @@
 // src/components/settings/index.tsx
 import React, { useState } from 'react';
 import { settingsService } from '../../services/settings';
+import { setTokens } from '../../services/api';
 
 interface UserSettingsSectionProps {
   initialProfile: Record<string, any>;
@@ -39,7 +40,13 @@ export const UserSettingsSection: React.FC<UserSettingsSectionProps> = ({ initia
     setError('');
     setMessage('');
     try {
-      await settingsService.changePassword(passwords);
+      const result = await settingsService.changePassword(passwords);
+      // The server revokes every old session on a password change and returns
+      // a fresh pair for this client - persist it or the user is logged out
+      // immediately after a successful change.
+      if (result?.access_token) {
+        setTokens(result.access_token, result.refresh_token);
+      }
       setMessage('Password changed successfully!');
       setPasswords({ current_password: '', new_password: '' });
     } catch (err: any) {

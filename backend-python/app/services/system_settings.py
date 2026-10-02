@@ -54,7 +54,10 @@ class SettingsService:
     def get_principal(db: Session, current_user):
         if getattr(current_user, "role", None) not in ["SUPER_ADMIN", "PRINCIPAL"]:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
-        school_id = getattr(current_user, "school_id", 1)
+        # School context comes from the authenticated user - never defaulted:
+        # a school-less caller (e.g. SUPER_ADMIN) gets the neutral defaults
+        # below instead of reading or writing another tenant's settings.
+        school_id = getattr(current_user, "school_id", None)
         settings = settings_crud.get_principal_settings(db, school_id)
         if not settings:
             return {
@@ -79,7 +82,14 @@ class SettingsService:
     def update_principal(db: Session, current_user, payload: PrincipalSettingsUpdate):
         if getattr(current_user, "role", None) not in ["SUPER_ADMIN", "PRINCIPAL"]:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
-        school_id = getattr(current_user, "school_id", 1)
+        school_id = getattr(current_user, "school_id", None)
+        if not school_id:
+            # Never write school settings without an authenticated school
+            # context (would otherwise target an arbitrary default school).
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="School context not found for user",
+            )
         data = payload.model_dump(exclude_none=True)
         # The free-text academic year is no longer writable: the ACTIVE
         # AcademicYear is authoritative and settings must never contradict it.
@@ -114,6 +124,16 @@ class SettingsService:
         if not verify_password(payload.current_password, current_user.password_hash):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
         current_user.password_hash = get_password_hash(payload.new_password)
+        # The user just proved knowledge of the old password by changing it,
+        # so a pending forced-change flag is satisfied by this very action.
+        current_user.must_change_password = False
         db.add(current_user)
         db.commit()
-        return {"message": "Password updated successfully"}
+        # Kill every previously issued session for this account, then hand
+        # this client a fresh token pair so it can continue without a
+        # forced re-login.
+        from app.core.token_service import issue_session, revoke_all_sessions
+
+        revoke_all_sessions(db, current_user)
+        session = issue_session(db, current_user)
+        return {"message": "Password updated successfully", **session}

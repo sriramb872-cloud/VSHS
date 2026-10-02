@@ -1,89 +1,199 @@
 // src/pages/superadmin/Subscriptions.tsx
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Building, ArrowRight, BarChart3 } from 'lucide-react';
+import {
+  BarChart3,
+  Building,
+  CheckCircle2,
+  CreditCard,
+  RefreshCw,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  XCircle,
+} from 'lucide-react';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  MobileListItem,
+  StatCard,
+} from '../../components/shared';
+import { AccessBadge } from '../../components/subscriptions/AccessBadge';
+import { formatDate } from '../../components/subscriptions/format';
+import { subscriptionsService } from '../../services/subscriptions';
+import { errorMessage } from '../../helpers/errorMessage';
+import type {
+  SchoolSubscriptionSummary,
+  SubscriptionMetrics,
+} from '../../types/subscription';
 
 /**
- * Subscriptions are **not** part of the current domain model.
+ * Super Admin > Subscriptions: platform-wide metrics plus a per-school rollup.
  *
- * A repository-wide search for `subscription`, `plan`, `billing`, `payment`,
- * `invoice`, `renewal`, `expiry` and `tenant limit` returns no model, table,
- * schema, CRUD, service or router: the only `expiry_date` in the codebase
- * belongs to `announcements`. There is nothing to read, and no billing
- * provider is configured.
- *
- * This screen therefore states that plainly and offers the capability that does
- * exist for the same operational question - per-school activation status via the
- * audit log and the school rollup - rather than rendering invented plans,
- * prices or renewal dates.
+ * Every number is an aggregate the API computed from real rows
+ * (`GET /subscription/metrics` and `GET /subscription/schools`) - nothing on
+ * this screen is estimated, interpolated or cached from a previous session.
  */
 export const SuperAdminSubscriptions: React.FC = () => {
   const navigate = useNavigate();
+  const [metrics, setMetrics] = useState<SubscriptionMetrics | null>(null);
+  const [schools, setSchools] = useState<SchoolSubscriptionSummary[]>([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [metricsData, schoolsData] = await Promise.all([
+        subscriptionsService.metrics(),
+        subscriptionsService.listSchools({ limit: 100 }),
+      ]);
+      setMetrics(metricsData);
+      setSchools(schoolsData.items);
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to load subscriptions.'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const filtered = schools.filter((school) => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return true;
+    return (
+      school.name.toLowerCase().includes(needle) ||
+      (school.code || '').toLowerCase().includes(needle)
+    );
+  });
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Subscriptions</h1>
-        <p className="text-xs text-slate-500">School licensing and billing status</p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Subscriptions</h1>
+          <p className="text-xs text-slate-500">School licensing, plans and billing status</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs transition-all"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
+        </button>
       </div>
 
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-start gap-2.5">
-          <CreditCard className="w-4 h-4 text-amber-700 mt-0.5 flex-shrink-0" />
-          <div>
-            <h2 className="text-sm font-bold text-amber-900">
-              Not available: there is no subscription model
-            </h2>
-            <p className="text-xs text-amber-800 mt-1">
-              SCHOLARIS has no subscription, plan, billing or payment model. There is no table,
-              schema or endpoint to read, and no payment provider is configured, so this screen
-              cannot show licensing or renewal data without inventing it.
-            </p>
-            <p className="text-xs text-amber-800 mt-2">
-              The closest real equivalent is per-school activation, managed from{' '}
-              <span className="font-mono">/superadmin/schools</span>, with every change recorded
-              in the audit log.
-            </p>
-          </div>
+      {error && <ErrorState title="Load Error" message={error} onRetry={load} />}
+
+      {metrics && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard
+            icon={<Building className="w-5 h-5" />}
+            label="Schools"
+            value={metrics.total_schools}
+            iconBgClass="bg-indigo-50 text-indigo-600"
+          />
+          <StatCard
+            icon={<CreditCard className="w-5 h-5" />}
+            label="Subscriptions on"
+            value={metrics.subscriptions_enabled}
+            subtitle={`of ${metrics.total_schools}`}
+            iconBgClass="bg-emerald-50 text-emerald-600"
+          />
+          <StatCard
+            icon={<Users className="w-5 h-5" />}
+            label="Active users"
+            value={metrics.active_user_subscriptions}
+            subtitle="with a live subscription"
+            iconBgClass="bg-cyan-50 text-cyan-600"
+          />
+          <StatCard
+            icon={<TrendingDown className="w-5 h-5" />}
+            label="Expired users"
+            value={metrics.expired_user_subscriptions}
+            iconBgClass="bg-amber-50 text-amber-600"
+          />
+          <StatCard
+            icon={<CheckCircle2 className="w-5 h-5" />}
+            label="Payments succeeded"
+            value={metrics.successful_payments}
+            iconBgClass="bg-emerald-50 text-emerald-600"
+          />
+          <StatCard
+            icon={<XCircle className="w-5 h-5" />}
+            label="Payments failed"
+            value={metrics.failed_payments}
+            subtitle="failed or cancelled"
+            iconBgClass="bg-rose-50 text-rose-600"
+          />
+          <StatCard
+            icon={<RefreshCw className="w-5 h-5" />}
+            label="Payments pending"
+            value={metrics.pending_payments}
+            iconBgClass="bg-amber-50 text-amber-600"
+          />
+          <StatCard
+            icon={<BarChart3 className="w-5 h-5" />}
+            label="Schools free now"
+            value={metrics.schools_currently_free}
+            iconBgClass="bg-cyan-50 text-cyan-600"
+          />
         </div>
+      )}
+
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by school name or code..."
+          className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+        />
       </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-4">
-        <h2 className="text-sm font-bold text-slate-900">What exists today</h2>
-        <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4 mt-2">
-          <li>
-            <span className="font-mono text-slate-800">schools.is_active</span> — whether a school
-            is currently on or off. Toggled from the Schools screen.
-          </li>
-          <li>
-            <span className="font-mono text-slate-800">/superadmin/reports</span> — cross-school
-            rollup with per-school activity, which is the closest thing to a renewal review.
-          </li>
-          <li>
-            <span className="font-mono text-slate-800">/superadmin/audit-logs</span> — the
-            authoritative history of who changed a school's status and when.
-          </li>
-        </ul>
-        <div className="flex flex-wrap gap-2 mt-4">
-          <button
-            type="button"
-            onClick={() => navigate('/superadmin/schools')}
-            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 active:scale-95 transition-all"
-          >
-            <Building className="w-4 h-4" />
-            Manage Schools
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/superadmin/reports')}
-            className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 active:scale-95 transition-all"
-          >
-            <BarChart3 className="w-4 h-4" />
-            Open Platform Report
-            <ArrowRight className="w-4 h-4" />
-          </button>
+      {loading ? (
+        <LoadingSkeleton type="list" count={4} />
+      ) : error ? null : filtered.length === 0 ? (
+        <EmptyState
+          title="No Schools Found"
+          description={
+            search
+              ? 'No school matches your search criteria.'
+              : 'There are no schools onboarded yet.'
+          }
+          icon={<Building className="w-10 h-10 text-slate-300" />}
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {filtered.map((school) => (
+            <MobileListItem
+              key={school.school_id}
+              title={school.name}
+              subtitle={
+                <>
+                  {school.code ? `Code: ${school.code}` : ''}
+                  {school.code ? ' · ' : ''}
+                  {school.active_subscriptions} active · {school.expired_subscriptions} expired
+                  {school.free_until ? ` · free until ${formatDate(school.free_until)}` : ''}
+                </>
+              }
+              icon={<Building className="w-5 h-5 text-indigo-600" />}
+              avatarBg="bg-indigo-50 text-indigo-600"
+              badge={<AccessBadge status={school.status} />}
+              onClick={() => navigate(`/superadmin/subscriptions/${school.school_id}`)}
+            />
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,15 +1,30 @@
 # backend-python/main.py
+"""SCHOLARIS API entry point.
+
+IMPORTANT: this module performs NO database schema changes. Historically it
+ran ``Base.metadata.create_all`` plus ALTER TABLE reconciliation at import
+time, which raced between gunicorn workers (see gunicorn_conf.py -> several
+workers, each importing this module). Schema management now lives exclusively
+in Alembic (``alembic upgrade head``), executed exactly once by the deploy
+start command BEFORE any worker starts. See docs/MIGRATIONS.md.
+"""
+import fnmatch
+import json
 import logging
+import os
+import time
 import traceback
+import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import inspect, text
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
-from app.core.database import Base, engine
 import app.models  # Ensure all models are registered in Base.metadata
+from app.core.rate_limit import limiter
 
 from app.routers.v1 import (
     auth,
@@ -43,13 +58,74 @@ from app.routers.v1 import (
     slip_tests,
     roles,
     reports,
+    subscriptions,
+    subscription_plans,
 )
 
 logger = logging.getLogger("scholaris")
 
-Base.metadata.create_all(bind=engine)
 
-ALLOWED_ORIGINS = [
+# ---------------------------------------------------------------------------
+# Structured logging
+# ---------------------------------------------------------------------------
+# Every line carries timestamp + level + logger + message, and request lines
+# additionally carry request_id/method/path/status/duration. NEVER log
+# passwords, access tokens, refresh tokens, reset tokens or DB credentials -
+# only the fields below are attached.
+
+class JsonLogFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S%z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        for key in ("request_id", "method", "path", "status", "duration_ms"):
+            value = getattr(record, key, None)
+            if value is not None:
+                payload[key] = value
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        return json.dumps(payload, ensure_ascii=False)
+
+
+class TextLogFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        base = super().format(record)
+        extras = []
+        for key in ("request_id", "method", "path", "status", "duration_ms"):
+            value = getattr(record, key, None)
+            if value is not None:
+                extras.append(f"{key}={value}")
+        return f"{base} {' '.join(extras)}" if extras else base
+
+
+def configure_logging() -> None:
+    handler = logging.StreamHandler()
+    log_format = os.getenv("LOG_FORMAT", "json").strip().lower()
+    if log_format == "text":
+        handler.setFormatter(
+            TextLogFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+        )
+    else:
+        handler.setFormatter(JsonLogFormatter())
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
+
+
+configure_logging()
+
+
+# ---------------------------------------------------------------------------
+# CORS - configurable via environment, never a wildcard
+# ---------------------------------------------------------------------------
+# ALLOWED_ORIGINS          comma-separated exact origins (overrides defaults)
+# ALLOWED_ORIGIN_PATTERNS  comma-separated fnmatch patterns, opt-in only -
+#                          e.g. https://*.vercel.app for preview deployments.
+DEFAULT_ALLOWED_ORIGINS = [
     "https://vshs.vercel.app",
     "http://localhost:3000",
     "http://localhost:5173",
@@ -58,138 +134,40 @@ ALLOWED_ORIGINS = [
 ]
 
 
-def _column_ddl(column) -> str:
-    """Render the DDL fragment for a single ORM column."""
-    return column.type.compile(engine.dialect)
+def _split_csv(raw: str) -> list:
+    return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-def _quote(identifier: str) -> str:
-    return f"`{identifier}`"
+_configured_origins = _split_csv(os.getenv("ALLOWED_ORIGINS", ""))
+ALLOWED_ORIGINS = _configured_origins or list(DEFAULT_ALLOWED_ORIGINS)
+ALLOWED_ORIGIN_PATTERNS = _split_csv(os.getenv("ALLOWED_ORIGIN_PATTERNS", ""))
 
 
-def _reconcile_enum_column(connection, table, column, live_column: dict) -> None:
-    """Widen a MySQL ENUM column when the model declares new values.
-
-    Only ever *adds* values: the emitted ENUM keeps every value already
-    present in the database and appends the ones the ORM declares but the
-    column is missing, in the model's declared order. Rows that already hold a
-    value are untouched, and no value is ever removed.
-    """
-    column_type = column.type
-    declared = list(getattr(column_type, "enums", None) or [])
-    if not declared or column_type.__class__.__name__ != "Enum":
-        return
-    if engine.dialect.name != "mysql":
-        return
-
-    live_type = live_column.get("type")
-    live_values = list(getattr(live_type, "enums", None) or [])
-    if not live_values:
-        return
-
-    missing = [value for value in declared if value not in live_values]
-    if not missing:
-        return
-
-    merged = live_values + missing
-    rendered = ", ".join(f"'{value}'" for value in merged)
-    nullability = "" if column.nullable else " NOT NULL"
-    connection.execute(
-        text(
-            f"ALTER TABLE {_quote(table.name)} "
-            f"MODIFY COLUMN {_quote(column.name)} "
-            f"ENUM({rendered}){nullability}"
-        )
-    )
-    logger.info(
-        "Startup schema migration: widened enum %s.%s with %s",
-        table.name,
-        column.name,
-        ", ".join(missing),
+def origin_allowed(origin: str) -> bool:
+    if origin in ALLOWED_ORIGINS:
+        return True
+    return any(
+        fnmatch.fnmatchcase(origin, pattern)
+        for pattern in ALLOWED_ORIGIN_PATTERNS
     )
 
 
-def apply_startup_schema_migrations() -> None:
-    """Apply small, idempotent upgrades required by the current ORM models.
+def origin_patterns_to_regex(patterns: list) -> str | None:
+    """Combine fnmatch-style patterns into a single regex for Starlette's
+    CORSMiddleware (``allow_origin_regex``, matched with ``fullmatch``).
 
-    ``create_all`` creates missing *tables* but it never adds columns to
-    tables that already exist. Any installation whose database predates a
-    column that was later added to a model therefore boots fine and then
-    fails at query time with MySQL error 1054 "Unknown column ... in 'field
-    list'". That is what broke ``GET /dashboard/principal`` for principals:
-    ``attendance_records.remarks`` was declared on the ORM model but absent
-    from the database, so any query selecting ``Attendance`` raised a 500.
-
-    Rather than special-casing one column at a time, this reconciles *every*
-    table in ``Base.metadata`` and adds any column the models declare but the
-    database is missing. The migration is strictly additive: it never drops
-    or renames anything, so it cannot destroy existing data.
-
-    IMPORTANT: gunicorn boots multiple worker processes (see
-    gunicorn_conf.py -> workers = 4), and each worker imports this module
-    independently. That means this function can run concurrently in several
-    workers against the same database. Without the try/except below, two
-    workers can both see the column missing and both issue
-    ``ALTER TABLE ... ADD COLUMN``; the loser gets a "Duplicate column name"
-    error, which is an unhandled exception at import time and crashes that
-    worker on boot. We treat "column already exists" as success instead of
-    letting it propagate.
+    Starlette >= 1.0 removed the ``allow_origin_patterns`` keyword, so the
+    opt-in pattern list must be compiled here. ``fnmatch.translate`` anchors
+    each pattern at the end; the explicit group keeps alternation correct.
     """
-    try:
-        with engine.begin() as connection:
-            inspector = inspect(connection)
-            present_tables = set(inspector.get_table_names())
-            for table in Base.metadata.sorted_tables:
-                if table.name not in present_tables:
-                    # create_all already handled missing tables.
-                    continue
-                live_columns = {c["name"]: c for c in inspector.get_columns(table.name)}
-                for column in table.columns:
-                    if column.name not in live_columns:
-                        nullability = "" if column.nullable else " NOT NULL"
-                        connection.execute(
-                            text(
-                                f"ALTER TABLE {_quote(table.name)} "
-                                f"ADD COLUMN {_quote(column.name)} "
-                                f"{_column_ddl(column)}{nullability}"
-                            )
-                        )
-                        logger.info(
-                            "Startup schema migration: added %s.%s",
-                            table.name,
-                            column.name,
-                        )
-                        continue
-
-                    # MySQL ENUM columns can also drift: adding a value to the
-                    # model's Enum() does not alter an existing column, so the
-                    # database keeps the old value list and any INSERT/UPDATE
-                    # using the new value fails with errno 1265 "Data truncated
-                    # for column". That is what broke POST /attendance/{id}/void
-                    # when "VOID" was added to the Attendance model.
-                    _reconcile_enum_column(
-                        connection, table, column, live_columns[column.name]
-                    )
-    except (OperationalError, ProgrammingError) as exc:
-        # Another worker already added the column (or is adding it right
-        # now) - this is expected under concurrent startup and is not fatal.
-        logger.warning(
-            "Startup schema migration skipped "
-            "(likely already applied by another worker): %s", exc
-        )
+    if not patterns:
+        return None
+    return "|".join(f"(?:{fnmatch.translate(pattern)})" for pattern in patterns)
 
 
-apply_startup_schema_migrations()
-
-# Academic Year lifecycle: backfills, index/constraint swaps and the
-# "one ACTIVE year per school" repair. Idempotent and fail-soft - see
-# app/core/academic_year_migrations.py.
-from app.core.academic_year_migrations import (  # noqa: E402
-    apply_academic_year_migrations,
-)
-
-apply_academic_year_migrations()
-
+# ---------------------------------------------------------------------------
+# Application
+# ---------------------------------------------------------------------------
 app = FastAPI(
     title="SCHOLARIS School ERP API",
     description="Production-ready multi-school ERP backend for SCHOLARIS V1",
@@ -199,21 +177,47 @@ app = FastAPI(
     openapi_url=None,
 )
 
-from app.core.rate_limit import limiter
-from slowapi.errors import RateLimitExceeded
-from slowapi import _rate_limit_exceeded_handler
-
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS Configuration
+# CORS Configuration (exact origins only; credentials are allowed because the
+# list is explicit - never "*").
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=origin_patterns_to_regex(ALLOWED_ORIGIN_PATTERNS),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_context_middleware(request: Request, call_next):
+    """Attach a correlation id to every request and emit one structured
+    access-log line per request (method, path, status, duration, request id).
+
+    Tokens/passwords are never read here and bodies are never logged.
+    Unhandled exceptions are logged with their traceback by the global
+    exception handler below (same request state, so the request id matches).
+    """
+    request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+    request.state.request_id = request_id
+    started = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = round((time.perf_counter() - started) * 1000, 1)
+    response.headers["X-Request-ID"] = request_id
+    logger.info(
+        "request completed",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "duration_ms": duration_ms,
+        },
+    )
+    return response
 
 
 @app.exception_handler(Exception)
@@ -231,18 +235,22 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     keeps the response CORS-compliant so the browser shows the real error
     instead of a misleading CORS message.
     """
+    request_id = getattr(request.state, "request_id", None)
     logger.error(
         "Unhandled exception on %s %s:\n%s",
         request.method,
         request.url.path,
         traceback.format_exc(),
+        extra={"request_id": request_id, "method": request.method, "path": request.url.path},
     )
 
     origin = request.headers.get("origin")
     headers = {}
-    if origin in ALLOWED_ORIGINS:
+    if origin and origin_allowed(origin):
         headers["Access-Control-Allow-Origin"] = origin
         headers["Access-Control-Allow-Credentials"] = "true"
+    if request_id:
+        headers["X-Request-ID"] = request_id
 
     return JSONResponse(
         status_code=500,
@@ -251,20 +259,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app.get("/debug/cors")
-def debug_cors():
-    return {
-        "message": "THIS IS THE DEPLOYED BACKEND",
-        "cors_origins": ALLOWED_ORIGINS,
-    }
-
 # Static and Media Files
-import os
-from fastapi.staticfiles import StaticFiles
-
 media_path = os.path.join(os.path.dirname(__file__), "media")
 os.makedirs(media_path, exist_ok=True)
+
 app.mount("/media", StaticFiles(directory=media_path), name="media")
+
 
 # Root Endpoints
 @app.get("/", tags=["Root"])
@@ -275,9 +275,39 @@ async def root():
         "status": "active"
     }
 
+
 @app.get("/health", tags=["Health"])
 async def health_check():
+    """Liveness probe: the process is up and serving requests.
+
+    Deliberately touches NO dependencies - a failed database must not make
+    the orchestrator kill/restart otherwise-healthy workers in a loop.
+    Use /ready to know whether the app can actually serve traffic.
+    """
     return {"status": "ok"}
+
+
+@app.get("/ready", tags=["Health"])
+async def readiness_check():
+    """Readiness probe: the app AND its database are reachable.
+
+    Returns 200 when the database answers a trivial query, 503 otherwise.
+    Never exposes connection strings, hostnames or other internals.
+    """
+    from sqlalchemy import text
+    from app.core.database import engine
+
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception:  # noqa: BLE001 - any driver error means "not ready"
+        logger.warning("readiness check failed: database unreachable")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "checks": {"database": "failed"}},
+        )
+    return {"status": "ready", "checks": {"database": "ok"}}
+
 
 # Register API Routers under /api/v1 prefix
 PREFIX = "/api/v1"
@@ -313,3 +343,5 @@ app.include_router(search.router, prefix=PREFIX)
 app.include_router(roles.router, prefix=PREFIX)
 app.include_router(reports.router, prefix=PREFIX)
 app.include_router(slip_tests.router, prefix=PREFIX)
+app.include_router(subscriptions.router, prefix=PREFIX)
+app.include_router(subscription_plans.router, prefix=PREFIX)

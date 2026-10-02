@@ -29,11 +29,47 @@ def _authorize_assignment_school(db: Session, assignment_id: int, current_user: 
     return assignment
 
 
-def _validate_assignment_relationships(db: Session, teacher_id: int, subject_id: int, school_id: int):
+def _validate_assignment_relationships(
+    db: Session,
+    teacher_id: int,
+    subject_id: int,
+    school_id: int,
+    grade_id: Optional[int] = None,
+    section_id: Optional[int] = None,
+):
+    """Every referenced object must belong to the assignment's school.
+
+    Covers teacher, subject, grade and section so a School A principal can
+    never link School B's class/section/subject into their own assignment
+    (cross-tenant object reference). Also enforces that the section actually
+    belongs to the given grade when both are supplied.
+    """
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not teacher or teacher.school_id != school_id or not subject or subject.school_id != school_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Teacher and subject must belong to the assignment school")
+
+    if grade_id is not None or section_id is not None:
+        from app.models.grade import Grade
+        from app.models.section import Section
+
+        grade = db.query(Grade).filter(Grade.id == grade_id).first() if grade_id is not None else None
+        if grade_id is not None and (not grade or grade.school_id != school_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Grade must belong to the assignment school",
+            )
+        if section_id is not None:
+            section_query = db.query(Section).filter(Section.id == section_id)
+            if grade_id is not None:
+                section_query = section_query.filter(Section.grade_id == grade_id)
+            section = section_query.first()
+            if not section or section.school_id != school_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Section must belong to the assignment school"
+                    + (" and grade" if grade_id is not None else ""),
+                )
 
 
 @router.get("", response_model=List[TeacherSubjectResponse])
@@ -75,7 +111,14 @@ def assign_teacher_to_subject(
         payload = TeacherSubjectCreate(
             **{**payload.model_dump(), "school_id": current_user.school_id}
         )
-    _validate_assignment_relationships(db, payload.teacher_id, payload.subject_id, payload.school_id)
+    _validate_assignment_relationships(
+        db,
+        payload.teacher_id,
+        payload.subject_id,
+        payload.school_id,
+        payload.grade_id,
+        payload.section_id,
+    )
 
     if payload.academic_year_id is None:
         resolved = resolve_year_id(db, current_user, request, allow_all=False)
@@ -112,7 +155,11 @@ def update_teacher_subject_assignment(
     school_id = assignment.school_id
     teacher_id = payload.teacher_id if payload.teacher_id is not None else assignment.teacher_id
     subject_id = payload.subject_id if payload.subject_id is not None else assignment.subject_id
-    _validate_assignment_relationships(db, teacher_id, subject_id, school_id)
+    grade_id = payload.grade_id if payload.grade_id is not None else assignment.grade_id
+    section_id = payload.section_id if payload.section_id is not None else assignment.section_id
+    _validate_assignment_relationships(
+        db, teacher_id, subject_id, school_id, grade_id, section_id
+    )
     service = TeacherSubjectService(db)
     result = service.update_assignment(assignment_id, payload)
     write_audit_log(
