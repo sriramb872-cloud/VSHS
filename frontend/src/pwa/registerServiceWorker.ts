@@ -38,10 +38,10 @@ const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
  */
 type UpdateWithOptions = (options?: {
   updateViaCache?: 'none' | 'imports' | 'all';
-}) => Promise<ServiceWorkerRegistration>;
+}) => Promise<void>;
 
-function updateRegistration(registration: ServiceWorkerRegistration): Promise<unknown> {
-  return (registration.update as UpdateWithOptions).call(registration, {
+function updateRegistration(registration: ServiceWorkerRegistration): Promise<void> {
+  return (registration.update as unknown as UpdateWithOptions).call(registration, {
     updateViaCache: 'none',
   });
 }

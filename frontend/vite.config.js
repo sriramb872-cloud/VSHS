@@ -85,7 +85,7 @@ export default defineConfig({
           //    a future entry added above/below cannot accidentally start
           //    persisting students, marks, attendance or report cards into
           //    shared Cache Storage. This holds whether the API is on a
-          //    different origin (today: localhost:8000 / api.scholaris.in) or
+          //    different origin (today: localhost:8000 / backend-production-510f.up.railway.app) or
           //    same-origin behind one domain.
           {
             urlPattern: ({ url, sameOrigin }) =>

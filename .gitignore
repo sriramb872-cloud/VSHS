@@ -1,34 +1,388 @@
-# Secret & Environment Variables
+# ============================================================
+# SCHOLARIS - Root Git Ignore
+# React + Vite Frontend / FastAPI Backend
+# ============================================================
+
+
+# ============================================================
+# 1. ENVIRONMENT VARIABLES / SECRETS
+# ============================================================
+
+# Ignore all environment files everywhere
 .env
-.env.local
 .env.*
+**/.env
+**/.env.*
+
+# Allow safe example files
 !.env.example
-*.pem
+!**/.env.example
 
-# Dependencies (Node / Python)
+# Optional: allow example production config
+!.env.production.example
+!**/.env.production.example
+
+
+# ============================================================
+# 2. NODE / VITE / FRONTEND
+# ============================================================
+
+# Dependencies
 node_modules/
-__pycache__/
-*.pyc
-venv/
-.venv/
+**/node_modules/
 
-# Test / lint caches and local scratch databases
-.pytest_cache/
-.ruff_cache/
-*.db
-*.sqlite3
-
-# Build outputs
+# Vite build output
 dist/
+**/dist/
+
+# Vercel local configuration
+.vercel/
+**/.vercel/
+
+# Vite cache
+.vite/
+**/.vite/
+
+# npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# npm cache
+.npm/
+
+# Package manager temporary files
+.yarn/
+.pnp.*
+.pnpm-store/
+
+
+# ============================================================
+# 3. REACT / TYPESCRIPT GENERATED FILES
+# ============================================================
+
+# TypeScript incremental build files
+*.tsbuildinfo
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Test snapshots / temporary reports
+test-results/
+playwright-report/
+blob-report/
+
+
+# ============================================================
+# 4. PYTHON / FASTAPI BACKEND
+# ============================================================
+
+# Python cache
+__pycache__/
+**/__pycache__/
+
+*.py[cod]
+*$py.class
+
+# Python compiled extensions
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+**/.venv/
+**/venv/
+**/env/
+
+# Python packaging
 build/
-.next/
+dist/
+*.egg-info/
+*.egg
+.eggs/
 
-# Runtime upload storage (user-supplied profile photos; must never be committed)
-backend-python/media/
+# Pip logs/cache
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Local QA / dev server logs
-backend-python/qa-*.log
+# Jupyter
+.ipynb_checkpoints/
 
-# System / OS files
-.DS_Store
+
+# ============================================================
+# 5. DATABASE / LOCAL DATA
+# ============================================================
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Local database folders
+data/
+**/data/
+database/
+**/database/
+
+# Local development storage
+storage/
+**/storage/
+
+# Temporary exports
+exports/
+**/exports/
+
+
+# ============================================================
+# 6. USER UPLOADS / GENERATED MEDIA
+# ============================================================
+
+# Uploaded files
+uploads/
+**/uploads/
+
+# Generated media
+media/
+**/media/
+
+# Temporary files
+tmp/
+temp/
+**/tmp/
+**/temp/
+
+# Generated documents
+generated/
+**/generated/
+
+
+# ============================================================
+# 7. LOGS
+# ============================================================
+
+*.log
+logs/
+**/logs/
+
+# Backend logs
+*.out
+
+
+# ============================================================
+# 8. SECURITY / CERTIFICATES / KEYS
+# ============================================================
+
+# Private keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# Certificates
+*.crt
+*.cer
+*.csr
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+id_ecdsa
+id_ecdsa.pub
+
+# Service account / credential files
+service-account*.json
+*-service-account*.json
+credentials.json
+**/credentials*.json
+
+# Firebase / Google credential files
+firebase-adminsdk-*.json
+google-credentials*.json
+
+# Generic secret files
+secrets.json
+secret.json
+**/secrets.json
+**/secret.json
+
+# JWT / auth keys
+jwt*.pem
+private*.pem
+
+
+# ============================================================
+# 9. LOCAL CONFIGURATION
+# ============================================================
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.example.json
+
+# JetBrains
+.idea/
+*.iml
+
+# Visual Studio
+.vs/
+
+# Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+
+# ============================================================
+# 10. LOCAL DEVELOPMENT CONFIG
+# ============================================================
+
+# Local-only configuration
+*.local
+*.local.*
+**/*.local
+**/*.local.*
+
+# OS-specific local overrides
+config.local.*
+settings.local.*
+
+
+# ============================================================
+# 11. BACKUP / TEMPORARY / EDITOR FILES
+# ============================================================
+
+*.bak
+*.backup
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+
+# Merge/editor temporary files
+*.rej
+
+
+# ============================================================
+# 12. ARCHIVES
+# ============================================================
+
+# Local source archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+
+# ============================================================
+# 13. GENERATED API / DOCUMENTATION OUTPUT
+# ============================================================
+
+# Generated OpenAPI exports
+openapi.json
+openapi.yaml
+
+# Generated API clients
+generated-client/
+**/generated-client/
+
+
+# ============================================================
+# 14. DOCKER / LOCAL TOOLING OVERRIDES
+# ============================================================
+
+# Local Docker overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Local devcontainer overrides
+.devcontainer/local/
+
+
+# ============================================================
+# 15. LINTER / TOOL CACHE
+# ============================================================
+
+.eslintcache
+.stylelintcache
+.prettierignore.local
+
+# Ruff / Black / pytest caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+
+# ============================================================
+# 16. CLOUD / DEPLOYMENT LOCAL FILES
+# ============================================================
+
+# Vercel
+.vercel/
+
+# Netlify
+.netlify/
+
+# Render
+.render/
+
+# Railway local/project metadata
+.railway/
+
+# Terraform state
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+
+# ============================================================
+# 17. SECRET / TOKEN BACKUPS
+# ============================================================
+
+*.secret
+*.secrets
+*.token
+
+token.json
+tokens.json
+access_token.json
+refresh_token.json
+
+# OAuth credentials
+oauth*.json
+**/oauth*.json
+
+
+# ============================================================
+# 18. AI / LOCAL TOOL GENERATED FILES
+# ============================================================
+
+# Local AI/editor state
+.cursor/
+.cursorrules.local
+.claude/
+.gemini/
+.aider*

@@ -313,7 +313,7 @@ export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v\d+\/?$/, '');
  * The backend stores profile photos as `/media/profile_photos/<file>` and
  * mounts StaticFiles at `/media` on the API process. The web app is served from
  * a *different* origin in every real deployment (Vite on :5173 in dev,
- * `api.scholaris.in` vs the app host in production), so handing `/media/...`
+ * `backend-production-510f.up.railway.app` vs the app host in production), so handing `/media/...`
  * straight to an `<img src>` makes the browser request it from the web origin
  * and get a 404 - the upload silently never appears.
  *
