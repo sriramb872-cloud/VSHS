@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -23,11 +23,60 @@ import { VitePWA } from 'vite-plugin-pwa'
 //   user instead of silently swapping the app under them mid-edit.
 //
 // * `skipWaiting: false` is deliberate - see that key below.
+//
+// * The Content-Security-Policy is generated at BUILD time from
+//   VITE_API_BASE_URL (see cspFromEnv below), so the API origin the policy
+//   allows is always the one set in the Vercel environment variable.
 
-export default defineConfig({
+// Builds the CSP <meta> tag from VITE_API_BASE_URL. Whatever URL the env
+// variable holds is the URL `connect-src` allows. Build-only: the dev server
+// is left without a CSP because Vite's HMR needs inline scripts.
+function cspFromEnv(mode) {
+  const env = loadEnv(mode, process.cwd(), '')
+  const raw = env.VITE_API_BASE_URL
+  if (!raw) {
+    throw new Error(
+      'VITE_API_BASE_URL is not set - refusing to build (it would fall back to localhost).',
+    )
+  }
+  const api = new URL(raw).origin
+
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' https://checkout.razorpay.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    `connect-src 'self' ${api} https://fonts.googleapis.com https://fonts.gstatic.com https://api.razorpay.com https://lumberjack.razorpay.com`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com",
+    "worker-src 'self'",
+    "manifest-src 'self'",
+  ].join('; ')
+
+  return {
+    name: 'csp-from-env',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler: () => [
+        {
+          tag: 'meta',
+          attrs: { 'http-equiv': 'Content-Security-Policy', content: csp },
+          injectTo: 'head-prepend',
+        },
+      ],
+    },
+  }
+}
+
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
+    cspFromEnv(mode),
     VitePWA({
       // The manifest lives in public/ and is linked from index.html.
       manifest: false,
@@ -125,4 +174,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))
