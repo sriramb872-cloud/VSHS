@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { dashboardService } from '../../services/dashboard';
 import { StudentDashboard } from '../../types/dashboard';
 import { StatCard, LoadingSkeleton, ErrorState, EmptyState } from '../../components/shared';
-import { Calendar, BookOpen, Award, Bell, Clock, MapPin, User } from 'lucide-react';
+import { Calendar, BookOpen, Award, Bell, Clock, MapPin, User, ClipboardCheck } from 'lucide-react';
 import { usePet } from '../../pet/PetContext';
 import { useCurrentTime } from '../../hooks/useClock';
 import {
@@ -92,6 +92,14 @@ export const StudentDashboardPage: React.FC = () => {
         <StatCard label="Pending Homework" value={data.pending_homework.length} icon={<BookOpen className="w-5 h-5" />} iconBgClass="bg-amber-50 text-amber-600" onClick={() => navigate('/student/homework')} />
         <StatCard label="Upcoming Exams" value={data.upcoming_exams.length} icon={<Calendar className="w-5 h-5" />} iconBgClass="bg-rose-50 text-rose-600" onClick={() => navigate('/student/exams')} />
         <StatCard label="Announcements" value={data.announcements.length} icon={<Bell className="w-5 h-5" />} iconBgClass="bg-[var(--brand-light)] text-[var(--brand)]" onClick={() => navigate('/student/announcements')} />
+        {/* Slip tests: still-scheduled tests for this student's own section. */}
+        <StatCard
+          label="Upcoming Slip Tests"
+          value={data.upcoming_slip_tests ?? 0}
+          icon={<ClipboardCheck className="w-5 h-5" />}
+          iconBgClass="bg-sky-50 text-sky-600"
+          onClick={() => navigate('/student/slip-tests')}
+        />
       </div>
 
       {/* Current / Upcoming class - derived from today's timetable + local clock */}

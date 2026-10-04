@@ -15,11 +15,13 @@ import type {
   AccessStatus,
   BulkOperationPayload,
   BulkOperationResponse,
+  CheckoutResponse,
   ExtendSubscriptionPayload,
   GrantSubscriptionPayload,
   MePlans,
   MeSubscription,
   MockCheckoutOutcome,
+  RazorpayVerifyPayload,
   SchoolRolesResponse,
   SchoolRoleDetailResponse,
   SchoolSettings,
@@ -114,13 +116,54 @@ export const subscriptionsService = {
   },
 
   /* -----------------------------------------------------------------------
-   * Payments (mock provider in this phase; Razorpay plugs into the same flow)
+   * Payments
+   *
+   * `PAYMENT_PROVIDER` decides what happens next:
+   *   INTERNAL - development only: the client reports a simulated outcome and
+   *              the server verifies its signed payload.
+   *   RAZORPAY - the browser opens Checkout.js, then reports ONLY the ids
+   *              Razorpay handed it; verification, amount and currency are
+   *              the server's job (see `verifyPayment`).
    * -------------------------------------------------------------------- */
 
-  async createCheckout(planId: number): Promise<SubscriptionPayment> {
-    const response = await api.post<SubscriptionPayment>(`${BASE}/payments`, {
+  async createCheckout(planId: number): Promise<CheckoutResponse> {
+    const response = await api.post<CheckoutResponse>(`${BASE}/payments`, {
       plan_id: planId,
     });
+    return response.data;
+  },
+
+  /**
+   * Report Razorpay's checkout result to the server for verification.
+   *
+   * The client sends ONLY the payment id and the signature Razorpay
+   * produced. The order id, the expected amount and the expected currency
+   * are read from the payment row on the server, and the payment itself is
+   * fetched back from Razorpay before anything is activated - so this call
+   * can never claim a success that did not happen.
+   */
+  async verifyPayment(
+    paymentId: number,
+    payload: RazorpayVerifyPayload
+  ): Promise<SubscriptionPayment> {
+    const response = await api.post<SubscriptionPayment>(
+      `${BASE}/payments/${paymentId}/verify`,
+      payload
+    );
+    return response.data;
+  },
+
+  /**
+   * Re-read one of the caller's own payments (404 for anyone else's row).
+   *
+   * Used while a UPI payment is still waiting for approval in the customer's
+   * UPI app: the browser callback and the webhook are both asynchronous, so
+   * the UI polls this instead of guessing.
+   */
+  async getPayment(paymentId: number): Promise<SubscriptionPayment> {
+    const response = await api.get<SubscriptionPayment>(
+      `${BASE}/payments/${paymentId}`
+    );
     return response.data;
   },
 

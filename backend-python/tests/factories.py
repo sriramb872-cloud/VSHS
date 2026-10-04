@@ -31,6 +31,7 @@ from app.models.notification import Notification
 from app.models.report_card import ReportCard
 from app.models.school import School
 from app.models.section import Section
+from app.models.slip_test import SlipTest
 from app.models.student import Student
 from app.models.student_enrollment import StudentEnrollment
 from app.models.subject import Subject
@@ -479,6 +480,42 @@ def make_notification(
         title=overrides.pop("title", "Notice"),
         message=overrides.pop("message", "Please read."),
         category=overrides.pop("category", "PUBLIC"),
+        **overrides,
+    )
+    db.add(row)
+    db.flush()
+    return row
+
+
+def make_slip_test(
+    db: Session,
+    school: School,
+    teacher: Teacher,
+    grade: Grade,
+    section: Section,
+    subject: Subject,
+    academic_year: AcademicYear,
+    scheduled_date: Optional[date] = None,
+    **overrides,
+) -> SlipTest:
+    """Defaults to *tomorrow* so the row lands in the "upcoming" filter by
+    default (today would be the boundary case)."""
+    row = SlipTest(
+        school_id=school.id,
+        academic_year_id=academic_year.id,
+        grade_id=grade.id,
+        section_id=section.id,
+        subject_id=subject.id,
+        teacher_id=teacher.id,
+        title=overrides.pop("title", "Unit 3 Quiz"),
+        description=overrides.pop("description", "Chapters 5 and 6"),
+        scheduled_date=scheduled_date or (date.today() + timedelta(days=3)),
+        start_time=overrides.pop("start_time", time(9, 30)),
+        duration_minutes=overrides.pop("duration_minutes", 45),
+        max_marks=overrides.pop("max_marks", 20),
+        status=overrides.pop("status", "scheduled"),
+        created_at=overrides.pop("created_at", datetime.utcnow()),
+        updated_at=overrides.pop("updated_at", datetime.utcnow()),
         **overrides,
     )
     db.add(row)

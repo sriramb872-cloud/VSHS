@@ -40,8 +40,21 @@ def _clear_failed_attempts(db: Session, user: User) -> None:
         db.commit()
 
 
-def authenticate_user(db: Session, mobile: str, password: str) -> Optional[User]:
-    identifier = str(mobile).strip()
+def find_users_by_identifier(db: Session, identifier: str) -> list[User]:
+    """Resolve ONE login ID to the accounts that match it.
+
+    A login ID is any of: mobile number, email address, student admission
+    number (e.g. ``SCH2026001``) or staff employee ID (e.g. ``EMP2026001``).
+    This is the single lookup shared by password login and by the password
+    reset flow - they must accept exactly the same identifiers, or a user who
+    can sign in would find they cannot recover their account.
+
+    Returned in lookup order (mobile, email, student, teacher); callers decide
+    which candidate to use. Nothing here filters by password or lock state.
+    """
+    identifier = str(identifier or "").strip()
+    if not identifier:
+        return []
 
     # 1. Check direct mobile match
     users = db.query(User).filter(User.mobile == identifier).all()
@@ -61,6 +74,14 @@ def authenticate_user(db: Session, mobile: str, password: str) -> Optional[User]
         teacher = db.query(Teacher).filter(Teacher.employee_id == identifier).first()
         if teacher and teacher.user:
             users = [teacher.user]
+
+    return users
+
+
+def authenticate_user(db: Session, mobile: str, password: str) -> Optional[User]:
+    identifier = str(mobile).strip()
+
+    users = find_users_by_identifier(db, identifier)
 
     if not users:
         return None

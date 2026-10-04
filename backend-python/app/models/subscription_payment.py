@@ -7,7 +7,7 @@ being retrofitted later.
 
 ``provider`` identifies who processed the money:
   * ``INTERNAL``  - the development-only mock provider (never in production)
-  * ``RAZORPAY``  - reserved for Phase 2 (NOT implemented yet)
+  * ``RAZORPAY``  - one-time prepaid UPI orders (Razorpay ORDERS API)
 
 Statuses: PENDING | SUCCESS | FAILED | CANCELLED | REFUNDED.
 

@@ -1,6 +1,6 @@
 // src/layouts/PrincipalLayout.tsx
 import React from 'react';
-import { UserCheck } from 'lucide-react';
+import { UserCheck, KeyRound } from 'lucide-react';
 import AppShell, { NavItem, LayoutDashboard, Users, BookOpen, BarChart3, CalendarDays, Settings, Bell, FileText, ClipboardList, User, Award, School, CreditCard } from './AppShell';
 
 const navItems: NavItem[] = [
@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { label: 'Announcements', path: '/principal/announcements', icon: <Bell className="w-4 h-4" /> },
   { label: 'Calendar', path: '/principal/calendar', icon: <CalendarDays className="w-4 h-4" /> },
   { label: 'Academic Years', path: '/principal/academic-years', icon: <CalendarDays className="w-4 h-4" /> },
+  { label: 'Password Resets', path: '/principal/password-reset-requests', icon: <KeyRound className="w-4 h-4" /> },
   { label: 'Subscription', path: '/principal/subscription', icon: <CreditCard className="w-4 h-4" /> },
   { label: 'Settings', path: '/principal/settings', icon: <Settings className="w-4 h-4" /> },
   { label: 'Profile', path: '/principal/profile', icon: <User className="w-4 h-4" /> },

@@ -1,6 +1,6 @@
 // src/layouts/StudentLayout.tsx
 import React from 'react';
-import AppShell, { NavItem, LayoutDashboard, ClipboardList, BookOpen, BarChart3, CalendarDays, FileText, Bell, Settings, User, CreditCard } from './AppShell';
+import AppShell, { NavItem, LayoutDashboard, ClipboardList, BookOpen, BarChart3, CalendarDays, FileText, Bell, Settings, User, CreditCard, ClipboardCheck } from './AppShell';
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -9,6 +9,7 @@ const navItems: NavItem[] = [
   { label: 'Marks', path: '/student/marks', icon: <BarChart3 className="w-4 h-4" /> },
   { label: 'Timetable', path: '/student/timetable', icon: <CalendarDays className="w-4 h-4" /> },
   { label: 'Exams', path: '/student/exams', icon: <FileText className="w-4 h-4" /> },
+  { label: 'Slip Tests', path: '/student/slip-tests', icon: <ClipboardCheck className="w-4 h-4" /> },
   { label: 'Report Cards', path: '/student/report-cards', icon: <BarChart3 className="w-4 h-4" /> },
   { label: 'Announcements', path: '/student/announcements', icon: <Bell className="w-4 h-4" /> },
   { label: 'Calendar', path: '/student/calendar', icon: <CalendarDays className="w-4 h-4" /> },

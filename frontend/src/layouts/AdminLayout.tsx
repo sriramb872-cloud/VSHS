@@ -1,5 +1,6 @@
 // src/layouts/AdminLayout.tsx
 import React from 'react';
+import { KeyRound } from 'lucide-react';
 import AppShell, { NavItem, LayoutDashboard, School, Users, BarChart3, Settings, Shield, Bell, FileText, User } from './AppShell';
 
 const navItems: NavItem[] = [
@@ -13,6 +14,7 @@ const navItems: NavItem[] = [
   { label: 'Permissions', path: '/superadmin/permissions', icon: <Shield className="w-4 h-4" /> },
   { label: 'Subscriptions', path: '/superadmin/subscriptions', icon: <FileText className="w-4 h-4" /> },
   { label: 'Audit Logs', path: '/superadmin/audit-logs', icon: <FileText className="w-4 h-4" /> },
+  { label: 'Password Resets', path: '/superadmin/password-reset-requests', icon: <KeyRound className="w-4 h-4" /> },
   { label: 'Notifications', path: '/superadmin/notifications', icon: <Bell className="w-4 h-4" /> },
   { label: 'Settings', path: '/superadmin/settings', icon: <Settings className="w-4 h-4" /> },
   { label: 'Profile', path: '/superadmin/profile', icon: <User className="w-4 h-4" /> },

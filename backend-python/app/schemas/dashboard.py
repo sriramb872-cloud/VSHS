@@ -52,6 +52,11 @@ class StudentDashboardResponse(BaseModel):
     report_card_summary: Optional[Any] = None
     announcements: List[Any] = []
     calendar_events: List[Any] = []
+    # Slip tests for this student's own section that are still scheduled for
+    # today or later. Drives the "Upcoming Slip Tests" dashboard card. Cancelled
+    # tests are excluded from the count (they still appear, marked, in the
+    # portal list).
+    upcoming_slip_tests: int = 0
 
     class Config:
         from_attributes = True

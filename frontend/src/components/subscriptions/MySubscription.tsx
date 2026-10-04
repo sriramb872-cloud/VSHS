@@ -296,6 +296,7 @@ export const MySubscription: React.FC = () => {
         open={!!selectedPlan}
         plan={selectedPlan}
         mockEnabled={plans?.mock_payments_enabled ?? false}
+        paymentProvider={plans?.payment_provider ?? 'INTERNAL'}
         onClose={() => setSelectedPlan(null)}
         onSettled={onCheckoutSettled}
       />

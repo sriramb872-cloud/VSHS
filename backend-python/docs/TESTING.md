@@ -51,6 +51,7 @@ is covered end-to-end in `test_auth.py`).
 | `tests/test_auth.py` | login, refresh rotation, revocation, token version, lockout, password flows, enumeration |
 | `tests/test_tenant_isolation.py` | security matrix A–H, core domains |
 | `tests/test_tenant_isolation_extended.py` | security matrix A–H, remaining domains + fix regressions |
+| `tests/test_password_reset.py` | forgot-password flows (generic response, OTP lifecycle, admin-assisted reset, rate limits) — see `docs/PASSWORD_RESET.md` |
 | `tests/test_migrations.py` | Alembic vs MySQL (gated, see `MIGRATIONS.md`) |
 
 ## Security tests A–H (mandatory, both tenant suites)

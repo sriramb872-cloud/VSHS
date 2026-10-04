@@ -107,6 +107,7 @@ class MockPaymentProvider(PaymentProvider):
         *,
         expected_amount: Optional[Decimal] = None,
         expected_currency: Optional[str] = None,
+        expected_order_id: Optional[str] = None,
     ) -> VerificationResult:
         required = ("order_id", "status", "amount", "currency", "signature")
         missing = [key for key in required if not payload.get(key) and payload.get(key) != 0]
@@ -116,6 +117,18 @@ class MockPaymentProvider(PaymentProvider):
                 verified=False,
                 status="FAILED",
                 message=f"missing fields: {', '.join(missing)}",
+            )
+
+        if (
+            expected_order_id is not None
+            and str(payload["order_id"]) != str(expected_order_id)
+        ):
+            return VerificationResult(
+                provider=self.name,
+                verified=False,
+                status="FAILED",
+                provider_order_id=str(payload["order_id"]),
+                message="order mismatch",
             )
 
         status = str(payload["status"]).upper()
@@ -177,6 +190,7 @@ class MockPaymentProvider(PaymentProvider):
             amount=amount,
             currency=str(payload["currency"]).upper(),
             message="ok",
+            provider_order_id=str(payload["order_id"]),
         )
 
     def handle_webhook(

@@ -372,7 +372,12 @@ def test_admin_reset_revokes_sessions_and_rotates_password(client, db):
     assert relogin["must_change_password"] is True
 
 
-def test_reset_password_flow_revokes_existing_sessions(client, db):
+def test_reset_password_flow_revokes_existing_sessions(client, db, monkeypatch):
+    from app.services import password_reset as password_reset_service
+
+    monkeypatch.setattr(password_reset_service, "generate_otp", lambda: "123456")
+    monkeypatch.setattr(password_reset_service, "_send_otp_email", lambda user, otp: True)
+
     school = make_school(db)
     user = make_user(db, school, role="TEACHER")
     live = login(client, user.mobile)
@@ -380,9 +385,20 @@ def test_reset_password_flow_revokes_existing_sessions(client, db):
     forgot = client.post(f"{PREFIX}/auth/forgot-password", json={"mobile": user.mobile})
     assert forgot.status_code == 200
 
-    db.refresh(user)
-    reset_token = user.reset_token
-    assert reset_token  # stored server-side; delivery channel is out of scope
+    verify = client.post(
+        f"{PREFIX}/auth/verify-reset-otp",
+        json={"login_id": user.mobile, "otp": "123456"},
+    )
+    assert verify.status_code == 200, verify.text
+    reset_token = verify.json()["reset_token"]
+    assert reset_token
+
+    # The code is never persisted in clear text - only a keyed hash is stored.
+    from app.models.password_reset import PasswordResetOtp
+
+    stored = db.query(PasswordResetOtp).filter(PasswordResetOtp.user_id == user.id).one()
+    assert "123456" not in stored.otp_hash
+    assert stored.used_at is not None
 
     resp = client.post(
         f"{PREFIX}/auth/reset-password",

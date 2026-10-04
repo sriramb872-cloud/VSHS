@@ -41,7 +41,19 @@ The ones that matter for deployment:
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | SQLAlchemy pool per worker | `5` / `10` |
 | `LOG_FORMAT` / `LOG_LEVEL` | `json`/`text`, `info`/... | `json`/`info` |
 | `RATE_LIMIT_ENABLED` | slowapi per-IP limits (account lockout is separate) | `true` |
+| `OTP_TTL_MINUTES` / `OTP_MAX_ATTEMPTS` | password-reset code lifetime / wrong tries before it locks | `10` / `5` |
+| `RESET_TOKEN_TTL_MINUTES` | single-use token issued after a correct code | `10` |
+| `FORGOT_PASSWORD_PER_HOUR` | self-service reset requests per login ID **and** per IP, per hour | `5` |
+| `SMTP_HOST` | SMTP server for the reset code. **Empty = self-service email disabled**: reset requests fall back to an admin-issued temporary password instead of failing | empty |
+| `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `MAIL_FROM` | SMTP credentials and the From address (never logged, never committed) | `587` / empty |
+| `PAYMENT_PROVIDER` | `INTERNAL` (development mock) or `RAZORPAY` (real UPI checkout) | `INTERNAL` |
+| `RAZORPAY_KEY_ID` | publishable Razorpay key (`rzp_...`) - the only payment value the browser may see | empty |
+| `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` | server-side secrets; production refuses to boot with `PAYMENT_PROVIDER=RAZORPAY` if either is missing | empty |
 | `PORT` | bind port (Railway injects this) | `8000` |
+
+See `docs/PASSWORD_RESET.md` for the flows, the migration and the manual test
+checklist, and `docs/PAYMENTS.md` for the Razorpay (UPI) setup, the webhook
+URL and the TEST-mode checklist.
 
 ## Database connection pool sizing
 

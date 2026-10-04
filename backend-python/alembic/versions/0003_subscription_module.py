@@ -253,7 +253,19 @@ def downgrade() -> None:
     Payment and audit history are business records: run this only on
     databases where the module was never used.  Guarded so a downgrade on a
     database that never had the tables is a no-op.
+
+    Tables are dropped BEFORE their indexes: MySQL refuses to drop an index
+    that a foreign key constraint still needs, and ``DROP TABLE`` removes
+    the indexes with it. The ``_drop_index`` calls below are guarded no-ops
+    kept for symmetry.
     """
+    _drop_table('subscription_audit_logs')
+    _drop_table('subscription_payments')
+    _drop_table('subscriptions')
+    _drop_table('user_subscription_overrides')
+    _drop_table('school_subscription_settings')
+    _drop_table('subscription_plans')
+
     _drop_index('ix_subscription_audit_user_created', 'subscription_audit_logs')
     _drop_index('ix_subscription_audit_school_action', 'subscription_audit_logs')
     _drop_index(op.f('ix_subscription_audit_logs_created_at'), 'subscription_audit_logs')
@@ -261,7 +273,6 @@ def downgrade() -> None:
     _drop_index(op.f('ix_subscription_audit_logs_user_id'), 'subscription_audit_logs')
     _drop_index(op.f('ix_subscription_audit_logs_school_id'), 'subscription_audit_logs')
     _drop_index(op.f('ix_subscription_audit_logs_id'), 'subscription_audit_logs')
-    _drop_table('subscription_audit_logs')
 
     _drop_index('uq_subscription_payment_provider_ref', 'subscription_payments')
     _drop_index('uq_subscription_payment_order', 'subscription_payments')
@@ -273,7 +284,6 @@ def downgrade() -> None:
     _drop_index(op.f('ix_subscription_payments_user_id'), 'subscription_payments')
     _drop_index(op.f('ix_subscription_payments_school_id'), 'subscription_payments')
     _drop_index(op.f('ix_subscription_payments_id'), 'subscription_payments')
-    _drop_table('subscription_payments')
 
     _drop_index('ix_subscriptions_status_end', 'subscriptions')
     _drop_index('ix_subscriptions_school_status', 'subscriptions')
@@ -284,21 +294,17 @@ def downgrade() -> None:
     _drop_index(op.f('ix_subscriptions_user_id'), 'subscriptions')
     _drop_index(op.f('ix_subscriptions_school_id'), 'subscriptions')
     _drop_index(op.f('ix_subscriptions_id'), 'subscriptions')
-    _drop_table('subscriptions')
 
     _drop_index('uq_user_subscription_override_type', 'user_subscription_overrides')
     _drop_index(op.f('ix_user_subscription_overrides_user_id'), 'user_subscription_overrides')
     _drop_index(op.f('ix_user_subscription_overrides_school_id'), 'user_subscription_overrides')
     _drop_index(op.f('ix_user_subscription_overrides_id'), 'user_subscription_overrides')
-    _drop_table('user_subscription_overrides')
 
     _drop_index(op.f('ix_school_subscription_settings_school_id'), 'school_subscription_settings')
     _drop_index(op.f('ix_school_subscription_settings_id'), 'school_subscription_settings')
-    _drop_table('school_subscription_settings')
 
     _drop_index('ix_subscription_plans_school_role', 'subscription_plans')
     _drop_index('ix_subscription_plans_school_active', 'subscription_plans')
     _drop_index(op.f('ix_subscription_plans_role'), 'subscription_plans')
     _drop_index(op.f('ix_subscription_plans_school_id'), 'subscription_plans')
     _drop_index(op.f('ix_subscription_plans_id'), 'subscription_plans')
-    _drop_table('subscription_plans')

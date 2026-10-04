@@ -2,15 +2,13 @@
 """Payment provider abstraction.
 
 The subscription domain depends on THIS interface only - never on a specific
-vendor SDK. Phase 1 ships the development ``MockPaymentProvider``; Phase 2
-adds ``RazorpayProvider`` implementing the same contract, and no
-subscription business logic changes:
+vendor SDK. Two providers implement it:
 
     PaymentService
           |
           +---- MockPaymentProvider   (provider="INTERNAL", dev only)
           |
-          +---- RazorpayProvider      (provider="RAZORPAY", Phase 2)
+          +---- RazorpayProvider      (provider="RAZORPAY", UPI, orders API)
 
 Contract meaning:
     create_order()      - open a checkout for a fixed amount/currency
@@ -57,6 +55,9 @@ class VerificationResult:
     amount: Optional[Decimal] = None
     currency: Optional[str] = None
     message: Optional[str] = None
+    # Order this result belongs to. A webhook carries no session and no user,
+    # so this is how the caller finds the payment row it may update.
+    provider_order_id: Optional[str] = None
 
 
 @dataclass
@@ -76,6 +77,22 @@ class PaymentProviderError(Exception):
         self.message = message
 
 
+def to_paise(amount: Decimal) -> int:
+    """Decimal rupees -> integer paise, with no float arithmetic anywhere.
+
+    ``Decimal("199.50") * 100 -> 19950`` exactly; a value that cannot be
+    represented in whole paise is a bug on our side, not something to round
+    silently in the direction that charges the customer.
+    """
+    value = Decimal(amount).quantize(Decimal("0.01"))
+    paise = value * 100
+    if paise != paise.to_integral_value():
+        raise PaymentProviderError(
+            "INVALID_AMOUNT", "Amount cannot be expressed in whole paise"
+        )
+    return int(paise)
+
+
 class PaymentProvider(ABC):
     """Contract every payment provider must implement."""
 
@@ -92,12 +109,17 @@ class PaymentProvider(ABC):
         *,
         expected_amount: Optional[Decimal] = None,
         expected_currency: Optional[str] = None,
+        expected_order_id: Optional[str] = None,
     ) -> VerificationResult:
         """Verify a provider result server-side.
 
         MUST NOT trust the caller: check the provider's signature and that
         the paid amount/currency match what we ordered. Only a verified
         SUCCESS may activate an entitlement.
+
+        ``expected_order_id`` is the order stored on OUR payment row; when the
+        caller knows it, a valid signature for a *different* order must be
+        rejected instead of being attached to this row.
         """
 
     @abstractmethod

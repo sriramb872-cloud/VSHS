@@ -1,8 +1,9 @@
 // src/pages/auth/Login.tsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff, GraduationCap, Loader2, Lock, Phone, ShieldCheck } from 'lucide-react';
+import { PASSWORD_RULES, passwordRulesPassed } from '../../utils/passwordRules';
 
 export const Login: React.FC = () => {
   const [mobileNumber, setMobileNumber] = useState('');
@@ -15,6 +16,8 @@ export const Login: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [changing, setChanging] = useState<boolean>(false);
   const [pendingRole, setPendingRole] = useState<string | undefined>(undefined);
 
@@ -22,6 +25,30 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
 
   const forceChangeActive = forceChange || mustChangePassword;
+
+  /**
+   * Read a human-readable message off an API error.
+   *
+   * FastAPI sends `detail` as a string, an array (validation) or an object
+   * (`{message, code}` - the password endpoints). Rendering any of those raw
+   * in JSX crashes React, so everything is flattened to a string here.
+   */
+  const apiErrorMessage = (err: any, fallback: string): string => {
+    const detail = err?.response?.data?.detail;
+    if (typeof detail === 'string' && detail) return detail;
+    if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+      if (typeof detail.message === 'string' && detail.message) return detail.message;
+      if (typeof detail.msg === 'string' && detail.msg) return detail.msg;
+    }
+    if (Array.isArray(detail)) {
+      const msg = detail
+        .map((d: any) => (typeof d === 'string' ? d : d?.msg || ''))
+        .filter(Boolean)
+        .join(', ');
+      if (msg) return msg;
+    }
+    return fallback;
+  };
 
   const goToDashboard = (role?: string) => {
     switch (role) {
@@ -51,6 +78,10 @@ export const Login: React.FC = () => {
       setError('New password and confirmation do not match.');
       return;
     }
+    if (passwordRulesPassed(newPassword) < PASSWORD_RULES.length) {
+      setError('Password does not meet the requirements yet.');
+      return;
+    }
 
     setChanging(true);
     try {
@@ -63,8 +94,10 @@ export const Login: React.FC = () => {
       goToDashboard(pendingRole || user?.role);
     } catch (err: any) {
       setError(
-        err?.response?.data?.detail ||
+        apiErrorMessage(
+          err,
           'Failed to change password. Please check your current password and try again.'
+        )
       );
     } finally {
       setChanging(false);
@@ -89,11 +122,7 @@ export const Login: React.FC = () => {
       goToDashboard(user.role);
       return;
     } catch (err: any) {
-      if (err.response && err.response.data && err.response.data.detail) {
-        setError(err.response.data.detail);
-      } else {
-        setError('Login failed. Please check your credentials and try again.');
-      }
+      setError(apiErrorMessage(err, 'Login failed. Please check your credentials and try again.'));
     } finally {
       setLoading(false);
     }
@@ -125,14 +154,29 @@ export const Login: React.FC = () => {
               <input
                 id="current-password"
                 name="current_password"
-                type="password"
+                type={showCurrentPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter current password"
-                className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full h-12 pl-10 pr-11 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword((v) => !v)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                tabIndex={-1}
+                aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+              >
+                {showCurrentPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+              </button>
             </div>
+            {currentPassword === '' && password && (
+              <p className="mt-1.5 text-[11px] text-slate-500">
+                Use the temporary password you signed in with.
+              </p>
+            )}
           </div>
 
           <div>
@@ -144,15 +188,47 @@ export const Login: React.FC = () => {
               <input
                 id="new-password"
                 name="new_password"
-                type="password"
+                type={showNewPassword ? 'text' : 'password'}
                 required
-                minLength={6}
+                minLength={8}
+                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password (min 6 characters)"
-                className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                placeholder="Enter new password"
+                className="w-full h-12 pl-10 pr-11 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((v) => !v)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                tabIndex={-1}
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+              >
+                {showNewPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+              </button>
             </div>
+
+            {/* Live checklist of the server's password policy. */}
+            <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5">
+              {PASSWORD_RULES.map((rule) => {
+                const ok = rule.test(newPassword);
+                return (
+                  <li
+                    key={rule.id}
+                    className={`flex items-center gap-1.5 text-[11px] font-semibold ${
+                      ok ? 'text-emerald-600' : 'text-slate-400'
+                    }`}
+                  >
+                    <span
+                      className={`w-3.5 h-3.5 flex-shrink-0 rounded-full border ${
+                        ok ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300'
+                      }`}
+                    />
+                    <span>{rule.label}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
           <div>
@@ -164,14 +240,20 @@ export const Login: React.FC = () => {
               <input
                 id="confirm-password"
                 name="confirm_password"
-                type="password"
+                type={showNewPassword ? 'text' : 'password'}
                 required
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter new password"
                 className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-300/80 bg-slate-50/50 text-slate-900 text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
             </div>
+            {confirmPassword.length > 0 && newPassword !== confirmPassword && (
+              <p className="mt-1.5 text-[11px] font-semibold text-rose-600">
+                Passwords do not match.
+              </p>
+            )}
           </div>
 
           <button
@@ -263,6 +345,17 @@ export const Login: React.FC = () => {
             >
               {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
             </button>
+          </div>
+
+          {/* Self-service recovery entry point. */}
+          <div className="flex justify-end -mt-1">
+            <Link
+              id="forgot-password-link"
+              to="/forgot-password"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              Forgot password?
+            </Link>
           </div>
         </div>
 

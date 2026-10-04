@@ -1,6 +1,6 @@
 // src/layouts/TeacherLayout.tsx
 import React from 'react';
-import AppShell, { NavItem, LayoutDashboard, Users, ClipboardList, BookOpen, CalendarDays, FileText, BarChart3, Settings, Bell, User, CreditCard } from './AppShell';
+import AppShell, { NavItem, LayoutDashboard, Users, ClipboardList, BookOpen, CalendarDays, FileText, BarChart3, Settings, Bell, User, CreditCard, ClipboardCheck } from './AppShell';
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/teacher/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -9,6 +9,8 @@ const navItems: NavItem[] = [
   { label: 'Homework', path: '/teacher/homework', icon: <BookOpen className="w-4 h-4" /> },
   { label: 'Timetable', path: '/teacher/timetable', icon: <CalendarDays className="w-4 h-4" /> },
   { label: 'Exams', path: '/teacher/exams', icon: <FileText className="w-4 h-4" /> },
+  // Between Exams and Marks Entry, as specified.
+  { label: 'Slip Tests', path: '/teacher/slip-tests', icon: <ClipboardCheck className="w-4 h-4" /> },
   { label: 'Marks Entry', path: '/teacher/marks', icon: <BarChart3 className="w-4 h-4" /> },
   { label: 'Report Cards', path: '/teacher/report-cards', icon: <BarChart3 className="w-4 h-4" /> },
   { label: 'Announcements', path: '/teacher/announcements', icon: <Bell className="w-4 h-4" /> },

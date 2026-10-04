@@ -15,10 +15,9 @@ subscription domain so the frontend can branch on stable codes.
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.api import deps
 from app.api.deps import get_db, get_current_active_user, require_subscription_admin
 from app.models.user import User
 from app.schemas.subscription import (
@@ -45,8 +44,10 @@ from app.schemas.subscription import (
     UserSubscriptionDetailResponse,
 )
 from app.schemas.subscription_payment import (
+    CheckoutResponse,
     MockCheckoutRequest,
     PaymentCreateRequest,
+    RazorpayVerifyRequest,
     SubscriptionPaymentListResponse,
     SubscriptionPaymentResponse,
 )
@@ -54,6 +55,15 @@ from app.services.payment import PaymentService
 from app.services.subscription import SubscriptionService
 
 router = APIRouter(prefix="/subscription", tags=["Subscriptions"])
+
+# Razorpay posts to ``/api/v1/subscriptions/webhooks/razorpay`` (plural, the
+# URL documented in the dashboard setup). A SEPARATE router keeps that single
+# unauthenticated endpoint out of the subscription router: it must never pick
+# up an auth, entitlement or per-account dependency by accident. It also
+# carries no slowapi decorator (slowapi applies nothing unless a route asks
+# for it - see app/core/rate_limit.py) and this app has no CSRF middleware
+# (auth is a bearer header, not a cookie), so nothing else needs exempting.
+webhooks_router = APIRouter(prefix="/subscriptions", tags=["Webhooks"])
 
 
 # ---------------------------------------------------------------------------
@@ -382,13 +392,13 @@ def my_payments(
 
 
 # ---------------------------------------------------------------------------
-# Payments (mock provider in Phase 1; Razorpay plugs into the same flow)
+# Payments (INTERNAL mock in development; Razorpay plugs into the same flow)
 # ---------------------------------------------------------------------------
 
 
 @router.post(
     "/payments",
-    response_model=SubscriptionPaymentResponse,
+    response_model=CheckoutResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_payment(
@@ -396,9 +406,51 @@ def create_payment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
+    """Open a payment for a plan.
+
+    The amount always comes from the plan row in the database. The response
+    carries the payment row plus, when the provider is RAZORPAY, everything
+    Checkout.js needs (public key id, order id, paise) - never a secret.
+    """
+    payment = PaymentService.create_checkout(
+        db, user=current_user, plan_id=payload.plan_id
+    )
+    return PaymentService.checkout_response(payment)
+
+
+@router.get("/payments/{payment_id}", response_model=SubscriptionPaymentResponse)
+def get_payment(
+    payment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Poll one of the caller's own payments (404 for anyone else's row).
+
+    Used by the checkout screen while a UPI payment is still awaiting the
+    customer's approval in their UPI app (asynchronous by nature).
+    """
     return PaymentService.serialize(
-        PaymentService.create_checkout(
-            db, user=current_user, plan_id=payload.plan_id
+        PaymentService.get_payment(db, user=current_user, payment_id=payment_id)
+    )
+
+
+@router.post("/payments/{payment_id}/verify", response_model=SubscriptionPaymentResponse)
+def verify_payment(
+    payment_id: int,
+    payload: RazorpayVerifyRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Verify a Razorpay checkout callback server-side.
+
+    Only the payment id + signature Razorpay generated come from the client;
+    the order id, the expected amount and the expected currency are read from
+    the payment row, and the payment itself is fetched back from Razorpay
+    before any access is granted.
+    """
+    return PaymentService.serialize(
+        PaymentService.verify_client_payment(
+            db, user=current_user, payment_id=payment_id, payload=payload
         )
     )
 
@@ -432,3 +484,30 @@ def cancel_payment(
     return PaymentService.serialize(
         PaymentService.cancel_pending(db, user=current_user, payment_id=payment_id)
     )
+
+
+# ---------------------------------------------------------------------------
+# Razorpay webhook - deliberately unauthenticated and un-gated
+# ---------------------------------------------------------------------------
+
+
+@webhooks_router.post("/webhooks/razorpay", status_code=status.HTTP_200_OK)
+async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
+    """Razorpay -> us: payment.captured / payment.failed.
+
+    NO login dependency and NOT behind the subscription gate: Razorpay has no
+    session. Authenticity comes solely from ``X-Razorpay-Signature``, an
+    HMAC-SHA256 over the RAW body bytes with ``RAZORPAY_WEBHOOK_SECRET``,
+    checked before anything is written to the database.
+
+    The raw bytes are read explicitly BEFORE any parsing, and no Pydantic body
+    model is declared, so nothing can re-serialise the payload and break the
+    signature. A bad signature is a 400; an unknown event or order id is
+    ACKed with 200 (and logged) so Razorpay does not retry forever.
+    """
+    body = await request.body()
+    payment = PaymentService.process_webhook(db, headers=request.headers, body=body)
+    return {
+        "status": "ok",
+        "payment_id": payment.id if payment is not None else None,
+    }

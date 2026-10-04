@@ -44,6 +44,42 @@ class SubscriptionPaymentResponse(BaseModel):
         from_attributes = True
 
 
+class CheckoutResponse(SubscriptionPaymentResponse):
+    """What ``POST /payments`` returns: the payment row + checkout handle.
+
+    Superset of :class:`SubscriptionPaymentResponse`, so the development mock
+    flow keeps working unchanged (its extra fields are simply ``null``).
+
+    For ``provider="RAZORPAY"`` the browser needs four things to open
+    Checkout.js: the PUBLIC key id, the order id, the amount in paise and the
+    currency. The key SECRET and the webhook secret are deliberately not part
+    of this model - they never leave the server.
+    """
+
+    amount_paise: Optional[int] = None
+    razorpay_key_id: Optional[str] = None
+    razorpay_order_id: Optional[str] = None
+
+
+class RazorpayVerifyRequest(BaseModel):
+    """Browser checkout callback (``POST /payments/{id}/verify``).
+
+    Deliberately WITHOUT an order id or an amount: the order comes from the
+    payment row in the database and the amount is re-read from Razorpay, so a
+    client can neither choose what it paid nor claim a success.
+    """
+
+    razorpay_payment_id: str = Field(..., min_length=1, max_length=64)
+    razorpay_signature: str = Field(..., min_length=1, max_length=256)
+
+
+class RazorpayWebhookResponse(BaseModel):
+    """Ack for Razorpay's webhook (200 == "do not retry")."""
+
+    status: str = "ok"
+    payment_id: Optional[int] = None
+
+
 class SubscriptionPaymentListResponse(BaseModel):
     total: int
     items: List[SubscriptionPaymentResponse]

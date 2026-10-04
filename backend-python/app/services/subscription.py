@@ -27,7 +27,6 @@ input is normalised on the way in.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -154,6 +153,7 @@ def _allow(
         school_id=school_id,
         role=role,
         mock_payments_enabled=PaymentService.mock_payments_enabled(),
+        payment_provider=PaymentService.active_provider(),
     )
 
 
@@ -185,6 +185,7 @@ def _deny(
         school_id=school_id,
         role=role,
         mock_payments_enabled=PaymentService.mock_payments_enabled(),
+        payment_provider=PaymentService.active_provider(),
     )
 
 
@@ -2065,7 +2066,6 @@ class SubscriptionService:
         if not user_rows:
             return 0, []
 
-        ids = [uid for uid, _, _, _ in user_rows]
         buckets = SubscriptionService._role_buckets(
             db, school_id, str(role).upper() if role else None, now
         )
@@ -2350,7 +2350,7 @@ class SubscriptionService:
             "role": role,
             "plans": plans,
             "mock_payments_enabled": PaymentService.mock_payments_enabled(),
-            "payment_provider": "INTERNAL",
+            "payment_provider": PaymentService.active_provider(),
         }
 
     @staticmethod

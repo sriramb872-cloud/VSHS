@@ -61,6 +61,8 @@ export interface StudentDashboard {
   report_card_summary?: any;
   announcements: any[];
   calendar_events: any[];
+  /** Slip tests for this student's own section, still scheduled. */
+  upcoming_slip_tests?: number;
 }
 
 export interface ParentDashboard {

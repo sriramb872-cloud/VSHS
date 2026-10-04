@@ -414,6 +414,30 @@ export interface SubscriptionPaymentListResponse {
   items: SubscriptionPayment[];
 }
 
+/**
+ * `POST /subscription/payments` - the payment row plus everything the
+ * browser needs to open Razorpay's hosted checkout.
+ *
+ * Superset of `SubscriptionPayment`, so the development mock flow keeps
+ * working unchanged (these three are simply `null` there). Only PUBLIC
+ * values: the key id is publishable, and the key secret / webhook secret
+ * are never part of any response.
+ */
+export interface CheckoutResponse extends SubscriptionPayment {
+  /** Plan price converted to whole paise (the unit Razorpay's API uses). */
+  amount_paise: number | null;
+  /** Publishable Razorpay key id (`rzp_...`). */
+  razorpay_key_id: string | null;
+  /** Order created server-side; Checkout.js charges exactly this order. */
+  razorpay_order_id: string | null;
+}
+
+/** Exactly the two ids Razorpay's `handler` returns - nothing else. */
+export interface RazorpayVerifyPayload {
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
 // ─── User-facing /me views ──────────────────────────────────────────────────
 
 export interface MeSubscription {

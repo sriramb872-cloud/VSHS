@@ -60,6 +60,7 @@ from app.routers.v1 import (
     reports,
     subscriptions,
     subscription_plans,
+    admin_password_reset,
 )
 
 logger = logging.getLogger("scholaris")
@@ -343,5 +344,12 @@ app.include_router(search.router, prefix=PREFIX)
 app.include_router(roles.router, prefix=PREFIX)
 app.include_router(reports.router, prefix=PREFIX)
 app.include_router(slip_tests.router, prefix=PREFIX)
+app.include_router(slip_tests.student_router, prefix=PREFIX)
 app.include_router(subscriptions.router, prefix=PREFIX)
+# Razorpay's unauthenticated webhook endpoint lives on its own router so it
+# can never inherit an auth/subscription dependency from subscriptions.router.
+app.include_router(subscriptions.webhooks_router, prefix=PREFIX)
 app.include_router(subscription_plans.router, prefix=PREFIX)
+# Flow B (admin-assisted password reset): /admin/password-reset-requests and
+# /admin/users/{id}/reset-password. Role hierarchy is enforced in the router.
+app.include_router(admin_password_reset.router, prefix=PREFIX)

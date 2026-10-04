@@ -51,4 +51,82 @@ export interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+}
+
+/* -------------------------------------------------------------------------
+ * Password reset (forgot password)
+ * ---------------------------------------------------------------------- */
+
+/**
+ * `POST /auth/forgot-password`.
+ *
+ * Deliberately generic: the server answers the same way whether the login ID
+ * exists, has no email, or was unknown. `message` is the only user-facing
+ * text the client may show for this call.
+ */
+export interface ForgotPasswordResponse {
+  message: string;
+  expires_in_minutes?: number;
+}
+
+/**
+ * `POST /auth/verify-reset-otp`.
+ *
+ * `reset_token` is the ONLY place it is ever returned: single-use, short-lived
+ * (10 min), spent by `/auth/reset-password`. Never persist it to storage.
+ */
+export interface VerifyResetOtpResponse {
+  message: string;
+  reset_token: string;
+  expires_in_minutes?: number;
+}
+
+/** `POST /auth/reset-password`. */
+export interface ResetPasswordResponse {
+  message: string;
+}
+
+/**
+ * Stable `detail.code` values the reset endpoints return. `detail` is always
+ * `{ message, code }`, so the UI branches on `code`, never on prose.
+ */
+export type ResetErrorCode =
+  | 'INVALID_OTP'
+  | 'OTP_EXPIRED'
+  | 'OTP_LOCKED'
+  | 'ADMIN_RESET_REQUIRED'
+  | 'RESET_TOKEN_INVALID'
+  | 'WEAK_PASSWORD'
+  | 'FORBIDDEN_ROLE'
+  | 'ALREADY_HANDLED';
+
+/** One row of `GET /admin/password-reset-requests`. */
+export interface PasswordResetRequest {
+  id: number;
+  user_id: number;
+  user_name: string;
+  role: string;
+  mobile: string | null;
+  email: string | null;
+  has_email: boolean;
+  school_id: number | null;
+  status: 'pending' | 'completed' | 'rejected';
+  requested_at: string | null;
+  handled_by: number | null;
+  handled_by_name: string | null;
+  handled_at: string | null;
+}
+
+/**
+ * `POST /admin/users/{id}/reset-password`.
+ *
+ * `temporary_password` is plaintext and returned exactly once - it exists only
+ * in this response, never stored or retrievable again. The client must show it
+ * once and drop it from state after the admin acknowledges it.
+ */
+export interface AdminResetPasswordResponse {
+  message: string;
+  temporary_password: string;
+  must_change_password: boolean;
+  user: { id: number; display_name: string; role: string };
 }

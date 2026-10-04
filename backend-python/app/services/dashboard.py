@@ -13,6 +13,7 @@ from app.models.attendance import Attendance
 from app.models.homework import Homework
 from app.models.announcement import Announcement
 from app.models.exam import Exam
+from app.models.slip_test import SlipTest
 from app.models.student_enrollment import StudentEnrollment
 from app.models.academic_year import AcademicYear
 from app.services.timetable import serialize_timetable
@@ -216,6 +217,7 @@ class DashboardService:
         upcoming_exams = []
         announcements = []
         todays_timetable = []
+        upcoming_slip_tests = 0
         if student:
             records = db.query(Attendance).filter(Attendance.student_id == student.id).all()
             if records:
@@ -261,6 +263,16 @@ class DashboardService:
                         and_(Announcement.grade_id == section.grade_id, Announcement.section_id == section.id),
                     ),
                 ).order_by(Announcement.created_at.desc()).limit(10).all()
+                # Same section + same year the dashboard already resolved for
+                # homework/exams, so the count can never disagree with what the
+                # Slip Tests page will list.
+                upcoming_slip_tests = db.query(func.count(SlipTest.id)).filter(
+                    SlipTest.school_id == school_id,
+                    SlipTest.academic_year_id == year_id,
+                    SlipTest.section_id == section.id,
+                    SlipTest.scheduled_date >= date.today(),
+                    func.lower(SlipTest.status) == "scheduled",
+                ).scalar() or 0
         return StudentDashboardResponse(
             todays_timetable=[serialize_timetable(slot) for slot in todays_timetable],
             attendance_percentage=attendance_percentage,
@@ -269,7 +281,8 @@ class DashboardService:
             latest_marks=[],
             report_card_summary=None,
             announcements=[{"id": a.id, "title": a.title, "content": a.content, "created_at": str(a.created_at)} for a in announcements],
-            calendar_events=[]
+            calendar_events=[],
+            upcoming_slip_tests=upcoming_slip_tests,
         )
 
     @staticmethod

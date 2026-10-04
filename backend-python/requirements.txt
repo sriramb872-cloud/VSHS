@@ -13,5 +13,14 @@ python-dotenv>=1.0.0
 Pillow==11.0.0
 slowapi==0.1.9
 gunicorn>=21.2.0
+# Razorpay SDK - UPI checkout through the ORDERS API (one-time prepaid
+# payments). Pinned: the signature helpers (utility.verify_payment_signature /
+# verify_webhook_signature) and the Client resource surface are the API we
+# depend on for money-moving code.
+razorpay==2.0.1
+# Web Push (VAPID) - free, no third-party push service (no Firebase). Pinned:
+# the webpush() call surface and WebPushException handling are what the
+# notification push dispatch depends on.
+pywebpush==2.0.3
 # Database migrations (run exactly once per deploy, before workers start).
 alembic>=1.13.0,<2

@@ -67,17 +67,61 @@ class UserResponse(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
-    mobile: Optional[str] = Field(None, description="Mobile number of the account")
-    email: Optional[str] = Field(None, description="Email of the account")
+    """Step 1 of the reset flow.
 
-    @model_validator(mode="after")
-    def require_one_identifier(self):
-        if not self.mobile and not self.email:
-            raise ValueError("Provide either mobile or email")
-        return self
+    ``login_id`` is the same identifier the sign-in form accepts (mobile,
+    email, student ID or employee ID); the legacy field names are still
+    accepted so older clients keep working.
+    """
+
+    login_id: str = Field(
+        ...,
+        min_length=1,
+        description="Mobile number, email address, student ID, or employee ID",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_legacy_identifier_aliases(cls, values):
+        if isinstance(values, dict):
+            for key in (
+                "login_id",
+                "identifier",
+                "username",
+                "student_id",
+                "employee_id",
+                "mobile_number",
+                "mobile",
+                "email",
+            ):
+                if values.get(key) not in (None, "") and not str(values.get("login_id") or "").strip():
+                    values["login_id"] = values[key]
+                    break
+            if values.get("login_id") is not None:
+                values["login_id"] = str(values["login_id"]).strip()
+            if values.get("otp") is not None:
+                values["otp"] = str(values["otp"]).strip()
+        return values
+
+
+class VerifyResetOtpRequest(ForgotPasswordRequest):
+    """Step 2: prove the code from the mail, receive a short-lived reset token."""
+
+    otp: str = Field(
+        ...,
+        min_length=1,
+        max_length=32,
+        description="6-digit code from the password reset email",
+    )
 
 
 class ResetPasswordRequest(BaseModel):
-    reset_token: str = Field(..., description="Token issued by /auth/forgot-password")
-    new_password: str = Field(..., min_length=6, description="New password")
+    """Step 3: spend the single-use token issued by verify-reset-otp.
+
+    Strength is validated server-side (``validate_password_strength``) so the
+    user gets one precise message instead of a generic 422.
+    """
+
+    reset_token: str = Field(..., min_length=1, description="Token issued by /auth/verify-reset-otp")
+    new_password: str = Field(..., min_length=1, description="New password")
 

@@ -23,6 +23,7 @@ import {
   Shield,
   Download,
   CreditCard,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAcademicYear } from '../contexts/AcademicYearContext';
@@ -374,6 +375,7 @@ export {
   Bell,
   User,
   CreditCard,
+  ClipboardCheck,
 };
 
 export default AppShell;

@@ -1,4 +1,5 @@
 # app/crud/notification.py
+import logging
 from datetime import datetime
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
@@ -9,6 +10,8 @@ from app.models.student import Student
 from app.models.student_enrollment import StudentEnrollment
 from app.models.user import User
 from app.schemas.notification import NotificationUpdate
+
+logger = logging.getLogger(__name__)
 
 
 class CRUDNotification:
@@ -98,6 +101,20 @@ class CRUDNotification:
                 query = query.filter(cond_class)
             elif category == "CLASS_TEACHER":
                 query = query.filter(cond_class_teacher)
+            elif category == "SLIP_TEST":
+                # Per-recipient rows (one per enrolled student) carrying the
+                # slip test id in `reference_id`. Narrow on purpose: matching on
+                # `user_id` alone would be the only audience guarantee, and the
+                # type check keeps a stray row from another domain out of this
+                # tab. Uncategorised queries still include these rows through
+                # `cond_direct`, which is what keeps the header bell badge
+                # counting them.
+                query = query.filter(
+                    and_(
+                        Notification.notification_type == "SLIP_TEST",
+                        Notification.user_id == current_user.id,
+                    )
+                )
             else:
                 query = query.filter(or_(cond_public, cond_class, cond_class_teacher, cond_direct))
 
@@ -214,7 +231,8 @@ class CRUDNotification:
         target_class_id: Optional[int] = None,
         target_student_id: Optional[int] = None,
         user_id: Optional[int] = None,
-        reference_id: Optional[int] = None
+        reference_id: Optional[int] = None,
+        push: bool = True,
     ) -> Notification:
         db_obj = Notification(
             title=title,
@@ -233,6 +251,18 @@ class CRUDNotification:
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
+        if push:
+            # Best-effort Web Push: a push failure must never break
+            # notification creation (same philosophy as notify_user).
+            try:
+                from app.services.push import schedule_push
+                schedule_push(db_obj.id)
+            except Exception:  # noqa: BLE001 - push is best-effort
+                logger.warning(
+                    "Failed to schedule Web Push dispatch for notification %s",
+                    db_obj.id,
+                    exc_info=True,
+                )
         return db_obj
 
     def update(self, db: Session, *, db_obj: Notification, obj_in: NotificationUpdate) -> Notification:

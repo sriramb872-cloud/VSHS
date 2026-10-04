@@ -1,6 +1,6 @@
 # app/routers/v1/notification.py
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from app.api import deps
 from app.schemas.notification import (
@@ -9,10 +9,49 @@ from app.schemas.notification import (
     NotificationResponse,
     TeacherClassInfoResponse,
 )
+from app.schemas.push import (
+    PushPublicKeyResponse,
+    PushSubscribeRequest,
+    PushUnsubscribeRequest,
+)
+from app.services import push as push_service
 from app.services.notification import NotificationService
 from app.models.user import UserModel
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
+
+
+@router.get("/push/public-key", response_model=PushPublicKeyResponse)
+def get_push_public_key(
+    current_user: UserModel = Depends(deps.get_current_active_user),
+):
+    """The VAPID public key the browser needs to subscribe (or "")."""
+    return push_service.get_public_key()
+
+
+@router.post("/push/subscribe", status_code=status.HTTP_201_CREATED)
+def subscribe_push(
+    obj_in: PushSubscribeRequest,
+    request: Request,
+    db: Session = Depends(deps.get_db),
+    current_user: UserModel = Depends(deps.get_current_active_user),
+):
+    return push_service.subscribe(
+        db,
+        user=current_user,
+        endpoint=obj_in.endpoint,
+        keys=obj_in.keys,
+        user_agent=request.headers.get("user-agent"),
+    )
+
+
+@router.post("/push/unsubscribe")
+def unsubscribe_push(
+    obj_in: PushUnsubscribeRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: UserModel = Depends(deps.get_current_active_user),
+):
+    return push_service.unsubscribe(db, user=current_user, endpoint=obj_in.endpoint)
 
 
 @router.get("/", response_model=NotificationListResponse)

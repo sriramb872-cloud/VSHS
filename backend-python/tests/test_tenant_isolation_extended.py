@@ -336,7 +336,11 @@ def test_f_extended_schoolless_non_super_admin_is_denied_everywhere(client, db, 
         "/files/metadata",
         "/principals/me",
         "/settings/principal",
-        "/slip-tests",
+        # Slip tests live under role prefixes (/teacher and /student), so both
+        # are listed: the fail-closed guard must fire before any role check.
+        "/teacher/slip-tests",
+        "/teacher/slip-tests/classes",
+        "/student/slip-tests",
     ]
     for path in guarded_paths:
         resp = client.get(f"{PREFIX}{path}", headers=h)

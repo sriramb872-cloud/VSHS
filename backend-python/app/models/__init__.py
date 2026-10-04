@@ -13,6 +13,7 @@ from app.models.student import Student
 from app.models.student_enrollment import StudentEnrollment
 from app.models.attendance import Attendance
 from app.models.attendance_record import AttendanceRecord
+from app.models.slip_test import SlipTest
 from app.models.homework import Homework
 from app.models.exam import Exam
 from app.models.exam_subject import ExamSubject
@@ -29,6 +30,8 @@ from app.models.role import Role
 from app.models.upload import Upload
 from app.models.app_settings import SystemSettings, SchoolSettings, UserAppSettings
 from app.models.refresh_token import RefreshToken
+from app.models.password_reset import PasswordResetOtp, PasswordResetRequest
+from app.models.push_subscription import PushSubscription
 from app.models.subscription_plan import SubscriptionPlan
 from app.models.subscription import Subscription
 from app.models.school_subscription_settings import SchoolSubscriptionSettings
@@ -51,6 +54,7 @@ __all__ = [
     "StudentEnrollment",
     "Attendance",
     "AttendanceRecord",
+    "SlipTest",
     "Homework",
     "Exam",
     "ExamSubject",
@@ -69,6 +73,9 @@ __all__ = [
     "SchoolSettings",
     "UserAppSettings",
     "RefreshToken",
+    "PasswordResetOtp",
+    "PasswordResetRequest",
+    "PushSubscription",
     "SubscriptionPlan",
     "Subscription",
     "SchoolSubscriptionSettings",

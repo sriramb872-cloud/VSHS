@@ -14,7 +14,7 @@ the same transaction as the change itself.
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_active_user, require_subscription_admin
+from app.api.deps import get_db, require_subscription_admin
 from app.models.subscription_plan import SubscriptionPlan
 from app.models.user import User
 from app.schemas.subscription_plan import (

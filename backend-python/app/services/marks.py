@@ -186,6 +186,11 @@ class MarksService:
         sub_name = exam_subject.subject.name if (exam_subject.subject and hasattr(exam_subject.subject, "name")) else (exam_subject.subject.subject_name if hasattr(exam_subject.subject, "subject_name") else f"Subject #{exam_subject.subject_id}")
         sec_name = exam.section.name if (exam.section and hasattr(exam.section, "name")) else (exam.section.section_name if hasattr(exam.section, "section_name") else f"Section #{exam.section_id}")
 
+        # TODO: this ONLY_FOR_CLASS "Marks Submitted" notice is meant for the
+        # class teacher, but that type is visible to the class's STUDENTS (and
+        # not to teachers). Push is disabled so students don't get a push
+        # about marks that are not published yet. Revisit when the in-app
+        # visibility for this notice is fixed.
         crud_notification.create(
             db,
             title="Marks Submitted",
@@ -196,6 +201,7 @@ class MarksService:
             school_id=exam.school_id,
             category="CLASS_TEACHER",
             target_class_id=exam.section_id,
+            push=False,
         )
 
     @staticmethod

@@ -13,10 +13,13 @@ import { RoleBasedRedirect } from "./RoleBasedRedirect";
 
 // Auth
 const Login = React.lazy(() => import("../pages/auth/Login"));
+const ForgotPassword = React.lazy(() => import("../pages/auth/ForgotPassword"));
 
 // Common
 const Unauthorized = React.lazy(() => import("../pages/common/Unauthorized"));
 const NotFound = React.lazy(() => import("../pages/common/NotFound"));
+// Flow B queue - served to both Super Admin and Principal routes.
+const PasswordResetRequests = React.lazy(() => import("../pages/common/PasswordResetRequests"));
 
 // Super Admin Pages
 const AdminDashboard = React.lazy(() => import("../pages/superadmin/Dashboard"));
@@ -84,6 +87,8 @@ const TeacherAttendanceHistory = React.lazy(() => import("../pages/teacher/Atten
 const TeacherAnnouncements = React.lazy(() => import("../pages/teacher/Announcements"));
 const TeacherCalendar = React.lazy(() => import("../pages/teacher/Calendar"));
 const TeacherReportCards = React.lazy(() => import("../pages/teacher/ReportCards"));
+const TeacherSlipTests = React.lazy(() => import("../pages/teacher/SlipTests"));
+const TeacherSlipTestList = React.lazy(() => import("../pages/teacher/SlipTestList"));
 const TeacherNotifications = React.lazy(() => import("../pages/teacher/Notifications"));
 const TeacherSettings = React.lazy(() => import("../pages/teacher/Settings"));
 const TeacherProfile = React.lazy(() => import("../pages/teacher/Profile"));
@@ -97,6 +102,8 @@ const StudentMarks = React.lazy(() => import("../pages/student/Marks"));
 const StudentReportCards = React.lazy(() => import("../pages/student/ReportCards"));
 const StudentHomework = React.lazy(() => import("../pages/student/Homework"));
 const StudentHomeworkDetails = React.lazy(() => import("../pages/student/HomeworkDetails"));
+const StudentSlipTests = React.lazy(() => import("../pages/student/SlipTests"));
+const StudentSlipTestDetails = React.lazy(() => import("../pages/student/SlipTestDetails"));
 const StudentAttendance = React.lazy(() => import("../pages/student/Attendance"));
 const StudentAnnouncements = React.lazy(() => import("../pages/student/Announcements"));
 const StudentCalendar = React.lazy(() => import("../pages/student/Calendar"));
@@ -116,6 +123,8 @@ const AppRoutes: React.FC = () => {
       {/* ==================== AUTH ==================== */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
+        {/* Self-service password recovery - public, no session required. */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
 
       {/* ==================== SUPER ADMIN ==================== */}
@@ -140,6 +149,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/superadmin/subscriptions/:schoolId/users/:userId" element={<AdminSubscriptionUser />} />
             <Route path="/superadmin/settings" element={<AdminSystemSettings />} />
             <Route path="/superadmin/audit-logs" element={<AdminAuditLogs />} />
+            <Route path="/superadmin/password-reset-requests" element={<PasswordResetRequests />} />
             <Route path="/superadmin/notifications" element={<AdminNotifications />} />
             <Route path="/superadmin/profile" element={<AdminProfile />} />
           </Route>
@@ -173,6 +183,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/principal/notifications" element={<PrincipalNotifications />} />
             {/* Self-service: reachable even while the gated modules are locked. */}
             <Route path="/principal/subscription" element={<PrincipalSubscription />} />
+            <Route path="/principal/password-reset-requests" element={<PasswordResetRequests />} />
             <Route path="/principal/settings" element={<PrincipalSettings />} />
             <Route path="/principal/profile" element={<PrincipalProfile />} />
             <Route path="/principal/analytics" element={<PrincipalAnalytics />} />
@@ -196,6 +207,14 @@ const AppRoutes: React.FC = () => {
             <Route path="/teacher/exams/:examId/marks/:examSubjectId" element={<TeacherMarksEntry />} />
             <Route path="/teacher/exams/:examId/subjects/:examSubjectId/marks" element={<TeacherMarksEntry />} />
             <Route path="/teacher/marks" element={<TeacherMarksEntry />} />
+            {/* Slip tests are teacher-only: the two routes live inside the
+                existing RoleRoute allowedRoles={["TEACHER"]} guard. The class
+                ids in the path are re-validated server-side. */}
+            <Route path="/teacher/slip-tests" element={<TeacherSlipTests />} />
+            <Route
+              path="/teacher/slip-tests/class/:gradeId/:sectionId/:subjectId"
+              element={<TeacherSlipTestList />}
+            />
             <Route path="/teacher/homework" element={<TeacherHomework />} />
             <Route path="/teacher/homework/create" element={<TeacherCreateHomework />} />
             <Route path="/teacher/homework/:id/edit" element={<TeacherEditHomework />} />
@@ -227,6 +246,9 @@ const AppRoutes: React.FC = () => {
             <Route path="/student/report-cards" element={<StudentReportCards />} />
             <Route path="/student/homework" element={<StudentHomework />} />
             <Route path="/student/homework/:id" element={<StudentHomeworkDetails />} />
+            {/* Read-only. Deep-link target for slip test bell entries. */}
+            <Route path="/student/slip-tests" element={<StudentSlipTests />} />
+            <Route path="/student/slip-tests/:id" element={<StudentSlipTestDetails />} />
             <Route path="/student/attendance" element={<StudentAttendance />} />
             <Route path="/student/announcements" element={<StudentAnnouncements />} />
             <Route path="/student/calendar" element={<StudentCalendar />} />

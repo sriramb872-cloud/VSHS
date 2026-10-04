@@ -13,7 +13,7 @@ the access check evaluates the clock.
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer
 
 from app.core.database import Base
 
