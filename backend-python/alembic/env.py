@@ -61,6 +61,16 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+# One MySQL advisory lock serialises migrations across processes. Without it,
+# two deploys starting together (Railway overlap, a restart-on-failure loop, a
+# manual redeploy during an auto-deploy) run DDL at the same time and MySQL
+# fails with error 1684 "skipped since its definition is being modified by
+# concurrent DDL statement". With it, the second process simply waits, then
+# finds everything already applied (every revision is idempotent) and moves on.
+MIGRATION_LOCK_NAME = "scholaris_alembic_migrations"
+MIGRATION_LOCK_WAIT_SECONDS = 180
+
+
 def run_migrations_online() -> None:
     """Run migrations against a live database."""
     connectable = engine_from_config(
@@ -70,14 +80,37 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-        )
+        use_lock = connection.dialect.name == "mysql"
+        if use_lock:
+            acquired = connection.exec_driver_sql(
+                "SELECT GET_LOCK(%s, %s)",
+                (MIGRATION_LOCK_NAME, MIGRATION_LOCK_WAIT_SECONDS),
+            ).scalar()
+            # GET_LOCK is session-scoped, so committing does NOT release it;
+            # the commit only closes SQLAlchemy's auto-begun transaction so
+            # Alembic can manage its own.
+            connection.commit()
+            if acquired != 1:
+                raise RuntimeError(
+                    "Could not acquire the migration lock within "
+                    f"{MIGRATION_LOCK_WAIT_SECONDS}s - another migration is "
+                    "still running."
+                )
+        try:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                compare_type=True,
+            )
 
-        with context.begin_transaction():
-            context.run_migrations()
+            with context.begin_transaction():
+                context.run_migrations()
+        finally:
+            if use_lock:
+                connection.exec_driver_sql(
+                    "SELECT RELEASE_LOCK(%s)", (MIGRATION_LOCK_NAME,)
+                )
+                connection.commit()
 
 
 if context.is_offline_mode():
